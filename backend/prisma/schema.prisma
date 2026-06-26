@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  PARENT
+  ADMIN
+  SUPERADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum VisitStatus {
+  CHECKED_IN
+  CHECKED_OUT
+  AUTO_CLOSED
+}
+
+enum MealType {
+  BREAKFAST
+  SNACK_MORNING
+  LUNCH
+  SNACK_AFTERNOON
+}
+
+enum ReservationType {
+  BIRTHDAY
+  PRIVATE_EVENT
+  GROUP_BOOKING
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  phone        String?
+  role         Role     @default(PARENT)
+  avatarUrl    String?  @map("avatar_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  pushToken    String?  @map("push_token")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  children         Child[]
+  userPackages     UserPackage[]
+  blogPosts        BlogPost[]
+  reservations     Reservation[]
+  checkedInVisits  Visit[]          @relation("CheckedInBy")
+  checkedOutVisits Visit[]          @relation("CheckedOutBy")
+  hourAdjustments  HourAdjustment[]
+
+  @@map("users")
+}
+
+model Child {
+  id          String   @id @default(uuid())
+  parentId    String   @map("parent_id")
+  firstName   String   @map("first_name")
+  lastName    String   @map("last_name")
+  dateOfBirth DateTime @map("date_of_birth") @db.Date
+  gender      Gender?
+  allergies   String?
+  notes       String?
+  qrCode      String   @unique @map("qr_code")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent User    @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  visits Visit[]
+
+  @@map("children")
+}
+
+model Package {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  totalHours   Decimal  @map("total_hours") @db.Decimal(10, 2)
+  price        Decimal  @db.Decimal(10, 2)
+  validityDays Int      @map("validity_days")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  userPackages UserPackage[]
+
+  @@map("packages")
+}
+
+model UserPackage {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  packageId      String   @map("package_id")
+  remainingHours Decimal  @map("remaining_hours") @db.Decimal(10, 2)
+  purchasedAt    DateTime @default(now()) @map("purchased_at")
+  expiresAt      DateTime @map("expires_at")
+  isActive       Boolean  @default(true) @map("is_active")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package         Package          @relation(fields: [packageId], references: [id])
+  visits          Visit[]
+  hourAdjustments HourAdjustment[]
+
+  @@map("user_packages")
+}
+
+model Visit {
+  id              String      @id @default(uuid())
+  childId         String      @map("child_id")
+  userPackageId   String?     @map("user_package_id")
+  checkedInAt     DateTime    @map("checked_in_at")
+  checkedOutAt    DateTime?   @map("checked_out_at")
+  durationMinutes Int?        @map("duration_minutes")
+  hoursDeducted   Decimal?    @map("hours_deducted") @db.Decimal(10, 2)
+  checkedInById   String      @map("checked_in_by")
+  checkedOutById  String?     @map("checked_out_by")
+  status          VisitStatus @default(CHECKED_IN)
+  notes           String?
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  child        Child        @relation(fields: [childId], references: [id])
+  userPackage  UserPackage? @relation(fields: [userPackageId], references: [id])
+  checkedInBy  User         @relation("CheckedInBy", fields: [checkedInById], references: [id])
+  checkedOutBy User?        @relation("CheckedOutBy", fields: [checkedOutById], references: [id])
+
+  @@map("visits")
+}
+
+model BlogPost {
+  id            String    @id @default(uuid())
+  title         String
+  slug          String    @unique
+  content       String
+  excerpt       String?
+  coverImageUrl String?   @map("cover_image_url")
+  authorId      String    @map("author_id")
+  isPublished   Boolean   @default(false) @map("is_published")
+  isFeatured    Boolean   @default(false) @map("is_featured")
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@map("blog_posts")
+}
+
+model MenuItem {
+  id          String   @id @default(uuid())
+  date        DateTime @db.Date
+  mealType    MealType @map("meal_type")
+  name        String
+  description String?
+  allergens   String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([date, mealType])
+  @@map("menu_items")
+}
+
+model Activity {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?
+  dayOfWeek    Int       @map("day_of_week")
+  startTime    String    @map("start_time")
+  endTime      String    @map("end_time")
+  ageGroup     String?   @map("age_group")
+  color        String?
+  isRecurring  Boolean   @default(true) @map("is_recurring")
+  specificDate DateTime? @map("specific_date") @db.Date
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("activities")
+}
+
+model Reservation {
+  id           String            @id @default(uuid())
+  userId       String?           @map("user_id")
+  type         ReservationType
+  title        String
+  date         DateTime          @db.Date
+  startTime    String            @map("start_time")
+  endTime      String            @map("end_time")
+  guestCount   Int?              @map("guest_count")
+  childName    String?           @map("child_name")
+  childAge     Int?              @map("child_age")
+  contactPhone String?           @map("contact_phone")
+  notes        String?
+  status       ReservationStatus @default(PENDING)
+  isFullDay    Boolean           @default(false) @map("is_full_day")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("reservations")
+}
+
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model HourAdjustment {
+  id            String   @id @default(uuid())
+  userPackageId String   @map("user_package_id")
+  adjustedById  String   @map("adjusted_by")
+  hoursBefore   Decimal  @map("hours_before") @db.Decimal(10, 2)
+  hoursAfter    Decimal  @map("hours_after") @db.Decimal(10, 2)
+  reason        String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  userPackage UserPackage @relation(fields: [userPackageId], references: [id])
+  adjustedBy  User        @relation(fields: [adjustedById], references: [id])
+
+  @@map("hour_adjustments")
+}
