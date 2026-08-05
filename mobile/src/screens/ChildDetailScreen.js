@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import { apiRequest } from '../utils/api';
+import { font } from '../theme';
 
 export default function ChildDetailScreen({ route, navigation }) {
   const { child: initialChild } = route.params;
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#4A3AFF',
+    backgroundColor: '#7c9fc9',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -175,11 +176,11 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#fff',
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: font.bold,
   },
   name: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#333',
   },
   age: {
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   allergyText: {
     color: '#E74C3C',
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: font.medium,
   },
   qrSection: {
     alignItems: 'center',
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: font.semibold,
     color: '#333',
     marginBottom: 16,
     paddingHorizontal: 20,
@@ -231,8 +232,8 @@ const styles = StyleSheet.create({
   },
   qrCode: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4A3AFF',
+    fontFamily: font.semibold,
+    color: '#7c9fc9',
     marginTop: 12,
     letterSpacing: 1,
   },
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
   },
   visitDate: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: font.semibold,
     color: '#333',
   },
   statusBadge: {
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: font.medium,
     color: '#555',
   },
   visitTime: {
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
   },
   visitDuration: {
     fontSize: 13,
-    color: '#4A3AFF',
+    color: '#7c9fc9',
     marginTop: 2,
   },
   deleteButton: {
@@ -302,6 +303,6 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#E74C3C',
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: font.medium,
   },
 });

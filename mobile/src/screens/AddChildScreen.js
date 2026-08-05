@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { apiRequest } from '../utils/api';
+import { font } from '../theme';
 
 export default function AddChildScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: font.semibold,
     color: '#555',
     marginBottom: 6,
     marginTop: 12,
@@ -186,19 +187,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   genderActive: {
-    backgroundColor: '#4A3AFF',
-    borderColor: '#4A3AFF',
+    backgroundColor: '#7c9fc9',
+    borderColor: '#7c9fc9',
   },
   genderText: {
     fontSize: 15,
     color: '#666',
-    fontWeight: '500',
+    fontFamily: font.medium,
   },
   genderTextActive: {
     color: '#fff',
   },
   button: {
-    backgroundColor: '#4A3AFF',
+    backgroundColor: '#7c9fc9',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -210,6 +211,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
 });

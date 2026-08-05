@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { font } from '../theme';
 
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#333',
     textAlign: 'center',
     marginBottom: 30,
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
     borderColor: '#E8E8E8',
   },
   button: {
-    backgroundColor: '#4A3AFF',
+    backgroundColor: '#7c9fc9',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
   footer: {
     flexDirection: 'row',
@@ -186,8 +187,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkText: {
-    color: '#4A3AFF',
+    color: '#7c9fc9',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
 });

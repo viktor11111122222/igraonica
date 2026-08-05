@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { font } from '../theme';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -105,13 +106,13 @@ const styles = StyleSheet.create({
   },
   logoText: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#4A3AFF',
+    fontFamily: font.bold,
+    color: '#7c9fc9',
   },
   logoSubtext: {
     fontSize: 28,
-    fontWeight: '400',
-    color: '#4A3AFF',
+    fontFamily: font.medium,
+    color: '#7c9fc9',
     marginTop: -8,
   },
   form: {
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     borderColor: '#E8E8E8',
   },
   button: {
-    backgroundColor: '#4A3AFF',
+    backgroundColor: '#7c9fc9',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
   footer: {
     flexDirection: 'row',
@@ -152,14 +153,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkText: {
-    color: '#4A3AFF',
+    color: '#7c9fc9',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
   createAccountText: {
-    color: '#4A3AFF',
+    color: '#7c9fc9',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: font.semibold,
     textAlign: 'center',
     marginTop: 16,
   },

@@ -5,12 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../utils/api';
+import PressableScale from '../components/PressableScale';
+import { colors, radius, spacing, type, shadow } from '../theme';
 
 export default function HomeScreen({ navigation }) {
   const { user, logout } = useAuth();
@@ -37,183 +38,205 @@ export default function HomeScreen({ navigation }) {
   }
 
   const activePackage = packages.find(
-    (p) => p.isActive && new Date(p.expiresAt) > new Date() && Number(p.remainingHours) > 0
+    (p) =>
+      p.isActive &&
+      new Date(p.expiresAt) > new Date() &&
+      Number(p.remainingHours) > 0
   );
+
+  const remaining = activePackage ? Number(activePackage.remainingHours) : 0;
+  const total = activePackage ? Number(activePackage.package.totalHours) : 0;
+  const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
 
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
     >
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Zdravo,</Text>
-          <Text style={styles.name}>{user?.firstName} {user?.lastName}</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <Text style={styles.greeting}>Zdravo,</Text>
+            <Text style={styles.name}>
+              {user?.firstName} {user?.lastName}
+            </Text>
+          </View>
+          <PressableScale
+            style={styles.logoutBtn}
+            onPress={logout}
+            accessibilityLabel="Odjava"
+          >
+            <Ionicons name="log-out-outline" size={20} color={colors.textOnPrimary} />
+          </PressableScale>
         </View>
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-          <Ionicons name="log-out-outline" size={22} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {activePackage ? (
-        <View style={styles.packageCard}>
-          <Text style={styles.packageLabel}>Preostali sati</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>Preostali sati</Text>
           <View style={styles.hoursRow}>
-            <Text style={styles.hoursNumber}>{Number(activePackage.remainingHours).toFixed(1)}</Text>
-            <Text style={styles.hoursUnit}>/ {Number(activePackage.package.totalHours)}h</Text>
+            <Text style={styles.hours}>{remaining.toFixed(1)}</Text>
+            <Text style={styles.hoursUnit}>/ {total}h</Text>
           </View>
+
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${pct * 100}%` }]} />
+          </View>
+
           <Text style={styles.packageName}>{activePackage.package.name}</Text>
-          <Text style={styles.packageExpiry}>
-            Vazi do: {new Date(activePackage.expiresAt).toLocaleDateString('sr-RS')}
-          </Text>
+          <View style={styles.expiryRow}>
+            <Ionicons name="calendar-outline" size={14} color={colors.textFaint} />
+            <Text style={styles.expiry}>
+              Vazi do{' '}
+              {new Date(activePackage.expiresAt).toLocaleDateString('sr-RS')}
+            </Text>
+          </View>
         </View>
       ) : (
-        <View style={[styles.packageCard, styles.noPackageCard]}>
-          <Text style={styles.noPackageText}>Nemate aktivan paket</Text>
-          <Text style={styles.noPackageSubtext}>Kontaktirajte igraonicu za kupovinu paketa</Text>
+        <View style={[styles.card, styles.emptyCard]}>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="albums-outline" size={30} color={colors.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>Nemate aktivan paket</Text>
+          <Text style={styles.emptyText}>
+            Kontaktirajte igraonicu za kupovinu paketa.
+          </Text>
         </View>
       )}
 
-      <TouchableOpacity
+      <PressableScale
         style={styles.menuItem}
         onPress={() => navigation.navigate('Children')}
       >
-        <View style={styles.menuIconContainer}>
-          <Ionicons name="people" size={24} color="#4A3AFF" />
+        <View style={styles.menuIcon}>
+          <Ionicons name="people" size={22} color={colors.primaryDarker} />
         </View>
-        <View style={styles.menuContent}>
+        <View style={styles.menuBody}>
           <Text style={styles.menuTitle}>Moja deca</Text>
-          <Text style={styles.menuSubtitle}>Pregledaj i dodaj decu, QR kodovi</Text>
+          <Text style={styles.menuSub}>Pregled i dodavanje dece</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#ccc" />
-      </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+      </PressableScale>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { paddingBottom: spacing.xxxl },
   header: {
+    paddingTop: 64,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+  },
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#4A3AFF',
+    justifyContent: 'space-between',
   },
-  greeting: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-  },
+  headerText: { flex: 1 },
+  greeting: { ...type.body, color: 'rgba(255,255,255,0.85)' },
+  name: { ...type.title, color: colors.textOnPrimary, marginTop: 2 },
   logoutBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoutText: {
-    color: '#fff',
-    fontSize: 14,
+  card: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.xl,
+    marginTop: -spacing.lg,
+    borderRadius: radius.xl,
+    padding: spacing.xxl,
+    ...shadow.card,
   },
-  packageCard: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  packageLabel: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 4,
+  cardLabel: {
+    ...type.caption,
+    color: colors.textFaint,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   hoursRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    marginTop: spacing.xs,
   },
-  hoursNumber: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#4A3AFF',
-  },
+  hours: { ...type.display, color: colors.primaryDarker },
   hoursUnit: {
-    fontSize: 20,
-    color: '#999',
-    marginLeft: 6,
+    ...type.heading,
+    color: colors.textFaint,
+    marginLeft: spacing.sm,
+  },
+  track: {
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+    marginTop: spacing.lg,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
   },
   packageName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 8,
+    ...type.heading,
+    color: colors.text,
+    marginTop: spacing.lg,
   },
-  packageExpiry: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 4,
-  },
-  noPackageCard: {
+  expiryRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 30,
+    gap: spacing.xs,
+    marginTop: spacing.xs,
   },
-  noPackageText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#999',
+  expiry: { ...type.caption, color: colors.textFaint },
+  emptyCard: { alignItems: 'center', paddingVertical: spacing.xxl },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
-  noPackageSubtext: {
-    fontSize: 14,
-    color: '#bbb',
-    marginTop: 6,
+  emptyTitle: { ...type.heading, color: colors.text },
+  emptyText: {
+    ...type.body,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 12,
-    padding: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow.card,
   },
-  menuIconContainer: {
+  menuIcon: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: '#EDE9FF',
-    justifyContent: 'center',
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
-    marginRight: 14,
+    justifyContent: 'center',
+    marginRight: spacing.lg,
   },
-  menuContent: {
-    flex: 1,
-  },
-  menuTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#333',
-  },
-  menuSubtitle: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
+  menuBody: { flex: 1 },
+  menuTitle: { ...type.heading, color: colors.text },
+  menuSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
 });

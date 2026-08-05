@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import * as storage from '../utils/storage';
 import { apiRequest } from '../utils/api';
 
 const AuthContext = createContext(null);
@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
 
   async function loadUser() {
     try {
-      const token = await SecureStore.getItemAsync('token');
+      const token = await storage.getItem('token');
       if (!token) {
         setLoading(false);
         return;
@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
       const data = await apiRequest('/auth/me');
       setUser(data.user);
     } catch {
-      await SecureStore.deleteItemAsync('token');
+      await storage.deleteItem('token');
     } finally {
       setLoading(false);
     }
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body: { email, password },
     });
-    await SecureStore.setItemAsync('token', data.token);
+    await storage.setItem('token', data.token);
     setUser(data.user);
     return data;
   }
@@ -43,13 +43,13 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body: fields,
     });
-    await SecureStore.setItemAsync('token', data.token);
+    await storage.setItem('token', data.token);
     setUser(data.user);
     return data;
   }
 
   async function logout() {
-    await SecureStore.deleteItemAsync('token');
+    await storage.deleteItem('token');
     setUser(null);
   }
 

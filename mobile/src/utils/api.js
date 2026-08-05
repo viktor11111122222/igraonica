@@ -1,9 +1,9 @@
-import * as SecureStore from 'expo-secure-store';
+import * as storage from './storage';
 
 const API_URL = 'http://localhost:3001/api';
 
 export async function apiRequest(endpoint, options = {}) {
-  const token = await SecureStore.getItemAsync('token');
+  const token = await storage.getItem('token');
 
   const config = {
     headers: {

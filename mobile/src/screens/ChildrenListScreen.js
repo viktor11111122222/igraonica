@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { apiRequest } from '../utils/api';
+import { font } from '../theme';
 
 export default function ChildrenListScreen({ navigation }) {
   const [children, setChildren] = useState([]);
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#4A3AFF',
+    backgroundColor: '#7c9fc9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -126,14 +127,14 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: font.bold,
   },
   info: {
     flex: 1,
   },
   childName: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semibold,
     color: '#333',
   },
   childAge: {
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: font.semibold,
     color: '#999',
   },
   emptySubtext: {
@@ -165,11 +166,11 @@ const styles = StyleSheet.create({
     bottom: 30,
     left: 20,
     right: 20,
-    backgroundColor: '#4A3AFF',
+    backgroundColor: '#7c9fc9',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#4A3AFF',
+    shadowColor: '#7c9fc9',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -178,6 +179,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
 });
