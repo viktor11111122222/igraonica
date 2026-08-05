@@ -1,6 +1,6 @@
 import * as storage from './storage';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = 'http://localhost:3002/api';
 
 export async function apiRequest(endpoint, options = {}) {
   const token = await storage.getItem('token');
