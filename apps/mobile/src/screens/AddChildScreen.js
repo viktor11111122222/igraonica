@@ -122,17 +122,20 @@ export default function AddChildScreen({ navigation }) {
           ].map((g) => {
             const active = gender === g.key;
             return (
-              <PressableScale
-                key={g.key}
-                style={[styles.genderBtn, active && styles.genderActive]}
-                onPress={() => setGender(active ? null : g.key)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-              >
-                <Text style={[styles.genderText, active && styles.genderTextActive]}>
-                  {g.label}
-                </Text>
-              </PressableScale>
+              // PressableScale stavlja style na unutrasnji View, pa flex mora
+              // na omotac da bi dugmad podelila red na pola.
+              <View key={g.key} style={styles.genderCell}>
+                <PressableScale
+                  style={[styles.genderBtn, active && styles.genderActive]}
+                  onPress={() => setGender(active ? null : g.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.genderText, active && styles.genderTextActive]}>
+                    {g.label}
+                  </Text>
+                </PressableScale>
+              </View>
             );
           })}
         </View>
@@ -248,14 +251,16 @@ const styles = StyleSheet.create({
   textArea: { height: 90, textAlignVertical: 'top', marginTop: spacing.md },
 
   genderRow: { flexDirection: 'row', gap: spacing.md },
+  genderCell: { flex: 1 },
   genderBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   genderActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   genderText: { ...type.label, color: colors.textMuted },
