@@ -13,6 +13,13 @@ export function todayKey() {
   return toKey(new Date());
 }
 
+// Iz kljuca nazad u Date, u lokalnoj zoni.
+// new Date('2026-08-12') bi bio UTC ponoc, pa bi zapadno od Grinica ispao 11.
+export function fromKey(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 // 0 = ponedeljak, kako to ocekuje backend (JS getDay() ima 0 = nedelja).
 export function dayIndex(date) {
   const js = date.getDay();

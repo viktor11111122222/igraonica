@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,28 +8,22 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { apiRequest } from '../utils/api';
-import { dayIndex, monthDates, toKey, todayKey } from '../utils/date';
-import DayCloud, { CLOUD_W } from '../components/DayCloud';
+import { useDaySelection } from '../hooks/useDay';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import DayStrip from '../components/DayStrip';
+import Announcement from '../components/Announcement';
+import ClosedNotice from '../components/ClosedNotice';
+import { useClosedDays } from '../context/ClosedDaysContext';
+import { MEALS } from '../data/meals';
 import { colors, radius, spacing, type, shadow } from '../theme';
-
-// Redosled i nazivi prate MealType enum sa backenda.
-const MEALS = [
-  { key: 'BREAKFAST', label: 'Dorucak', icon: 'sunny-outline' },
-  { key: 'SNACK_MORNING', label: 'Uzina', icon: 'nutrition-outline' },
-  { key: 'LUNCH', label: 'Rucak', icon: 'restaurant-outline' },
-  { key: 'SNACK_AFTERNOON', label: 'Popodnevna uzina', icon: 'ice-cream-outline' },
-];
-
-const DAY_NAMES = ['Pon', 'Uto', 'Sre', 'Cet', 'Pet', 'Sub', 'Ned'];
 
 export default function MenuScreen() {
   const [days, setDays] = useState({});
-  const [selectedDay, setSelectedDay] = useState(todayKey());
+  const { today, selected: selectedDay, setSelected: setSelectedDay } =
+    useDaySelection();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const stripRef = useRef(null);
 
   // Backend vraca nedelju po nedelju, a traka pokriva ceo mesec - zato
   // dovlacimo nedelju izabranog dana i spajamo je sa vec ucitanim danima.
@@ -44,26 +38,28 @@ export default function MenuScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load(selectedDay);
-    }, [load, selectedDay])
+  // selectedDay je u zavisnostima, pa promena dana odmah povlaci njegovu
+  // nedelju umesto da se ceka sledece osvezavanje.
+  useAutoRefresh(useCallback(() => load(selectedDay), [load, selectedDay]));
+
+  const { isClosed, closedDays } = useClosedDays();
+
+  // Neradnog dana se ne kuva, pa se jelovnik ne prikazuje ni ako je ostao unet
+  // od ranije.
+  const zatvoreno = isClosed(selectedDay);
+  const items = zatvoreno ? [] : days[selectedDay] || [];
+
+  // Dani za koje je jelovnik unet - u traci se vide kao izrazeniji oblak,
+  // pa prazan dan ne izgleda kao da aplikacija ne radi.
+  const marked = new Set(
+    Object.entries(days)
+      .filter(([date, list]) => list?.length > 0 && !isClosed(date))
+      .map(([date]) => date)
   );
 
-  const dates = monthDates();
-  const today = todayKey();
-  const items = days[selectedDay] || [];
-
-  // Mesec je duzi od ekrana, pa traku pomeramo na danasnji dan.
-  useEffect(() => {
-    const i = dates.findIndex((d) => toKey(d) === today);
-    if (i > 1) {
-      stripRef.current?.scrollTo({
-        x: (CLOUD_W + spacing.sm) * (i - 1),
-        animated: false,
-      });
-    }
-  }, []);
+  // Iz konteksta, a ne iz `days` - traka pokriva ceo mesec, a ucitane su samo
+  // nedelje kroz koje je korisnik prosao.
+  const closed = new Set(Object.keys(closedDays));
 
   async function onRefresh() {
     setRefreshing(true);
@@ -78,28 +74,16 @@ export default function MenuScreen() {
         <Text style={styles.headerSub}>Sta se jede ove nedelje</Text>
       </View>
 
-      <View style={styles.dayStrip}>
-        <ScrollView
-          ref={stripRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dayStripContent}
-        >
-          {dates.map((date) => {
-            const key = toKey(date);
-            return (
-              <DayCloud
-                key={key}
-                name={DAY_NAMES[dayIndex(date)]}
-                number={date.getDate()}
-                active={key === selectedDay}
-                today={key === today}
-                onPress={() => setSelectedDay(key)}
-              />
-            );
-          })}
-        </ScrollView>
-      </View>
+      <DayStrip
+        today={today}
+        selected={selectedDay}
+        onSelect={setSelectedDay}
+        marked={marked}
+        closed={closed}
+      />
+
+      <ClosedNotice date={selectedDay} today={selectedDay === today} />
+      <Announcement screen="menu" />
 
       {loading ? (
         <View style={styles.centered}>
@@ -117,9 +101,10 @@ export default function MenuScreen() {
               <View style={styles.emptyIcon}>
                 <Ionicons name="restaurant-outline" size={34} color={colors.primary} />
               </View>
-              <Text style={styles.emptyTitle}>Jelovnik nije objavljen</Text>
+              <Text style={styles.emptyTitle}>Za ovaj dan nema jelovnika</Text>
               <Text style={styles.emptyText}>
-                Za ovaj dan jos uvek nema unetih obroka.
+                Dani sa jelovnikom su u traci iznad izrazeniji - dodirnite neki
+                od njih.
               </Text>
             </View>
           ) : (
@@ -168,14 +153,6 @@ const styles = StyleSheet.create({
     ...type.body,
     color: 'rgba(255,255,255,0.85)',
     marginTop: spacing.xs,
-  },
-  dayStrip: {
-    backgroundColor: colors.primary,
-    paddingBottom: spacing.lg,
-  },
-  dayStripContent: {
-    paddingHorizontal: spacing.xl,
-    gap: spacing.sm,
   },
   list: {
     padding: spacing.xl,

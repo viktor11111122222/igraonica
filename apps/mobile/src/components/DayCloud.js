@@ -65,7 +65,13 @@ function cloudFor(seed) {
 }
 
 // Jedan dan u traci datuma.
-export default function DayCloud({ name, number, active, today, onPress }) {
+// `filled` znaci da taj dan ima sadrzaja (jelovnik, aktivnosti) - oblak je
+// tada vidljiviji, pa se odmah vidi gde ima sta da se pogleda.
+//
+// `closed` je neradni dan. Broj se precrtava, jer to citljivo znaci "ne vazi",
+// a ne otima mesto tackici koja oznacava danasnji dan - dan ume da bude i
+// danasnji i neradni istovremeno.
+export default function DayCloud({ name, number, active, today, filled, closed, onPress }) {
   const puffs = cloudFor(number);
 
   return (
@@ -73,7 +79,7 @@ export default function DayCloud({ name, number, active, today, onPress }) {
       {/* Providnost ide na grupu, ne na pojedinacne krugove - inace bi se
           njihovi preklopi videli kao svetlije mrlje. */}
       <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${CLOUD_W} ${CLOUD_H}`}>
-        <G opacity={active ? 1 : 0.18}>
+        <G opacity={active ? 1 : filled ? 0.45 : 0.18}>
           <Rect {...BODY} fill={colors.surface} />
           {puffs.map((p, i) => (
             <Circle key={i} cx={p.cx} cy={p.cy} r={p.r} fill={colors.surface} />
@@ -83,7 +89,15 @@ export default function DayCloud({ name, number, active, today, onPress }) {
 
       <View style={styles.content}>
         <Text style={[styles.name, active && styles.nameActive]}>{name}</Text>
-        <Text style={[styles.number, active && styles.numberActive]}>{number}</Text>
+        <Text
+          style={[
+            styles.number,
+            active && styles.numberActive,
+            closed && styles.numberClosed,
+          ]}
+        >
+          {number}
+        </Text>
         {today && <View style={[styles.dot, active && styles.dotActive]} />}
       </View>
     </PressableScale>
@@ -109,6 +123,7 @@ const styles = StyleSheet.create({
   nameActive: { color: colors.textMuted },
   number: { ...type.heading, color: colors.textOnPrimary, marginTop: 2 },
   numberActive: { color: colors.text },
+  numberClosed: { textDecorationLine: 'line-through' },
   dot: {
     width: 5,
     height: 5,

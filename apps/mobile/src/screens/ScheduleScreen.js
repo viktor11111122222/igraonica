@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,29 +8,35 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { apiRequest } from '../utils/api';
-import { dayIndex, monthDates, toKey, todayKey } from '../utils/date';
-import DayCloud, { CLOUD_W } from '../components/DayCloud';
+import { dayIndex, fromKey, monthDates, toKey } from '../utils/date';
+import { useDaySelection } from '../hooks/useDay';
+import DayStrip from '../components/DayStrip';
+import Announcement from '../components/Announcement';
+import ClosedNotice from '../components/ClosedNotice';
+import { useClosedDays } from '../context/ClosedDaysContext';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
 // Backend koristi 0 = ponedeljak (ne JS konvenciju gde je 0 = nedelja).
-const DAYS = [
-  { i: 0, short: 'Pon', long: 'Ponedeljak' },
-  { i: 1, short: 'Uto', long: 'Utorak' },
-  { i: 2, short: 'Sre', long: 'Sreda' },
-  { i: 3, short: 'Cet', long: 'Cetvrtak' },
-  { i: 4, short: 'Pet', long: 'Petak' },
-  { i: 5, short: 'Sub', long: 'Subota' },
-  { i: 6, short: 'Ned', long: 'Nedelja' },
+// Imena stoje u akuzativu jer se koriste samo u recenici "Za <dan> nije
+// zakazana...". Zenski dani tu menjaju oblik (sreda -> sredu), muski ne.
+const DAY_NAMES_ACC = [
+  'ponedeljak',
+  'utorak',
+  'sredu',
+  'cetvrtak',
+  'petak',
+  'subotu',
+  'nedelju',
 ];
 
 export default function ScheduleScreen() {
   const [week, setWeek] = useState({});
-  const [selectedDay, setSelectedDay] = useState(todayKey());
+  const { today, selected: selectedDay, setSelected: setSelectedDay } =
+    useDaySelection();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const stripRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -43,11 +49,7 @@ export default function ScheduleScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  useAutoRefresh(load);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -55,25 +57,26 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   }
 
-  const dates = monthDates();
-  const today = todayKey();
+  const { isClosed, closedDays } = useClosedDays();
 
   // Raspored se ponavlja svake nedelje, pa datum iz trake svodimo na dan
   // u nedelji i tim kljucem citamo aktivnosti.
-  const selectedDate = dates.find((d) => toKey(d) === selectedDay) || new Date();
-  const day = dayIndex(selectedDate);
-  const activities = week[day] || [];
+  const day = dayIndex(fromKey(selectedDay));
+  const zatvoreno = isClosed(selectedDay);
+  // Neradnog dana aktivnosti se ne odrzavaju, pa se i ne prikazuju - inace bi
+  // roditelj video "Mali kuvari 10:30" ispod obavestenja da se ne dolazi.
+  const activities = zatvoreno ? [] : week[day] || [];
 
-  // Mesec je duzi od ekrana, pa traku pomeramo na danasnji dan.
-  useEffect(() => {
-    const i = dates.findIndex((d) => toKey(d) === today);
-    if (i > 1) {
-      stripRef.current?.scrollTo({
-        x: (CLOUD_W + spacing.sm) * (i - 1),
-        animated: false,
-      });
-    }
-  }, []);
+  // Raspored se ponavlja nedeljno, pa se oznacava svaki datum ciji dan u
+  // nedelji ima aktivnosti. Neradni dani se ne oznacavaju.
+  const marked = new Set(
+    monthDates()
+      .filter((d) => (week[dayIndex(d)] || []).length > 0 && !isClosed(toKey(d)))
+      .map(toKey)
+  );
+
+  // Traka posebno oznacava neradne dane, da se vide i pre nego sto se dodirnu.
+  const closed = new Set(Object.keys(closedDays));
 
   return (
     <View style={styles.container}>
@@ -82,28 +85,16 @@ export default function ScheduleScreen() {
         <Text style={styles.headerSub}>Nedeljne aktivnosti</Text>
       </View>
 
-      <View style={styles.dayStrip}>
-        <ScrollView
-          ref={stripRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dayStripContent}
-        >
-          {dates.map((date) => {
-            const key = toKey(date);
-            return (
-              <DayCloud
-                key={key}
-                name={DAYS[dayIndex(date)].short}
-                number={date.getDate()}
-                active={key === selectedDay}
-                today={key === today}
-                onPress={() => setSelectedDay(key)}
-              />
-            );
-          })}
-        </ScrollView>
-      </View>
+      <DayStrip
+        today={today}
+        selected={selectedDay}
+        onSelect={setSelectedDay}
+        marked={marked}
+        closed={closed}
+      />
+
+      <ClosedNotice date={selectedDay} today={selectedDay === today} />
+      <Announcement screen="schedule" />
 
       {loading ? (
         <View style={styles.centered}>
@@ -116,14 +107,16 @@ export default function ScheduleScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {activities.length === 0 ? (
+          {/* Neradnog dana obavestenje iznad vec sve objasnjava - "nije
+              zakazana nijedna aktivnost" bi tu samo zbunjivalo. */}
+          {zatvoreno ? null : activities.length === 0 ? (
             <View style={styles.empty}>
               <View style={styles.emptyIcon}>
                 <Ionicons name="calendar-outline" size={34} color={colors.primary} />
               </View>
               <Text style={styles.emptyTitle}>Nema aktivnosti</Text>
               <Text style={styles.emptyText}>
-                Za {DAYS[day].long.toLowerCase()} nije zakazana nijedna aktivnost.
+                Za {DAY_NAMES_ACC[day]} nije zakazana nijedna aktivnost.
               </Text>
             </View>
           ) : (
@@ -176,8 +169,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     marginTop: spacing.xs,
   },
-  dayStrip: { backgroundColor: colors.primary, paddingBottom: spacing.lg },
-  dayStripContent: { paddingHorizontal: spacing.xl, gap: spacing.sm },
   list: {
     padding: spacing.xl,
     gap: spacing.md,

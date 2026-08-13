@@ -302,6 +302,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     alignSelf: 'center',
+    // QR dugme vise ne strci iz trake (stoji u njenoj kupoli), pa navigator
+    // sam odvaja sadrzaj - dodatni razmak nije potreban.
     marginBottom: spacing.xxl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,

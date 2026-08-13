@@ -1,16 +1,25 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useSettings } from '../context/SettingsContext';
+import Announcement from '../components/Announcement';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
 import HoursRing from '../components/HoursRing';
 import { ageInYears, yearsLabel } from '../utils/date';
+import { summarize } from '../utils/packages';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
-export default function HomeScreen({ navigation }) {
+// Bez suvisne decimale: 12,5 h ali 20 h.
+const num = (value) =>
+  (Math.round((Number(value) || 0) * 10) / 10).toString().replace('.', ',');
+const hours = (value) => `${num(value)} h`;
+
+export default function PackageScreen({ navigation }) {
   const { user, logout } = useAuth();
+  const { settings } = useSettings();
   const [packages, setPackages] = useState([]);
   const [children, setChildren] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,11 +33,9 @@ export default function HomeScreen({ navigation }) {
     if (kids) setChildren(kids.children || []);
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData])
-  );
+  // Admin dodeli paket ili koriguje sate, a roditelj to vidi bez izlaska i
+  // povratka na ekran.
+  useAutoRefresh(loadData);
 
   async function onRefresh() {
     setRefreshing(true);
@@ -36,17 +43,16 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   }
 
-  const activePackage = packages.find(
-    (p) =>
-      p.isActive &&
-      new Date(p.expiresAt) > new Date() &&
-      Number(p.remainingHours) > 0
-  );
+  // Zbir preko svih paketa koji vaze, ne samo preko jednog.
+  const sum = summarize(packages);
 
-  const remaining = activePackage ? Number(activePackage.remainingHours) : 0;
-  const total = activePackage ? Number(activePackage.package.totalHours) : 0;
-  const progress = total > 0 ? remaining / total : 0;
-  const spent = Math.max(0, total - remaining);
+  const contact = [
+    { icon: 'time-outline', value: settings.working_hours },
+    { icon: 'call-outline', value: settings.club_phone },
+    { icon: 'location-outline', value: settings.club_address },
+    { icon: 'mail-outline', value: settings.club_email },
+  ].filter((item) => item.value);
+
 
   return (
     <ScrollView
@@ -74,32 +80,78 @@ export default function HomeScreen({ navigation }) {
         </PressableScale>
       </View>
 
-      {activePackage ? (
+      {sum.hasAny ? (
         <View style={styles.card}>
           <View style={styles.packageTop}>
-            <HoursRing progress={progress}>
-              <Text style={styles.ringHours}>{remaining.toFixed(1)}</Text>
-              <Text style={styles.ringUnit}>sati</Text>
+            {/* U prstenu stoji udeo, ne sati - sati su ispisani pored, pa bi
+                isti broj dvaput bio suvisan. Udeo se poklapa sa lukom. */}
+            <HoursRing progress={sum.progress}>
+              <Text style={styles.ringHours}>{Math.round(sum.progress * 100)}%</Text>
+              <Text style={styles.ringUnit}>preostalo</Text>
             </HoursRing>
 
             <View style={styles.packageInfo}>
-              <Text style={styles.packageLabel}>Aktivan paket</Text>
-              <Text style={styles.packageName}>{activePackage.package.name}</Text>
-              <View style={styles.metaRow}>
-                <Ionicons name="hourglass-outline" size={14} color={colors.textFaint} />
-                <Text style={styles.meta}>
-                  Iskorisceno {spent.toFixed(1)} od {total}h
-                </Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textFaint} />
-                <Text style={styles.meta}>
-                  Vazi do{' '}
-                  {new Date(activePackage.expiresAt).toLocaleDateString('sr-RS')}
-                </Text>
-              </View>
+              {/* Namerno ne pise naziv paketa: roditelj moze da ima vise
+                  paketa, a i dokupljuje ih, pa jedan naziv ne govori nista.
+                  Umesto toga stoji zbir sati iz svih paketa koji jos vaze. */}
+              <Text style={styles.packageLabel}>Ukupno sati</Text>
+              <Text style={styles.packageName}>{hours(sum.total)}</Text>
+              {/* Broj paketa prati zbir iznad, pa se racunaju svi koji vaze -
+                  i oni kojima su sati potroseni, jer i oni ulaze u ukupno. */}
+              {sum.packages.length > 1 && (
+                <View style={styles.metaRow}>
+                  <Ionicons name="albums-outline" size={14} color={colors.textFaint} />
+                  <Text style={styles.meta}>iz {sum.packages.length} paketa</Text>
+                </View>
+              )}
+              {/* Kada ima vise paketa, vazan je onaj koji prvi istice. */}
+              {sum.expiresAt && (
+                <View style={styles.metaRow}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.textFaint} />
+                  <Text style={styles.meta}>
+                    {sum.usableCount > 1 ? 'Prvi istice ' : 'Vazi do '}
+                    {new Date(sum.expiresAt).toLocaleDateString('sr-RS')}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
+
+          {/* Ukupno stoji gore pored prstena, pa se ovde ne ponavlja. */}
+          <View style={styles.sums}>
+            <View style={styles.sumCell}>
+              <Text style={[styles.sumValue, { color: colors.accentText }]}>
+                {hours(sum.spent)}
+              </Text>
+              <Text style={styles.sumLabel}>iskorisceno</Text>
+            </View>
+            <View style={styles.sumDivider} />
+            <View style={styles.sumCell}>
+              <Text style={[styles.sumValue, { color: colors.success }]}>
+                {hours(sum.remaining)}
+              </Text>
+              <Text style={styles.sumLabel}>preostalo</Text>
+            </View>
+          </View>
+
+          {/* Kada ima vise paketa, zbir sam po sebi nije dovoljan. */}
+          {sum.packages.length > 1 && (
+            <View style={styles.breakdown}>
+              {sum.packages.map((p) => (
+                <View key={p.id} style={styles.breakdownRow}>
+                  <Text style={styles.breakdownName} numberOfLines={1}>
+                    {p.package.name}
+                  </Text>
+                  <Text style={styles.breakdownHours}>
+                    {hours(p.remainingHours)} / {hours(p.totalHours)}
+                  </Text>
+                  <Text style={styles.breakdownDate}>
+                    do {new Date(p.expiresAt).toLocaleDateString('sr-RS')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       ) : (
         <View style={[styles.card, styles.emptyCard]}>
@@ -113,6 +165,10 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
       )}
+
+      {/* Stoji ispod kartice paketa jer ona negativnom marginom ulazi u
+          zaglavlje, pa iznad nje nema mesta. */}
+      <Announcement screen="package" />
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Moja deca</Text>
@@ -180,6 +236,24 @@ export default function HomeScreen({ navigation }) {
           </PressableScale>
         ))
       )}
+
+      {/* Kontakt igraonice. Sve dolazi iz podesavanja - prazna polja se
+          preskacu, pa kartice nema ako admin nista nije uneo. */}
+      {contact.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{settings.club_name || 'Kids club'}</Text>
+          </View>
+          <View style={styles.contactCard}>
+            {contact.map((item) => (
+              <View key={item.icon} style={styles.contactRow}>
+                <Ionicons name={item.icon} size={16} color={colors.primary} />
+                <Text style={styles.contactText}>{item.value}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -219,6 +293,37 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   packageTop: { flexDirection: 'row', alignItems: 'center' },
+
+  sums: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  sumCell: { flex: 1, alignItems: 'center' },
+  sumValue: { ...type.heading, color: colors.text },
+  sumLabel: {
+    ...type.caption,
+    color: colors.textFaint,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sumDivider: { width: 1, height: 28, backgroundColor: colors.border },
+
+  breakdown: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.sm,
+  },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  breakdownName: { ...type.caption, color: colors.text, flex: 1 },
+  breakdownHours: { ...type.caption, color: colors.textMuted },
+  breakdownDate: { ...type.caption, color: colors.textFaint },
   ringHours: { ...type.title, color: colors.primaryDarker },
   ringUnit: { ...type.caption, color: colors.textFaint, marginTop: -2 },
   packageInfo: { flex: 1, marginLeft: spacing.xl },
@@ -228,7 +333,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  packageName: { ...type.heading, color: colors.text, marginTop: 2 },
+  packageName: { ...type.title, color: colors.text, marginTop: 2 },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,6 +408,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   ctaText: { ...type.label, color: colors.textOnAccent },
+
+  contactCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.xl,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadow.card,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  contactText: { ...type.body, color: colors.textMuted, flex: 1 },
 
   childRow: {
     flexDirection: 'row',

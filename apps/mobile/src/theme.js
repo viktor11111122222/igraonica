@@ -1,4 +1,4 @@
-// Design tokens za Igraonica.
+// Design tokens za Kids club.
 // Jedan izvor istine za boje, razmake i animacije.
 
 export const colors = {
@@ -78,23 +78,23 @@ export const motion = {
   stagger: 40,
 };
 
+// boxShadow radi na iOS-u, Androidu (9+) i webu, pa zamenjuje i stare
+// shadow* props (samo iOS) i elevation (samo Android).
+// Pazi na blur: RN racuna shadowRadius = blurRadius / 2, pa je blur ovde
+// dupla vrednost starog shadowRadius-a da bi senka ostala ista.
+// Providnost ide u samu boju, posto boxShadow nema shadowOpacity.
 export const shadow = {
   card: {
-    shadowColor: '#1f2a37',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    boxShadow: '0px 2px 20px rgba(31, 42, 55, 0.06)',
   },
   raised: {
-    shadowColor: '#1f2a37',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    elevation: 8,
+    boxShadow: '0px 6px 28px rgba(31, 42, 55, 0.14)',
   },
 };
 
-export const TAB_BAR_HEIGHT = 70;
+// Visina trake se namerno ne drzi ovde: nav sam sebi racuna visinu (traka +
+// kupola nad QR dugmetom + sigurna zona), a navigator je izmeri i za toliko
+// odvoji sadrzaj ekrana. Konstanta sa fiksnim brojem bi se razisla sa stvarnom
+// visinom cim se oblik promeni.
 
-export default { colors, radius, spacing, type, font, motion, shadow, TAB_BAR_HEIGHT };
+export default { colors, radius, spacing, type, font, motion, shadow };

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -11,10 +12,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { font } from '../theme';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
+  const { settings } = useSettings();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,14 +38,22 @@ export default function LoginScreen({ navigation }) {
     }
   }
 
+  const clubName = (settings.club_name || 'Kids club').trim().split(/\s+/);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Logo umesto ispisanog naziva. Ako se naziv u podesavanjima promeni,
+          ostaje kao alternativni tekst za citace ekrana. */}
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>Kids</Text>
-        <Text style={styles.logoSubtext}>club</Text>
+        <Image
+          source={require('../../assets/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+          accessibilityLabel={clubName.join(' ')}
+        />
       </View>
 
       <View style={styles.form}>
@@ -103,6 +114,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: 50,
+  },
+  logo: {
+    width: 260,
+    height: 142,
   },
   logoText: {
     fontSize: 48,
