@@ -18,6 +18,15 @@ const TEST_PARENT = {
 };
 
 async function cleanDB() {
+  // Treca brana (posle tests/env.js i jest.config.js): cleanDB brise sve, pa
+  // se pred svako brisanje jos jednom proverava da je baza zaista testna.
+  const dbName = (process.env.DATABASE_URL || '').split('/').pop().split('?')[0];
+  if (!dbName.includes('test')) {
+    throw new Error(
+      `cleanDB odbija da obrise bazu "${dbName}" - ime baze mora da sadrzi "test".`
+    );
+  }
+
   await prisma.hourAdjustment.deleteMany();
   await prisma.visit.deleteMany();
   await prisma.userPackage.deleteMany();
@@ -25,6 +34,7 @@ async function cleanDB() {
   await prisma.blogPost.deleteMany();
   await prisma.menuItem.deleteMany();
   await prisma.activity.deleteMany();
+  await prisma.closedDay.deleteMany();
   await prisma.reservation.deleteMany();
   await prisma.setting.deleteMany();
   await prisma.package.deleteMany();

@@ -2,21 +2,73 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const {
+  CATALOG,
+  DEFAULTS,
+  PUBLIC_KEYS,
+  cleanAnnouncementTabs,
+} = require('../config/settings');
 
 const router = express.Router();
 
-// GET /api/settings - admin vidi sva podesavanja
+// GET /api/settings/public - javno, podesavanja koja mobilna aplikacija cita.
+// Mora pre '/:key', inace bi ta ruta uhvatila "public" kao kljuc.
+// Vraca mapu kljuc -> vrednost, sa podrazumevanim vrednostima za sve sto jos
+// nije upisano u bazu, da klijent nikad ne dobije prazno.
+router.get('/public', async (req, res) => {
+  try {
+    const rows = await prisma.setting.findMany({
+      where: { key: { in: PUBLIC_KEYS } },
+    });
+
+    const settings = {};
+    for (const key of PUBLIC_KEYS) settings[key] = DEFAULTS[key];
+    for (const row of rows) settings[row.key] = row.value;
+
+    res.json({ settings });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Greska na serveru.' });
+  }
+});
+
+// GET /api/settings - admin vidi sva podesavanja.
+// Kljucevi iz kataloga se uvek vracaju, i kada jos nisu upisani u bazu -
+// tada nose podrazumevanu vrednost i `stored: false`.
 router.get(
   '/',
   protect,
   authorize('ADMIN', 'SUPERADMIN'),
   async (req, res) => {
     try {
-      const settings = await prisma.setting.findMany({
-        orderBy: { key: 'asc' },
+      const rows = await prisma.setting.findMany({ orderBy: { key: 'asc' } });
+      const byKey = new Map(rows.map((r) => [r.key, r]));
+
+      const fromCatalog = CATALOG.map((item) => {
+        const row = byKey.get(item.key);
+        return {
+          key: item.key,
+          value: row ? row.value : item.value,
+          description: row?.description || item.description,
+          isPublic: item.public,
+          stored: !!row,
+          updatedAt: row?.updatedAt || null,
+        };
       });
 
-      res.json({ settings });
+      // Kljucevi koje je neko dodao rucno, van kataloga.
+      const extra = rows
+        .filter((r) => !DEFAULTS.hasOwnProperty(r.key))
+        .map((r) => ({
+          key: r.key,
+          value: r.value,
+          description: r.description,
+          isPublic: false,
+          stored: true,
+          updatedAt: r.updatedAt,
+        }));
+
+      res.json({ settings: [...fromCatalog, ...extra] });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Greska na serveru.' });
@@ -53,7 +105,9 @@ router.patch(
   protect,
   authorize('ADMIN', 'SUPERADMIN'),
   [
-    body('value').notEmpty().withMessage('Vrednost je obavezna.'),
+    // Prazna vrednost je dozvoljena: telefon, adresa i obavestenje se brisu
+    // tako sto se ostave prazni.
+    body('value').isString().withMessage('Vrednost mora biti tekst.'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -62,20 +116,32 @@ router.patch(
     }
 
     try {
-      const setting = await prisma.setting.findUnique({
-        where: { key: req.params.key },
-      });
+      const { key } = req.params;
+      const setting = await prisma.setting.findUnique({ where: { key } });
 
-      if (!setting) {
+      // Kljuc iz kataloga postoji i pre nego sto je ijednom sacuvan, pa se
+      // prvo cuvanje mora poneti kao kreiranje, a ne kao 404.
+      const known = CATALOG.find((c) => c.key === key);
+      if (!setting && !known) {
         return res.status(404).json({ message: 'Podesavanje nije pronadjeno.' });
       }
 
-      const updated = await prisma.setting.update({
-        where: { key: req.params.key },
-        data: {
-          value: req.body.value,
-          description: req.body.description !== undefined ? req.body.description : setting.description,
-        },
+      const description =
+        req.body.description !== undefined
+          ? req.body.description
+          : setting?.description || known?.description || null;
+
+      // Spisak ekrana za obavestenje se cisti od imena koja vise ne postoje,
+      // da stara vrednost ne bi ostala u bazi kao nevidljivo smece.
+      const value =
+        key === 'announcement_tabs'
+          ? cleanAnnouncementTabs(req.body.value)
+          : req.body.value;
+
+      const updated = await prisma.setting.upsert({
+        where: { key },
+        update: { value, description },
+        create: { key, value, description },
       });
 
       res.json({ setting: updated });
@@ -93,7 +159,7 @@ router.post(
   authorize('ADMIN', 'SUPERADMIN'),
   [
     body('key').notEmpty().withMessage('Kljuc je obavezan.'),
-    body('value').notEmpty().withMessage('Vrednost je obavezna.'),
+    body('value').isString().withMessage('Vrednost mora biti tekst.'),
   ],
   async (req, res) => {
     const errors = validationResult(req);

@@ -49,7 +49,7 @@ beforeAll(async () => {
   const pkgRes = await request(app)
     .post('/api/packages')
     .set('Authorization', `Bearer ${adminToken}`)
-    .send({ name: 'Test 10h', totalHours: 10, price: 3000, validityDays: 30 });
+    .send({ name: 'Test 10h', totalHours: 10, validityDays: 30 });
   packageId = pkgRes.body.package.id;
 
   const assignRes = await request(app)
@@ -222,6 +222,7 @@ describe('POST /api/visits/check-in', () => {
       data: {
         userId: emptyParent.id,
         packageId,
+        totalHours: 10,
         remainingHours: 0,
         expiresAt,
       },
@@ -260,6 +261,7 @@ describe('POST /api/visits/check-in', () => {
       data: {
         userId: expiredParent.id,
         packageId,
+        totalHours: 10,
         remainingHours: 5,
         expiresAt: expiredDate,
       },
@@ -696,6 +698,7 @@ describe('Check-in bira ispravan paket', () => {
         data: {
           userId: smartParentId,
           packageId,
+          totalHours: 10,
           remainingHours: 3,
           expiresAt: soon,
         },
@@ -704,6 +707,7 @@ describe('Check-in bira ispravan paket', () => {
         data: {
           userId: smartParentId,
           packageId,
+          totalHours: 10,
           remainingHours: 8,
           expiresAt: later,
         },
@@ -735,6 +739,7 @@ describe('Check-in bira ispravan paket', () => {
       data: {
         userId: smartParentId,
         packageId,
+        totalHours: 50,
         remainingHours: 50,
         expiresAt: expired,
       },
@@ -746,6 +751,7 @@ describe('Check-in bira ispravan paket', () => {
       data: {
         userId: smartParentId,
         packageId,
+        totalHours: 10,
         remainingHours: 0,
         expiresAt: future,
       },

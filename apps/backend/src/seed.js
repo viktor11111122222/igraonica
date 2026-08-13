@@ -16,7 +16,7 @@ const seed = async () => {
       email: 'admin@igraonica.com',
       password: hashedPassword,
       firstName: 'Admin',
-      lastName: 'Igraonica',
+      lastName: 'Kids club',
       role: 'ADMIN',
     },
   });

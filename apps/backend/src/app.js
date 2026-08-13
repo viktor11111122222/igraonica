@@ -13,6 +13,7 @@ const blogRoutes = require('./routes/blog');
 const uploadRoutes = require('./routes/upload');
 const menuRoutes = require('./routes/menu');
 const scheduleRoutes = require('./routes/schedule');
+const closedDaysRoutes = require('./routes/closedDays');
 const reservationsRoutes = require('./routes/reservations');
 const dashboardRoutes = require('./routes/dashboard');
 
@@ -21,6 +22,15 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Jelovnik, raspored i obavestenja se menjaju iz admina i moraju odmah da se
+// vide u aplikaciji. Express podrazumevano salje ETag, pa klijent (iOS ume da
+// kesira odgovor bez Cache-Control zaglavlja) moze da posluzi stari podatak.
+// Zato se odgovori API-ja izricito ne kesiraju.
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -36,6 +46,7 @@ app.use('/api/blog', blogRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/closed-days', closedDaysRoutes);
 app.use('/api/reservations', reservationsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

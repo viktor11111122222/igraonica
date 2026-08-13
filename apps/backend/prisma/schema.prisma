@@ -88,12 +88,13 @@ model Child {
   @@map("children")
 }
 
+// Cena se ne vodi ovde - naplata ide preko racuna, van aplikacije.
+// Aplikacija sluzi samo za pracenje sati.
 model Package {
   id           String   @id @default(uuid())
   name         String
   description  String?
   totalHours   Decimal  @map("total_hours") @db.Decimal(10, 2)
-  price        Decimal  @db.Decimal(10, 2)
   validityDays Int      @map("validity_days")
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
@@ -105,9 +106,14 @@ model Package {
 }
 
 model UserPackage {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  packageId      String   @map("package_id")
+  id        String @id @default(uuid())
+  userId    String @map("user_id")
+  packageId String @map("package_id")
+
+  // Ukupan broj sati se upisuje u trenutku dodele i vise se ne menja.
+  // Da se cita iz Package.totalHours, izmena paketa u adminu bi unazad
+  // pokvarila racunicu vec dodeljenih paketa ("iskorisceno X od Y").
+  totalHours     Decimal  @map("total_hours") @db.Decimal(10, 2)
   remainingHours Decimal  @map("remaining_hours") @db.Decimal(10, 2)
   purchasedAt    DateTime @default(now()) @map("purchased_at")
   expiresAt      DateTime @map("expires_at")
@@ -229,6 +235,21 @@ model Setting {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+// Dan kada igraonica ne radi (rodjendan, privatna proslava, praznik...).
+// Jedan red po datumu - zato @unique: dan je ili neradni ili nije.
+// `reason` je kratak tekst koji roditelj vidi u aplikaciji, pa nije enum -
+// razlozi su previse raznovrsni da bi se unapred pobrojali.
+model ClosedDay {
+  id        String   @id @default(uuid())
+  date      DateTime @unique @db.Date
+  reason    String
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("closed_days")
 }
 
 model HourAdjustment {

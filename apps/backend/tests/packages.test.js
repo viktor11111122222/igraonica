@@ -42,14 +42,13 @@ describe('POST /api/packages', () => {
         name: 'Paket 10 sati',
         description: 'Osnovni paket',
         totalHours: 10,
-        price: 3000,
         validityDays: 30,
       });
 
     expect(res.status).toBe(201);
     expect(res.body.package.name).toBe('Paket 10 sati');
     expect(Number(res.body.package.totalHours)).toBe(10);
-    expect(Number(res.body.package.price)).toBe(3000);
+    expect(res.body.package.description).toBe('Osnovni paket');
     expect(res.body.package.validityDays).toBe(30);
     packageId = res.body.package.id;
   });
@@ -61,7 +60,6 @@ describe('POST /api/packages', () => {
       .send({
         name: 'Mesecni paket',
         totalHours: 40,
-        price: 8000,
         validityDays: 30,
       });
 
@@ -76,7 +74,6 @@ describe('POST /api/packages', () => {
       .send({
         name: 'Hack paket',
         totalHours: 100,
-        price: 0,
         validityDays: 365,
       });
 
@@ -100,7 +97,6 @@ describe('POST /api/packages', () => {
       .send({
         name: 'Negativan',
         totalHours: -5,
-        price: 1000,
         validityDays: 30,
       });
 
@@ -130,18 +126,18 @@ describe('PATCH /api/packages/:id', () => {
     const res = await request(app)
       .patch(`/api/packages/${packageId}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'Paket 10h (azurirano)', price: 3500 });
+      .send({ name: 'Paket 10h (azurirano)', validityDays: 45 });
 
     expect(res.status).toBe(200);
     expect(res.body.package.name).toBe('Paket 10h (azurirano)');
-    expect(Number(res.body.package.price)).toBe(3500);
+    expect(res.body.package.validityDays).toBe(45);
   });
 
   test('parent ne moze da azurira paket', async () => {
     const res = await request(app)
       .patch(`/api/packages/${packageId}`)
       .set('Authorization', `Bearer ${parentToken}`)
-      .send({ price: 0 });
+      .send({ name: 'Pokusaj izmene' });
 
     expect(res.status).toBe(403);
   });
@@ -166,7 +162,6 @@ describe('DELETE /api/packages/:id', () => {
       .send({
         name: 'Za brisanje',
         totalHours: 5,
-        price: 1000,
         validityDays: 7,
       });
     deletePackageId = res.body.package.id;
@@ -319,6 +314,21 @@ describe('GET /api/packages/user/:userId', () => {
 // ==================== HOUR ADJUSTMENTS ====================
 
 describe('POST /api/packages/:userPackageId/adjust-hours', () => {
+  // Blok sam sebi pravi paket. Ranije je koristio userPackageId koji postavlja
+  // test iz sasvim drugog describe-a, pa bi svaki raniji propust ovde ispao kao
+  // 404 na nepostojecem paketu - greska koja ne govori nista o pravom uzroku.
+  // Sati unutar bloka se i dalje nadovezuju (10 -> 15 -> 12 -> 0), jer se bas
+  // to i proverava: da se korekcije slazu jedna na drugu.
+  beforeAll(async () => {
+    const res = await request(app)
+      .post('/api/packages/assign')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ userId: parentId, packageId });
+
+    expect(res.status).toBe(201);
+    userPackageId = res.body.userPackage.id;
+  });
+
   test('admin dodaje sate', async () => {
     const res = await request(app)
       .post(`/api/packages/${userPackageId}/adjust-hours`)

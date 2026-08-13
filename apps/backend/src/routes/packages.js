@@ -30,7 +30,6 @@ router.post(
   [
     body('name').notEmpty().withMessage('Naziv paketa je obavezan.'),
     body('totalHours').isFloat({ gt: 0 }).withMessage('Ukupan broj sati mora biti veci od 0.'),
-    body('price').isFloat({ min: 0 }).withMessage('Cena mora biti 0 ili veca.'),
     body('validityDays').isInt({ gt: 0 }).withMessage('Broj dana vazenja mora biti veci od 0.'),
   ],
   async (req, res) => {
@@ -40,10 +39,10 @@ router.post(
     }
 
     try {
-      const { name, description, totalHours, price, validityDays } = req.body;
+      const { name, description, totalHours, validityDays } = req.body;
 
       const pkg = await prisma.package.create({
-        data: { name, description, totalHours, price, validityDays },
+        data: { name, description, totalHours, validityDays },
       });
 
       res.status(201).json({ package: pkg });
@@ -62,7 +61,6 @@ router.patch(
   [
     body('name').optional().notEmpty().withMessage('Naziv ne moze biti prazan.'),
     body('totalHours').optional().isFloat({ gt: 0 }).withMessage('Sati moraju biti veci od 0.'),
-    body('price').optional().isFloat({ min: 0 }).withMessage('Cena mora biti 0 ili veca.'),
     body('validityDays').optional().isInt({ gt: 0 }).withMessage('Dani moraju biti veci od 0.'),
   ],
   async (req, res) => {
@@ -72,7 +70,7 @@ router.patch(
     }
 
     try {
-      const allowedFields = ['name', 'description', 'totalHours', 'price', 'validityDays', 'isActive'];
+      const allowedFields = ['name', 'description', 'totalHours', 'validityDays', 'isActive'];
       const data = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
@@ -153,10 +151,13 @@ router.post(
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + pkg.validityDays);
 
+      // `totalHours` se snima ovde i ostaje nepromenjen do kraja - kasnija
+      // izmena paketa ne sme unazad da promeni racunicu ovog roditelja.
       const userPackage = await prisma.userPackage.create({
         data: {
           userId,
           packageId,
+          totalHours: pkg.totalHours,
           remainingHours: pkg.totalHours,
           expiresAt,
           notes,
@@ -245,10 +246,14 @@ router.post(
       const hoursBefore = Number(userPackage.remainingHours);
       const hoursAfter = Math.max(0, hoursBefore + hours);
 
+      // Rucnim dodavanjem preostalo moze da predje ukupno. Tada se podize i
+      // ukupno, da "iskorisceno = ukupno - preostalo" nikad ne bude negativno.
+      const totalHours = Math.max(Number(userPackage.totalHours), hoursAfter);
+
       const [updated, adjustment] = await prisma.$transaction([
         prisma.userPackage.update({
           where: { id: req.params.userPackageId },
-          data: { remainingHours: hoursAfter },
+          data: { remainingHours: hoursAfter, totalHours },
           include: { package: true },
         }),
         prisma.hourAdjustment.create({

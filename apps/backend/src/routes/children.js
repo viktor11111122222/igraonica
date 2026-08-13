@@ -51,6 +51,7 @@ router.get('/all', authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
         include: {
           parent: {
             omit: { password: true },
+            include: { userPackages: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -60,8 +61,25 @@ router.get('/all', authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
       prisma.child.count({ where }),
     ]);
 
+    // Osoblju je najvaznije da odmah vidi da li roditelj ima sati - bez toga
+    // dete ne moze da se prijavi. Zato ide uz svako dete, a ne tek na
+    // stranici roditelja.
+    const now = new Date();
+    const withHours = children.map((child) => {
+      const remaining = child.parent.userPackages
+        .filter((up) => up.isActive && new Date(up.expiresAt) > now)
+        .reduce((sum, up) => sum + Number(up.remainingHours), 0);
+
+      const { userPackages, ...parent } = child.parent;
+      return {
+        ...child,
+        parent,
+        parentRemainingHours: Math.round(remaining * 100) / 100,
+      };
+    });
+
     res.json({
-      children,
+      children: withHours,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (err) {

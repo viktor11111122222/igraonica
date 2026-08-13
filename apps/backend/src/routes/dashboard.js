@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const { startOfDay, endOfDay, addDays, toKey } = require('../utils/day');
 
 const router = express.Router();
 
@@ -10,10 +11,9 @@ router.use(authorize('ADMIN', 'SUPERADMIN'));
 // GET /api/dashboard/stats - glavne statistike
 router.get('/stats', async (req, res) => {
   try {
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setUTCHours(23, 59, 59, 999);
+    // Lokalni dan, ne UTC: "danas" mora da pocne u ponoc po nasem vremenu.
+    const todayStart = startOfDay();
+    const todayEnd = endOfDay();
 
     const [totalUsers, totalChildren, activeKids, pendingCheckouts, todayVisits, todayHours] = await Promise.all([
       prisma.user.count({ where: { role: 'PARENT', isActive: true } }),
@@ -76,9 +76,7 @@ router.get('/chart/visits', async (req, res) => {
     const period = req.query.period || 'week';
     const days = period === 'month' ? 30 : 7;
 
-    const startDate = new Date();
-    startDate.setUTCDate(startDate.getUTCDate() - days + 1);
-    startDate.setUTCHours(0, 0, 0, 0);
+    const startDate = startOfDay(addDays(new Date(), -days + 1));
 
     const visits = await prisma.visit.findMany({
       where: { checkedInAt: { gte: startDate } },
@@ -87,14 +85,11 @@ router.get('/chart/visits', async (req, res) => {
 
     const chart = {};
     for (let i = 0; i < days; i++) {
-      const d = new Date(startDate);
-      d.setUTCDate(startDate.getUTCDate() + i);
-      const key = d.toISOString().split('T')[0];
-      chart[key] = 0;
+      chart[toKey(addDays(startDate, i))] = 0;
     }
 
     visits.forEach((v) => {
-      const key = new Date(v.checkedInAt).toISOString().split('T')[0];
+      const key = toKey(v.checkedInAt);
       if (chart[key] !== undefined) {
         chart[key]++;
       }
@@ -115,9 +110,7 @@ router.get('/chart/hours', async (req, res) => {
     const period = req.query.period || 'week';
     const days = period === 'month' ? 30 : 7;
 
-    const startDate = new Date();
-    startDate.setUTCDate(startDate.getUTCDate() - days + 1);
-    startDate.setUTCHours(0, 0, 0, 0);
+    const startDate = startOfDay(addDays(new Date(), -days + 1));
 
     const visits = await prisma.visit.findMany({
       where: {
@@ -129,14 +122,11 @@ router.get('/chart/hours', async (req, res) => {
 
     const chart = {};
     for (let i = 0; i < days; i++) {
-      const d = new Date(startDate);
-      d.setUTCDate(startDate.getUTCDate() + i);
-      const key = d.toISOString().split('T')[0];
-      chart[key] = 0;
+      chart[toKey(addDays(startDate, i))] = 0;
     }
 
     visits.forEach((v) => {
-      const key = new Date(v.checkedOutAt).toISOString().split('T')[0];
+      const key = toKey(v.checkedOutAt);
       if (chart[key] !== undefined) {
         chart[key] += Number(v.hoursDeducted);
       }

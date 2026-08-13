@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { CATALOG } = require('../src/config/settings');
 
 let adminToken;
 let parentToken;
@@ -95,12 +96,12 @@ describe('GET /api/settings', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.settings.length).toBe(6);
 
-    // sortirano po kljucu
+    // Tacan broj se namerno ne proverava - katalog podesavanja raste. Bitno je
+    // da su svi kljucevi iz kataloga tu, i to redom kojim su u katalogu:
+    // panel ih tako prikazuje grupisane po smislu, a ne azbucno.
     const keys = res.body.settings.map((s) => s.key);
-    const sorted = [...keys].sort();
-    expect(keys).toEqual(sorted);
+    expect(keys.slice(0, CATALOG.length)).toEqual(CATALOG.map((c) => c.key));
   });
 
   test('parent ne moze da vidi podesavanja', async () => {
@@ -161,11 +162,23 @@ describe('PATCH /api/settings/:key', () => {
     expect(res.body.setting.description).toBe('Novo vreme zatvaranja');
   });
 
-  test('validira da vrednost nije prazna', async () => {
+  // Prazna vrednost je dozvoljena namerno: telefon, adresa i obavestenje u
+  // aplikaciji se brisu tako sto se ostave prazni.
+  test('dozvoljava praznu vrednost, tako se podesavanje brise', async () => {
     const res = await request(app)
       .patch('/api/settings/closing_time')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ value: '' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.setting.value).toBe('');
+  });
+
+  test('odbija vrednost koja nije tekst', async () => {
+    const res = await request(app)
+      .patch('/api/settings/closing_time')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ value: 42 });
 
     expect(res.status).toBe(400);
   });
@@ -219,5 +232,64 @@ describe('DELETE /api/settings/:key', () => {
       .set('Authorization', `Bearer ${parentToken}`);
 
     expect(res.status).toBe(403);
+  });
+});
+
+// Spisak ekrana za obavestenje se menjao (nekada je postojao "gallery", a
+// "home" je dodat kasnije), pa stara vrednost ume da ostane u bazi kao
+// nevidljivo smece koje panel ne moze da skine.
+describe('PATCH /api/settings/announcement_tabs', () => {
+  const sacuvaj = (value) =>
+    request(app)
+      .patch('/api/settings/announcement_tabs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ value });
+
+  test('cuva poznate ekrane', async () => {
+    const res = await sacuvaj('home,menu');
+
+    expect(res.status).toBe(200);
+    expect(res.body.setting.value).toBe('home,menu');
+  });
+
+  test('odbacuje ekran koji ne postoji', async () => {
+    const res = await sacuvaj('home,gallery,menu');
+
+    expect(res.body.setting.value).toBe('home,menu');
+  });
+
+  test('cisti razmake i prazne delove', async () => {
+    const res = await sacuvaj(' home , , menu ,');
+
+    expect(res.body.setting.value).toBe('home,menu');
+  });
+
+  test('uklanja duplikate', async () => {
+    const res = await sacuvaj('home,home,menu');
+
+    expect(res.body.setting.value).toBe('home,menu');
+  });
+
+  test('prazna vrednost ostaje prazna', async () => {
+    const res = await sacuvaj('');
+
+    expect(res.status).toBe(200);
+    expect(res.body.setting.value).toBe('');
+  });
+
+  test('sve same nepoznate vrednosti daju prazno', async () => {
+    const res = await sacuvaj('gallery,nepostoji');
+
+    expect(res.body.setting.value).toBe('');
+  });
+
+  // Druga podesavanja se ne diraju ovim ciscenjem.
+  test('ne dira ostale kljuceve', async () => {
+    const res = await request(app)
+      .patch('/api/settings/club_name')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ value: 'home,gallery' });
+
+    expect(res.body.setting.value).toBe('home,gallery');
   });
 });
