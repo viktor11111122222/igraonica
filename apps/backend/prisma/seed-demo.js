@@ -373,8 +373,22 @@ async function main() {
 
       const dete = izbor(deca);
       const datum = addDays(danas, -dan);
-      const dolazak = uSat(datum, izmedju(9, 17), izbor([0, 15, 30, 45]));
-      const minuti = izmedju(45, 210);
+
+      let dolazak = uSat(datum, izmedju(9, 17), izbor([0, 15, 30, 45]));
+      let minuti = izmedju(45, 210);
+
+      // Danasnja poseta mora da bude i zavrsena, dakle cela u proslosti -
+      // inace bi panel prikazivao odjavu koja se jos nije desila.
+      if (dan === 0) {
+        const otvaranje = uSat(datum, 9);
+        const proteklo = Math.floor((Date.now() - otvaranje.getTime()) / 60000);
+        if (proteklo < 90) continue; // rano je, jos niko nije ni dosao ni otisao
+        minuti = Math.min(minuti, proteklo - 30);
+        dolazak = new Date(
+          otvaranje.getTime() + izmedju(0, proteklo - minuti) * 60000
+        );
+      }
+
       const odlazak = new Date(dolazak.getTime() + minuti * 60000);
       // Ne moze da se naplati vise nego sto je na paketu ostalo - backend to
       // isto ogranicava pri odjavi. Bez ovoga zbir poseta premasi paket i
@@ -420,15 +434,51 @@ async function main() {
     return [...mapa.values()];
   }
 
-  // Tekuci paketi: poslednjih mesec dana.
+  // Tekuci paketi: od danas unazad mesec dana. Danas je ukljucen namerno -
+  // bez toga bi tekuci dan bio prazan, a to je dan koji se najcesce gleda.
   for (const { userPackage, deca, stanje } of poPaketu(sviParovi)) {
     await posejPosete({
       deca,
       userPackage,
       cilj: Number(userPackage.totalHours) * (CILJ[stanje] ?? 0.4),
-      odDana: 1,
+      odDana: 0,
       doDana: 29,
     });
+  }
+
+  // Danasnji promet se dosipa namerno. Gornja petlja bira dane izvlacenjem, pa
+  // tekuci dan ume da ostane skoro prazan - a to je bas dan koji se gleda.
+  for (const { userPackage, deca } of poPaketu(sviParovi)) {
+    const ukupno = Number(userPackage.totalHours);
+    const vec = potroseno.get(userPackage.id) || 0;
+    if (ukupno - vec < 1) continue; // potrosen paket, nema cime da dodje
+
+    const otvaranje = uSat(danas, 9);
+    const proteklo = Math.floor((Date.now() - otvaranje.getTime()) / 60000);
+    if (proteklo < 90) break; // rano jutro, jos nema zavrsenih poseta
+
+    const minuti = Math.min(izmedju(60, 180), proteklo - 30);
+    const dolazak = new Date(
+      otvaranje.getTime() + izmedju(0, proteklo - minuti) * 60000
+    );
+    const sati = Math.min(naplata(minuti), ukupno - vec);
+
+    await prisma.visit.create({
+      data: {
+        childId: izbor(deca).id,
+        userPackageId: userPackage.id,
+        checkedInAt: dolazak,
+        checkedOutAt: new Date(dolazak.getTime() + minuti * 60000),
+        durationMinutes: minuti,
+        hoursDeducted: sati,
+        checkedInById: admin.id,
+        checkedOutById: admin.id,
+        status: 'CHECKED_OUT',
+      },
+    });
+
+    potroseno.set(userPackage.id, vec + sati);
+    brojPoseta++;
   }
 
   // Raniji paketi: potroseni do kraja, pre vise meseci.
@@ -574,9 +624,20 @@ async function main() {
   console.log(`Rezervacije: ${REZERVACIJE.length}.`);
 
   // ---- Neradni dani ----
+  // Neradni dani se stavljaju samo unapred. Danasnji dan mora da ostane radni:
+  // to je dan koji se gleda, a zatvorena igraonica sakriva jelovnik i
+  // aktivnosti, pa demo podaci izgledaju kao da nesto ne radi.
+  const zatvorenDanas = await prisma.closedDay.findUnique({
+    where: { date: new Date(Date.UTC(danas.getFullYear(), danas.getMonth(), danas.getDate())) },
+  });
+  if (zatvorenDanas) {
+    await prisma.closedDay.delete({ where: { id: zatvorenDanas.id } });
+    console.log('Uklonjen neradni dan koji je pao na danas.');
+  }
+
   const NERADNI = [
-    { date: addDays(danas, 2), reason: 'Rodjendan', note: 'Zatvoreno za privatnu proslavu' },
-    { date: addDays(danas, 5), reason: 'Privatna proslava', note: 'Krstenje, ceo dan' },
+    { date: addDays(danas, 3), reason: 'Rodjendan', note: 'Zatvoreno za privatnu proslavu' },
+    { date: addDays(danas, 6), reason: 'Privatna proslava', note: 'Krstenje, ceo dan' },
   ];
 
   for (const d of NERADNI) {

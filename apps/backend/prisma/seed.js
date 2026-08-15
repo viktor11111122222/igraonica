@@ -89,7 +89,7 @@ const ACTIVITIES = [
   { dayOfWeek: 4, title: 'Radionica gline', startTime: '10:30', endTime: '11:30', ageGroup: '3-6 godina', color: '#b08968', description: 'Oblikovanje i susenje figura.' },
   { dayOfWeek: 4, title: 'Bioskop u igraonici', startTime: '17:00', endTime: '18:00', ageGroup: 'svi uzrasti', color: '#457b9d', description: 'Crtani film uz kokice.' },
   { dayOfWeek: 5, title: 'Sportsko jutro', startTime: '10:00', endTime: '11:00', ageGroup: '4-6 godina', color: '#2a9d8f', description: 'Mini poligon i takmicenja.' },
-  { dayOfWeek: 5, title: 'Rodjendanski termin', startTime: '16:00', endTime: '19:00', ageGroup: 'svi uzrasti', color: '#e76f51', description: 'Rezervisan termin za proslave.' },
+  { dayOfWeek: 5, title: 'Kreativna radionica', startTime: '16:00', endTime: '17:30', ageGroup: '3-6 godina', color: '#e76f51', description: 'Kolaz, slikanje i izrada ukrasa.' },
   { dayOfWeek: 6, title: 'Porodicna nedelja', startTime: '11:00', endTime: '13:00', ageGroup: 'svi uzrasti', color: '#e9c46a', description: 'Roditelji se igraju zajedno sa decom.' },
 ];
 
