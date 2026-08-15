@@ -213,25 +213,17 @@ textarea {
 }
 
 .brand {
-  padding: 0 10px 20px;
+  padding: 0 4px 12px;
 }
-/* Logo je siri nego visi, pa se skalira po sirini bocne trake. */
+/* Logo je providan, pa se slaze i sa svetlom i sa tamnom temom - bela
+   podloga iz originalnog JPEG-a bi na tamnoj bila svetao pravougaonik.
+   Sirina je namerno skromna: logo je natpis, ne naslov ekrana. */
 .brand-logo {
   display: block;
   width: 100%;
-  max-width: 170px;
+  max-width: 160px;
   height: auto;
-}
-.brand-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--primary-darker);
-  line-height: 1.1;
-}
-.brand-sub {
-  font-size: 12px;
-  color: var(--text-faint);
-  margin-top: 2px;
+  margin: 0 auto;
 }
 
 .nav {
@@ -742,21 +734,10 @@ td.actions {
 }
 .login-logo {
   display: block;
-  width: 220px;
+  width: 230px;
   max-width: 100%;
   height: auto;
-  margin: 0 auto 4px;
-}
-.login-title {
-  font-size: 26px;
-  color: var(--primary-darker);
-  text-align: center;
-}
-.login-sub {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-  margin: 4px 0 24px;
+  margin: 0 auto 18px;
 }
 
 /* ============ Pomocno ============ */

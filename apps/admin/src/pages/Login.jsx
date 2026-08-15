@@ -26,7 +26,6 @@ export default function Login() {
     <div className="login-wrap">
       <form className="login-card" onSubmit={onSubmit}>
         <img className="login-logo" src={logo} alt="Kids club" />
-        <div className="login-sub">Admin panel</div>
 
         <Alert>{error}</Alert>
 

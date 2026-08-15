@@ -115,9 +115,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 50,
   },
+  // Odnos stranica logoa je 2.07; visina prati sirinu da se ne rasteze.
   logo: {
-    width: 260,
-    height: 142,
+    width: 240,
+    height: 116,
   },
   logoText: {
     fontSize: 48,

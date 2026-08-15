@@ -69,7 +69,6 @@ export default function Layout() {
       <aside className="sidebar">
         <div className="brand">
           <img className="brand-logo" src={logo} alt="Kids club" />
-          <div className="brand-sub">Admin panel</div>
         </div>
 
         <nav className="nav">
