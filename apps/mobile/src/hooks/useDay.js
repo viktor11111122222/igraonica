@@ -66,11 +66,17 @@ export function useDaySelection() {
   const prevToday = useRef(today);
 
   useEffect(() => {
-    if (prevToday.current === today) return;
+    const prethodniDan = prevToday.current;
+    if (prethodniDan === today) return;
+    prevToday.current = today;
+
     // Ako je korisnik ostao na "danas", selekcija prati prelazak u novi dan.
     // Ako je rucno izabrao neki drugi datum, taj izbor se ne dira.
-    setSelected((current) => (current === prevToday.current ? today : current));
-    prevToday.current = today;
+    //
+    // Poredi se zapamceni `prethodniDan`, ne `prevToday.current`: updater se
+    // izvrsava tek u sledecem renderu, kada u ref-u vec stoji novi dan - pa bi
+    // poredjenje uvek ispalo netacno i selekcija nikad ne bi presla u novi dan.
+    setSelected((current) => (current === prethodniDan ? today : current));
   }, [today]);
 
   return { today, selected, setSelected };
