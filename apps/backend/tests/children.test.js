@@ -12,7 +12,7 @@ let childId;
 beforeAll(async () => {
   await cleanDB();
 
-  const admin = await createTestUser(TEST_ADMIN);
+  await createTestUser(TEST_ADMIN);
   const parent = await createTestUser(TEST_PARENT);
   const parent2 = await createTestUser({
     email: 'roditelj2@test.com',

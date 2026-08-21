@@ -1,10 +1,9 @@
-import { useRef } from 'react';
-import { Animated, Pressable } from 'react-native';
+import { Animated, Pressable, useAnimatedValue } from 'react-native';
 import { motion } from '../theme';
 
 // Svako dugme mora da reaguje na dodir. Scale 0.96 daje trenutni feedback.
 export default function PressableScale({ children, style, onPress, ...rest }) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useAnimatedValue(1);
 
   function to(value, duration) {
     Animated.timing(scale, {

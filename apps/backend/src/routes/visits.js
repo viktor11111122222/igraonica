@@ -156,7 +156,7 @@ router.post(
         newRemainingHours = Math.max(0, currentHours - hoursDeducted);
       }
 
-      const [updatedVisit, updatedPackage] = await prisma.$transaction([
+      const [updatedVisit] = await prisma.$transaction([
         prisma.visit.update({
           where: { id: openVisit.id },
           data: {

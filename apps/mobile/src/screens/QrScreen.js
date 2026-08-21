@@ -1,13 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Animated,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated, ActivityIndicator, ScrollView, useAnimatedValue } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
@@ -181,7 +173,7 @@ export default function QrScreen({ navigation, route }) {
 }
 
 function PickerRow({ child, index, onPress }) {
-  const enter = useRef(new Animated.Value(0)).current;
+  const enter = useAnimatedValue(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -191,7 +183,7 @@ function PickerRow({ child, index, onPress }) {
         delay: index * motion.stagger,
         useNativeDriver: true,
       }).start();
-    }, [index])
+    }, [index, enter])
   );
 
   return (
@@ -226,7 +218,7 @@ function PickerRow({ child, index, onPress }) {
 
 // Pressable sa scale feedbackom - koristi se svuda gde se pritiska.
 function PressableScale({ children, style, onPress }) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useAnimatedValue(1);
 
   return (
     <Pressable

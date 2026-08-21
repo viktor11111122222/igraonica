@@ -12,9 +12,13 @@ const DAY_NAMES = ['Pon', 'Uto', 'Sre', 'Cet', 'Pet', 'Sub', 'Ned'];
 export default function DayStrip({ today, selected, onSelect, marked, closed }) {
   const ref = useRef(null);
 
-  // Kada dan predje u novi (i posebno kada predje u novi mesec) traka mora
-  // da se prekomponuje - zato `today` kao zavisnost.
-  const dates = useMemo(() => monthDates(), [today]);
+  // Kada dan predje u novi mesec, traka mora da se prekomponuje.
+  // `monthDates()` cita danasnji datum sam, bez argumenta - linter zato ne vidi
+  // vezu i trazi da se `mesec` izbaci. Ostaje namerno: to je jedini ulaz koji
+  // stvarno menja rezultat.
+  const mesec = today.slice(0, 7);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const dates = useMemo(() => monthDates(), [mesec]);
 
   // Mesec je duzi od ekrana, pa traku pomeramo na danasnji dan.
   useEffect(() => {

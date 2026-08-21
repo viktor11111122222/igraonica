@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // Skeniranje QR koda kamerom.
 //
@@ -55,9 +55,13 @@ export default function QrScanner({ active, onScan, onError }) {
   const [status, setStatus] = useState('starting');
   const [message, setMessage] = useState('');
 
-  // U ref-u, da promena funkcije ne restartuje kameru usred rada.
+  // U ref-u, da promena funkcije ne restartuje kameru usred rada. Sinhronizuje
+  // se u layout effect-u, ne u renderu: prekinut render bi inace ostavio ref sa
+  // vrednoscu iz prolaza koji nikad nije prikazan.
   const onScanRef = useRef(onScan);
-  onScanRef.current = onScan;
+  useLayoutEffect(() => {
+    onScanRef.current = onScan;
+  });
 
   useEffect(() => {
     if (!active) return undefined;

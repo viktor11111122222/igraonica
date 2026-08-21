@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
 
 let adminToken;
 let parentToken;
@@ -11,7 +11,7 @@ let userPackageId;
 beforeAll(async () => {
   await cleanDB();
 
-  const admin = await createTestUser(TEST_ADMIN);
+  await createTestUser(TEST_ADMIN);
   const parent = await createTestUser(TEST_PARENT);
   parentId = parent.id;
 

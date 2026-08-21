@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from '@testing-library/react-native';
-import { Text } from 'react-native';
 import AppNavigator from '../AppNavigator';
 
 let mockAuth = { user: null, loading: false };

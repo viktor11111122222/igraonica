@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { Animated, StyleSheet, View, useAnimatedValue } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { colors } from '../theme';
 
@@ -10,7 +10,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 export default function HoursRing({ size = 116, stroke = 10, progress = 0, children }) {
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = useRef(new Animated.Value(circumference)).current;
+  const offset = useAnimatedValue(circumference);
 
   useEffect(() => {
     Animated.timing(offset, {
@@ -19,7 +19,7 @@ export default function HoursRing({ size = 116, stroke = 10, progress = 0, child
       // strokeDashoffset nije transform, pa ne moze na native driver.
       useNativeDriver: false,
     }).start();
-  }, [progress, circumference]);
+  }, [progress, circumference, offset]);
 
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>

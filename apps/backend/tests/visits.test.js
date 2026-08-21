@@ -16,7 +16,7 @@ beforeAll(async () => {
   await cleanDB();
 
   // Kreiraj korisnike
-  const admin = await createTestUser(TEST_ADMIN);
+  await createTestUser(TEST_ADMIN);
   const parent = await createTestUser(TEST_PARENT);
   parentId = parent.id;
 
@@ -147,7 +147,7 @@ describe('POST /api/visits/check-in', () => {
   });
 
   test('odbija check-in za deaktivirano dete', async () => {
-    const deactivatedChild = await prisma.child.create({
+    await prisma.child.create({
       data: {
         firstName: 'Deaktiviran',
         lastName: 'D',
@@ -176,7 +176,7 @@ describe('POST /api/visits/check-in', () => {
       lastName: 'Paketa',
     });
 
-    const noPackageChild = await prisma.child.create({
+    await prisma.child.create({
       data: {
         firstName: 'Dete',
         lastName: 'BezPaketa',
@@ -206,7 +206,7 @@ describe('POST /api/visits/check-in', () => {
       lastName: 'Sati',
     });
 
-    const emptyChild = await prisma.child.create({
+    await prisma.child.create({
       data: {
         firstName: 'Dete',
         lastName: 'PrazanSati',
@@ -245,7 +245,7 @@ describe('POST /api/visits/check-in', () => {
       lastName: 'Paket',
     });
 
-    const expiredChild = await prisma.child.create({
+    await prisma.child.create({
       data: {
         firstName: 'Dete',
         lastName: 'IstekaoPaket',
@@ -570,7 +570,7 @@ describe('GET /api/visits/my', () => {
   });
 
   test('roditelj bez dece dobija praznu listu', async () => {
-    const noDeteParent = await createTestUser({
+    await createTestUser({
       email: 'bezdece@test.com',
       password: 'test123',
       firstName: 'Bez',
@@ -693,7 +693,7 @@ describe('Check-in bira ispravan paket', () => {
     const later = new Date();
     later.setDate(later.getDate() + 25);
 
-    const [soonPkg, laterPkg] = await Promise.all([
+    const [soonPkg] = await Promise.all([
       prisma.userPackage.create({
         data: {
           userId: smartParentId,

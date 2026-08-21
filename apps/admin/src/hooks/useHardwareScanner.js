@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 // Rucni citac QR koda - onaj sa kase - racunaru se predstavlja kao tastatura.
 // Procitani kod "otkuca" za nekoliko milisekundi i, zavisno od podesavanja
@@ -31,8 +31,12 @@ const GUTANJE_MS = 300;
 const PAMTI_ZNAKOVA = 24;
 
 export default function useHardwareScanner(onScan, { enabled = true } = {}) {
+  // Sinhronizacija u layout effect-u, ne u renderu - prekinut render bi ostavio
+  // ref sa vrednoscu iz prolaza koji nikad nije prikazan.
   const onScanRef = useRef(onScan);
-  onScanRef.current = onScan;
+  useLayoutEffect(() => {
+    onScanRef.current = onScan;
+  });
 
   useEffect(() => {
     if (!enabled) return undefined;

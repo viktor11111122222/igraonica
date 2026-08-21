@@ -1,6 +1,5 @@
 import { render, screen, waitFor, act } from '@testing-library/react-native';
-import { Text } from 'react-native';
-import { AppState } from 'react-native';
+import { Text, AppState } from 'react-native';
 import { SettingsProvider, useSettings, isOn } from '../SettingsContext';
 import { apiRequest } from '../../utils/api';
 

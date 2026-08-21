@@ -1,5 +1,4 @@
-import { useRef } from 'react';
-import { Animated, Pressable, StyleSheet } from 'react-native';
+import { Animated, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, motion, shadow } from '../theme';
 
@@ -7,7 +6,7 @@ export const QR_SIZE = 64;
 
 // Kruzno dugme koje sedi u useku tab bara.
 export default function QrTabButton({ onPress, focused }) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useAnimatedValue(1);
 
   function animateTo(value, duration) {
     Animated.timing(scale, {

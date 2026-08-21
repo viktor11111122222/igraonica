@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import * as storage from '../utils/storage';
 import { apiRequest, onSessionExpired } from '../utils/api';
 
@@ -8,15 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  // Kada bilo koji poziv naidje na istekao token, aplikacija se sama vrati na
-  // prijavu umesto da svaki ekran pise gresku bez izlaza.
-  useEffect(() => onSessionExpired(() => setUser(null)), []);
-
-  async function loadUser() {
+  const loadUser = useCallback(async () => {
     try {
       const token = await storage.getItem('token');
       if (!token) {
@@ -30,7 +22,15 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  // Kada bilo koji poziv naidje na istekao token, aplikacija se sama vrati na
+  // prijavu umesto da svaki ekran pise gresku bez izlaza.
+  useEffect(() => onSessionExpired(() => setUser(null)), []);
 
   async function login(email, password) {
     const data = await apiRequest('/auth/login', {

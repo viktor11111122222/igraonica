@@ -58,7 +58,7 @@ router.get(
 
       // Kljucevi koje je neko dodao rucno, van kataloga.
       const extra = rows
-        .filter((r) => !DEFAULTS.hasOwnProperty(r.key))
+        .filter((r) => !Object.hasOwn(DEFAULTS, r.key))
         .map((r) => ({
           key: r.key,
           value: r.value,

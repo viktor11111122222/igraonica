@@ -19,13 +19,7 @@ export default function ChildDetailScreen({ route, navigation }) {
   const [visits, setVisits] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const [childData, visitsData] = await Promise.all([
         apiRequest(`/children/${child.id}`),
@@ -34,8 +28,18 @@ export default function ChildDetailScreen({ route, navigation }) {
       setChild(childData.child);
       const childVisits = (visitsData.visits || []).filter((v) => v.childId === child.id);
       setVisits(childVisits);
-    } catch {}
-  }
+    } catch {
+      // Bez servera ostaje podatak sa kojim je ekran otvoren.
+    }
+  }, [child.id]);
+
+  // Namerno se ne prosledjuje `loadData` direktno: asinhrona funkcija vraca
+  // Promise, a useFocusEffect bi ga shvatio kao funkciju za ciscenje.
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   async function onRefresh() {
     setRefreshing(true);

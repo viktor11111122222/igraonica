@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { get } from '../lib/api';
 
 // Ko je trenutno u igraonici. Podatak treba na dva mesta: bocnoj traci za
@@ -8,6 +8,9 @@ import { get } from '../lib/api';
 // Ovde je jedan tajmer i jedan zahtev, koliko god mesta ga slusalo. Uz to,
 // `reload()` posle prijave deteta odmah osvezi i znacku - ranije je kasnila do
 // pola minuta.
+//
+// Radi kao spoljni izvor (`useSyncExternalStore`), a ne kao stanje koje se
+// prepisuje iz effect-a: podatak zivi van React-a, pa mu je to i prirodan oblik.
 
 const INTERVAL_MS = 30000;
 
@@ -17,7 +20,7 @@ let timer = null;
 
 function objavi(novo) {
   stanje = novo;
-  slusaoci.forEach((javi) => javi(stanje));
+  slusaoci.forEach((javi) => javi());
 }
 
 async function ucitaj() {
@@ -30,6 +33,28 @@ async function ucitaj() {
   }
 }
 
+// Prvi pretplatnik pali tajmer, poslednji ga gasi.
+function pretplati(javi) {
+  slusaoci.add(javi);
+  if (slusaoci.size === 1) {
+    ucitaj();
+    timer = setInterval(ucitaj, INTERVAL_MS);
+  }
+
+  return () => {
+    slusaoci.delete(javi);
+    if (slusaoci.size === 0) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
+}
+
+// Snimak mora da bude ista referenca dok se nista ne menja, inace bi React
+// renderovao u krug. `objavi` zato pravi nov objekat samo kada ima novog
+// podatka.
+const snimak = () => stanje;
+
 // Testovi dele modul, pa im treba cist pocetak.
 export function __resetActiveVisits() {
   clearInterval(timer);
@@ -39,26 +64,6 @@ export function __resetActiveVisits() {
 }
 
 export function useActiveVisits() {
-  const [lokalno, setLokalno] = useState(stanje);
-
-  useEffect(() => {
-    slusaoci.add(setLokalno);
-    setLokalno(stanje);
-
-    // Prvi pretplatnik pali tajmer, poslednji ga gasi.
-    if (slusaoci.size === 1) {
-      ucitaj();
-      timer = setInterval(ucitaj, INTERVAL_MS);
-    }
-
-    return () => {
-      slusaoci.delete(setLokalno);
-      if (slusaoci.size === 0) {
-        clearInterval(timer);
-        timer = null;
-      }
-    };
-  }, []);
-
-  return { ...lokalno, reload: useCallback(ucitaj, []) };
+  const trenutno = useSyncExternalStore(pretplati, snimak, snimak);
+  return { ...trenutno, reload: ucitaj };
 }

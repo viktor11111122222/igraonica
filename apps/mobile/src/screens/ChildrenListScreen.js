@@ -16,18 +16,22 @@ export default function ChildrenListScreen({ navigation }) {
   const [children, setChildren] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadChildren();
-    }, [])
-  );
-
-  async function loadChildren() {
+  const loadChildren = useCallback(async () => {
     try {
       const data = await apiRequest('/children');
       setChildren(data.children || []);
-    } catch {}
-  }
+    } catch {
+      // Bez servera lista ostaje prazna; ekran to i kaze.
+    }
+  }, []);
+
+  // Namerno se ne prosledjuje `loadChildren` direktno: asinhrona funkcija vraca
+  // Promise, a useFocusEffect bi ga shvatio kao funkciju za ciscenje.
+  useFocusEffect(
+    useCallback(() => {
+      loadChildren();
+    }, [loadChildren])
+  );
 
   async function onRefresh() {
     setRefreshing(true);

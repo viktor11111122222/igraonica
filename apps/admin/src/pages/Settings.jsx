@@ -53,7 +53,14 @@ export default function Settings() {
     [settings]
   );
 
-  useEffect(() => setValues(original), [original]);
+  // Kada podaci sa servera stignu (ili se ponovo dovuku), lokalna kopija se
+  // ravna po njima. Prilagodjavanje u renderu umesto effect-a: nema prolaza u
+  // kome je ekran vec nacrtan sa praznim vrednostima.
+  const [prethodni, setPrethodni] = useState(null);
+  if (original !== prethodni) {
+    setPrethodni(original);
+    setValues(original);
+  }
 
   useEffect(() => {
     const pending = timers.current;

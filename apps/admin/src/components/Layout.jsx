@@ -59,7 +59,13 @@ export default function Layout() {
   const { count: activeCount } = useActiveVisits();
 
   // Izbor iz menija vodi na drugu stranicu - fioka tu nema sta vise da radi.
-  useEffect(() => setMenuOpen(false), [pathname]);
+  // Prilagodjava se u renderu, ne u effect-u: tako ne postoji prolaz u kome se
+  // nova stranica vec crta a fioka jos stoji preko nje.
+  const [prethodnaPutanja, setPrethodnaPutanja] = useState(pathname);
+  if (pathname !== prethodnaPutanja) {
+    setPrethodnaPutanja(pathname);
+    setMenuOpen(false);
+  }
 
   // Dok je fioka preko ekrana, stranica ispod ne sme da se pomera pod prstom.
   useEffect(() => {
