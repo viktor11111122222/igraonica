@@ -77,16 +77,102 @@ vrednost iz kataloga uz oznaku „podrazumevano". `PATCH` je upsert, pa prvo
 cuvanje kreira zapis. Prazna vrednost je dozvoljena i znaci „nema" (obavestenje
 se sakriva, telefon se ne prikazuje).
 
+## Skeniranje QR koda
+
+Kod deteta ima fiksan oblik: `IGR-` i osam heksadecimalnih znakova, uvek 12.
+Ekran Prijave prima ga na tri nacina, i sva tri rade isto:
+
+| Nacin | Sta treba |
+|---|---|
+| Kamera telefona | HTTPS sa sertifikatom kojem uredjaj veruje (vidi ispod) |
+| Rucni citac | 2D imager u HID-KBW rezimu |
+| Kucanje | nista |
+
+**Smer se ne bira.** Prvo skeniranje deteta ga prijavljuje, sledece odjavljuje —
+ekran to zna iz spiska prisutnih, pa nema prekidaca koji se moze zaboraviti.
+
+### Rucni citac
+
+Citac se racunaru predstavlja kao tastatura i "otkuca" kod za nekoliko
+milisekundi. Zavrsni znak mu je podesiv (Enter, Tab, ili nista), pa ga
+`useHardwareScanner` ne ceka — kraj prepoznaje po obliku koda. Zato radi u sve
+tri postavke, i kada fokus nije u polju.
+
+Ako ne radi, proveri redom:
+
+1. **Mora biti 2D imager.** Laserski citac (crvena linija) fizicki ne moze da
+   procita QR — cita samo crticne kodove.
+2. **Mora biti u HID-KBW rezimu**, ne serial/POS. Prebacuje se skeniranjem
+   konfiguracionog koda iz uputstva citaca.
+3. **Mora umeti da cita sa ekrana telefona.** Stariji imageri to ne mogu.
+
+Raspored tastature nije problem: `0-9`, `A-F` i `-` su na istom mestu na US
+QWERTY i srpskom QWERTZ rasporedu.
+
+### Kamera na telefonu
+
+WebKit trazi **validan** sertifikat za `getUserMedia`. Bez njega Safari ne
+postavi ni `navigator.mediaDevices` — nema greske, skener prosto cuti. Zato
+`http://<ip>:5173` nikad nece dobiti kameru, a ni samopotpisan sertifikat koji
+je korisnik "propustio" kroz upozorenje.
+
+Postupak:
+
+```bash
+# 1. Sopstveni CA i sertifikat za LAN adresu (SAN mora da bude bas taj IP)
+mkdir -p ~/.local/share/igraonica-dev-certs && cd $_
+openssl req -x509 -newkey rsa:2048 -sha256 -days 825 -nodes \
+  -keyout rootCA.key -out rootCA.crt -subj "/CN=Igraonica Dev CA" \
+  -addext "basicConstraints=critical,CA:TRUE" \
+  -addext "keyUsage=critical,keyCertSign,cRLSign"
+
+IP=$(ipconfig getifaddr en0)
+openssl req -newkey rsa:2048 -nodes -keyout server.key -out server.csr -subj "/CN=$IP"
+printf "subjectAltName=IP:$IP,IP:127.0.0.1,DNS:localhost\nextendedKeyUsage=serverAuth\n" > ext.cnf
+openssl x509 -req -in server.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial \
+  -out server.crt -days 397 -sha256 -extfile ext.cnf
+
+# 2. Dev server preko HTTPS-a, otvoren ka mrezi
+cd -; npx vite --config vite.config.https.js
+```
+
+Zatim na telefonu, jednom:
+
+1. Otvori `rootCA.crt` (npr. `python3 -m http.server 8000` u fascikli sa
+   sertifikatima, pa `http://<ip>:8000/rootCA.crt`) → Allow
+2. Settings → General → VPN & Device Management → instaliraj profil
+3. Settings → General → About → **Certificate Trust Settings** → ukljuci ga
+
+Posle toga `https://<ip>:5173` radi sa kamerom.
+
+**SAN je vezan za IP**, pa se sertifikat mora ponovo izdati kad se LAN adresa
+promeni; Vite ga cita samo pri pokretanju, pa i on mora da se restartuje.
+Putanju do sertifikata menja `SSL_CERT_DIR`.
+
+U simulator se isti CA ubacuje jednom komandom:
+
+```bash
+xcrun simctl keychain booted add-root-cert ~/.local/share/igraonica-dev-certs/rootCA.crt
+```
+
 ## Struktura
 
 ```
 src/
-  lib/api.js       jedina tacka za fetch; token, greske, upload
-  lib/format.js    datumi, sati, cene, nazivi enum-a — sve u sr-RS
-  hooks/useFetch.js  ucitavanje sa reload-om; menja se `path` -> refetch
-  context/         AuthContext (prijava, /auth/me, provera role)
-  components/      Layout (sidebar), ui.jsx (Modal, Field, Badge...), BarChart
-  pages/           jedna datoteka po stranici iz tabele gore
+  lib/api.js               jedina tacka za fetch; token, greske, upload, 401
+  lib/format.js            datumi, sati, cene, nazivi enum-a — sve u sr-RS
+  hooks/useFetch.js        ucitavanje sa reload-om; menja se `path` -> refetch
+  hooks/useActiveVisits.js ko je u igraonici; jedan tajmer za traku i Prijave
+  hooks/useHardwareScanner.js  rucni citac kao tastatura, na nivou prozora
+  context/                 AuthContext (prijava, /auth/me, provera role),
+                           ThemeContext (svetla/tamna/sistemska)
+  components/              Layout (sidebar + fioka), ui.jsx (Modal, Field,
+                           Badge...), BarChart, QrScanner, ClosedDays
+  pages/                   jedna datoteka po stranici iz tabele gore
+
+vite.config.js         obican dev server
+vite.config.https.js   isti, ali preko HTTPS-a — za skener na telefonu
+eslint.config.js       `npm run lint`
 ```
 
 ## Boje
