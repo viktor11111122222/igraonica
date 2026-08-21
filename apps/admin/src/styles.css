@@ -196,7 +196,7 @@ textarea {
 /* ============ Layout ============ */
 .shell {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .sidebar {
@@ -547,6 +547,7 @@ textarea {
 /* ============ Tabele ============ */
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 table {
   width: 100%;
@@ -1020,4 +1021,282 @@ textarea.setting-input {
   font-weight: 700;
   font-size: 16px;
   color: var(--primary-darker);
+}
+
+/* ============ Skener ============ */
+.scanner {
+  margin-bottom: 14px;
+}
+.scanner-view {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #000;
+}
+.scanner-view video {
+  display: block;
+  max-width: 100%;
+}
+.center {
+  text-align: center;
+}
+
+/* ============ Ishod skeniranja ============ */
+/* Radnik posle skeniranja gleda u telefon i trazi jedan podatak: da li je
+   proslo. Zato ishod nije redak teksta u formi nego traka na vrhu strane, u
+   boji radnje - zelena za dolazak, plava za odlazak, crvena za gresku. */
+.scan-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid;
+  box-shadow: var(--shadow-card);
+  animation: pop 0.16s ease-out;
+}
+.scan-result.in {
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+.scan-result.out {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+.scan-result.bad {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+.scan-result-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+.scan-result.in .scan-result-mark {
+  background: var(--success);
+}
+.scan-result.out .scan-result-mark {
+  background: var(--primary-dark);
+}
+.scan-result.bad .scan-result-mark {
+  background: var(--danger-solid);
+}
+.scan-result-text {
+  flex: 1;
+  min-width: 0;
+}
+.scan-result-title {
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.scan-result-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+/* Zaglavlje je lepljivo, pa `scrollIntoView` bez ovoga dovede vrh trake tacno
+   ispod njega - vidi se samo donja ivica. */
+.scan-result,
+.page > .card {
+  scroll-margin-top: 96px;
+}
+
+/* ============ Telefon ============ */
+/* Do 860px bocna traka ne staje pored sadrzaja (244px od ~390px ekrana), pa
+   postaje fioka preko ekrana. Dugme za nju je u zaglavlju stranice. */
+
+.menu-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+}
+.topbar-title {
+  min-width: 0;
+}
+.scrim {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .menu-btn {
+    display: grid;
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    border: 0;
+    padding: 0;
+    background: rgba(15, 23, 32, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+  .shell.menu-open .scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100dvh;
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-raised);
+    padding-top: max(22px, env(safe-area-inset-top));
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  .shell.menu-open .sidebar {
+    transform: none;
+  }
+  /* Stavke menija su glavni nacin kretanja kroz aplikaciju na telefonu - prst
+     trazi vise od 9px visine. Zaglavlja grupa i logo se za toliko stisnu, da
+     bi cela navigacija i dalje stala bez skrolovanja. */
+  .nav-item {
+    padding: 12px 10px;
+  }
+  .nav-group {
+    padding: 12px 10px 4px;
+  }
+  .brand {
+    padding: 0 4px 6px;
+  }
+  .brand-logo {
+    max-width: 124px;
+  }
+
+  .topbar {
+    padding: 10px 14px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    gap: 10px;
+  }
+  .topbar h1 {
+    font-size: 17px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Podnaslov je opis, ne podatak. Na uskom ekranu samo gura akcije u drugi
+     red. */
+  .topbar-sub {
+    display: none;
+  }
+  .topbar-actions {
+    margin-left: auto;
+  }
+
+  .page {
+    padding: 14px 14px calc(32px + env(safe-area-inset-bottom));
+  }
+  .card-body,
+  .card-head {
+    padding: 14px;
+  }
+
+  /* Dugmad i polja se hvataju prstom, ne misem. */
+  .btn {
+    min-height: 44px;
+  }
+  .btn.sm {
+    min-height: 36px;
+  }
+  /* Ispod 16px iOS zumira stranicu cim se polje fokusira i vise se ne vrati. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .inline {
+    flex-wrap: wrap;
+  }
+  /* ...ali ne u tabeli. Tamo `inline` drzi avatar uz ime, pa bi prelom spustio
+     ime u drugi red i razbio visine redova. */
+  td .inline {
+    flex-wrap: nowrap;
+  }
+  /* Kod je na nekim stranama klasa same celije, na drugima div u njoj. Prelom
+     na crtici ("IGR- / 00148917") se ne moze uporediti sa nalepnicom. */
+  td.mono,
+  td .mono {
+    white-space: nowrap;
+  }
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Traka ishoda: dugme za sledece skeniranje ide u svoj red, da naslov ne bi
+     ostao na dva-tri slova po redu. */
+  .scan-result {
+    flex-wrap: wrap;
+  }
+  .scan-result-text {
+    flex: 1 1 60%;
+  }
+  .scan-result-next {
+    flex: 1 0 100%;
+    justify-content: center;
+  }
+  .scan-result,
+  .page > .card {
+    scroll-margin-top: 74px;
+  }
+
+  /* Tabele imaju previse kolona za telefon. Umesto da se stisnu do
+     necitljivosti, klize vodoravno unutar svoje kartice. Ime i kod se ne lome
+     - prelomljeni "IGR-0004 / 5227" se ne moze uporediti sa nalepnicom. */
+  .table-wrap table {
+    min-width: 720px;
+  }
+  .row-main,
+  .row-sub {
+    white-space: nowrap;
+  }
+
+  /* Modal dolazi odozdo kao list papira - lakse je dohvatiti palcem. */
+  .modal-backdrop {
+    padding: 0;
+    place-items: end center;
+  }
+  .modal {
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+  }
+  .modal-foot {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .scrim {
+    transition: none;
+  }
+  .scan-result {
+    animation: none;
+  }
 }

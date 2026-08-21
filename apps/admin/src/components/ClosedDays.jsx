@@ -18,6 +18,8 @@ export default function ClosedDays() {
   const [brisem, setBrisem] = useState(null);
   const [busy, setBusy] = useState(false);
   const [greska, setGreska] = useState('');
+  // Odvojeno od `greska`: ta traka stoji na stranici, iza otvorenog dijaloga.
+  const [brisanjeGreska, setBrisanjeGreska] = useState('');
 
   const dani = data?.closedDays || [];
   const danas = todayKey();
@@ -43,13 +45,13 @@ export default function ClosedDays() {
 
   async function obrisi() {
     setBusy(true);
-    setGreska('');
+    setBrisanjeGreska('');
     try {
       await del(`/closed-days/${brisem.id}`);
       setBrisem(null);
       reload();
     } catch (err) {
-      setGreska(err.message);
+      setBrisanjeGreska(err.message);
     } finally {
       setBusy(false);
     }
@@ -171,7 +173,11 @@ export default function ClosedDays() {
           text={`${formatDate(brisem.date)} vise nece biti oznacen kao neradni i obavestenje u aplikaciji nestaje.`}
           confirmLabel="Vrati u radne"
           onConfirm={obrisi}
-          onClose={() => setBrisem(null)}
+          error={brisanjeGreska}
+          onClose={() => {
+            setBrisem(null);
+            setBrisanjeGreska('');
+          }}
           busy={busy}
         />
       )}

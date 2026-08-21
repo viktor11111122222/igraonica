@@ -256,13 +256,13 @@ export default function UserDetail() {
               <button className="btn secondary" onClick={() => setAdjusting(null)} disabled={busy}>
                 Odustani
               </button>
-              <button className="btn" onClick={adjust} disabled={busy || !adjustForm.hours}>
+              <button className="btn" disabled={busy || !adjustForm.hours} type="submit" form="sati-forma">
                 {busy ? 'Cuva se...' : 'Sacuvaj'}
               </button>
             </>
           }
         >
-          <form onSubmit={adjust}>
+          <form id="sati-forma" onSubmit={adjust}>
             <Alert>{formError}</Alert>
             <p className="muted" style={{ marginTop: 0 }}>
               {adjusting.package.name} · trenutno {formatHours(adjusting.remainingHours)}
@@ -293,9 +293,12 @@ export default function UserDetail() {
 
       {history && (
         <Modal title="Istorija korekcija" onClose={() => setHistory(null)} wide>
+          {/* Bez ove poruke neuspelo ucitavanje izgleda kao "nema korekcija" -
+              a to su dve razlicite stvari. */}
+          <Alert>{history.error}</Alert>
           {!history.items ? (
             <Spinner />
-          ) : !history.items.length ? (
+          ) : history.error ? null : !history.items.length ? (
             <Empty title="Nema korekcija" text="Sati ovog paketa nisu rucno menjani." />
           ) : (
             <div className="table-wrap">

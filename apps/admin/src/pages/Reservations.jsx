@@ -34,6 +34,9 @@ export default function Reservations() {
   const [form, setForm] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Greska pri brisanju ide u sam dijalog. Traka na stranici je iza otvorenog
+  // prozora, pa je radnik ne vidi - vidi samo da se nista nije desilo.
+  const [brisanjeGreska, setBrisanjeGreska] = useState('');
   const [formError, setFormError] = useState('');
 
   const params = new URLSearchParams({ page, limit: 20 });
@@ -86,7 +89,7 @@ export default function Reservations() {
       setDeleting(null);
       reload();
     } catch (e) {
-      setFormError(e.message);
+      setBrisanjeGreska(e.message);
     } finally {
       setBusy(false);
     }
@@ -253,13 +256,13 @@ export default function Reservations() {
               <button className="btn secondary" onClick={() => setForm(null)} disabled={busy}>
                 Odustani
               </button>
-              <button className="btn" onClick={save} disabled={busy}>
+              <button className="btn" disabled={busy} type="submit" form="rezervacija-forma">
                 {busy ? 'Cuva se...' : 'Sacuvaj'}
               </button>
             </>
           }
         >
-          <form onSubmit={save}>
+          <form id="rezervacija-forma" onSubmit={save}>
             <Alert>{formError}</Alert>
             <div className="field-row">
               <Field label="Tip">
@@ -329,7 +332,11 @@ export default function Reservations() {
           confirmLabel="Obrisi"
           busy={busy}
           onConfirm={remove}
-          onClose={() => setDeleting(null)}
+          error={brisanjeGreska}
+          onClose={() => {
+            setDeleting(null);
+            setBrisanjeGreska('');
+          }}
         />
       )}
     </>

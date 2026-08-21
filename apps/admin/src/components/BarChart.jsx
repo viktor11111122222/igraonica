@@ -22,7 +22,9 @@ export default function BarChart({
   color = MARK_BLUE,
   height = 200,
   formatValue = (v) => v,
-  formatLabel = (d) => d,
+  // Tacka podatka je objekat, pa ga podrazumevana funkcija ne sme vratiti kao
+  // takvog - React bi pukao na "Objects are not valid as a React child".
+  formatLabel = (d) => (d && typeof d === 'object' ? d.date ?? '' : d),
   valueKey = 'value',
 }) {
   const wrapRef = useRef(null);

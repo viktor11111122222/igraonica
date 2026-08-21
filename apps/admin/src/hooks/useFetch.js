@@ -22,6 +22,9 @@ export function useFetch(path) {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    // Bez ovoga greska sa prethodne pretrage ostaje na ekranu i posle uspesnog
+    // ucitavanja novih podataka.
+    setError('');
     get(path)
       .then((d) => alive && setData(d))
       .catch((e) => alive && setError(e.message))

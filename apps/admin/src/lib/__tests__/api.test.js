@@ -1,5 +1,16 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { api, get, post, patch, del, getToken, setToken, ApiError, uploadImage } from '../api';
+import {
+  api,
+  get,
+  post,
+  patch,
+  del,
+  getToken,
+  setToken,
+  ApiError,
+  uploadImage,
+  onSessionExpired,
+} from '../api';
 
 // Odgovor servera se pravi rucno, da se ne zavisi od pravog backenda.
 function odgovor({ ok = true, status = 200, body = {} } = {}) {
@@ -135,5 +146,80 @@ describe('uploadImage', () => {
     expect(opcije.headers['Content-Type']).toBeUndefined();
     expect(opcije.body).toBeInstanceOf(FormData);
     expect(opcije.body.get('image')).toBe(file);
+  });
+});
+
+// Backend vraca 401 i za istekao token i za pogresnu lozinku - razlika je samo
+// u ruti. Ako se to pomesa, pogresna lozinka izgleda kao istekla sesija.
+describe('istekla sesija', () => {
+  beforeEach(() => {
+    setToken('stari-token');
+  });
+
+  test('401 na obicnoj ruti brise token', async () => {
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: { message: 'Nevazeci token.' } }));
+
+    await expect(get('/users')).rejects.toThrow('Nevazeci token.');
+    expect(getToken()).toBeNull();
+  });
+
+  test('401 na obicnoj ruti javlja da je sesija istekla', async () => {
+    const javi = vi.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: { message: 'Nevazeci token.' } }));
+
+    await expect(get('/users')).rejects.toThrow();
+
+    expect(javi).toHaveBeenCalledTimes(1);
+    odjavi();
+  });
+
+  test('pogresna lozinka pri prijavi ne racuna se kao istekla sesija', async () => {
+    const javi = vi.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(
+      odgovor({ ok: false, status: 401, body: { message: 'Pogresan email ili lozinka.' } })
+    );
+
+    await expect(post('/auth/login', { email: 'a@b.c', password: 'x' })).rejects.toThrow(
+      'Pogresan email ili lozinka.'
+    );
+
+    expect(javi).not.toHaveBeenCalled();
+    expect(getToken()).toBe('stari-token');
+    odjavi();
+  });
+
+  test('ni neuspela registracija ne obara sesiju', async () => {
+    const javi = vi.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: { message: 'Nalog je deaktiviran.' } }));
+
+    await expect(post('/auth/register', {})).rejects.toThrow();
+
+    expect(javi).not.toHaveBeenCalled();
+    odjavi();
+  });
+
+  test('403 nije istekla sesija', async () => {
+    const javi = vi.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 403, body: { message: 'Nemate dozvolu.' } }));
+
+    await expect(get('/users')).rejects.toThrow('Nemate dozvolu.');
+
+    expect(javi).not.toHaveBeenCalled();
+    expect(getToken()).toBe('stari-token');
+    odjavi();
+  });
+
+  test('odjava sa osluskivanja prestaje da javlja', async () => {
+    const javi = vi.fn();
+    onSessionExpired(javi)();
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: {} }));
+
+    await expect(get('/users')).rejects.toThrow();
+
+    expect(javi).not.toHaveBeenCalled();
   });
 });

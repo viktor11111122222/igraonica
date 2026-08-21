@@ -81,8 +81,12 @@ export function formatDuration(minutes) {
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
-export function initials(firstName = '', lastName = '') {
-  return `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
+// Podrazumevana vrednost parametra vazi samo za `undefined`, pa `null` iz baze
+// ne bi bio pokriven - otuda `?? ''` umesto oslanjanja na podrazumevanu.
+export function initials(firstName, lastName) {
+  const prvo = (firstName ?? '')[0] || '';
+  const drugo = (lastName ?? '')[0] || '';
+  return `${prvo}${drugo}`.toUpperCase();
 }
 
 export function ageInYears(dateOfBirth) {

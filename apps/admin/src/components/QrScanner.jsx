@@ -11,13 +11,47 @@ import { useEffect, useRef, useState } from 'react';
 
 const READER_ID = 'qr-reader';
 
-// Isti kod ume da se procita vise puta u sekundi dok je pred kamerom. Bez ove
-// pauze bi se posle prijave odmah okinula i odjava.
-const COOLDOWN_MS = 3000;
+// Deo kadra koji se gleda. Fiksnih 220px je pucalo na uskim telefonima -
+// html5-qrcode odbija okvir siri od samog videa, pa se skener nije ni pokrenuo.
+const QRBOX_RATIO = 0.7;
+
+function qrbox(sirinaKadra, visinaKadra) {
+  const strana = Math.floor(Math.min(sirinaKadra, visinaKadra) * QRBOX_RATIO);
+  return { width: strana, height: strana };
+}
+
+// Zasto kamere nema pre nego sto se uopste proba.
+//
+// Bitno za telefone: iOS Safari ne postavlja `navigator.mediaDevices` ako
+// stranica nije na HTTPS-u sa sertifikatom kojem uredjaj veruje. Samoprotpisan
+// sertifikat koji je korisnik "propustio" kroz upozorenje se ne racuna. Tada
+// nema nikakve greske pri pokretanju - objekta prosto nema, pa je bez ove
+// provere ispadalo da skener cuti bez razloga.
+function stanjeKamere() {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    return typeof window !== 'undefined' && window.isSecureContext === false
+      ? 'nesigurno'
+      : 'nedostupno';
+  }
+  return 'ok';
+}
+
+const PORUKE = {
+  nesigurno:
+    'Kamera radi samo preko HTTPS-a. Otvorite admin na https:// adresi, ili unesite kod rucno.',
+  nedostupno:
+    'Pregledac ne nudi kameru. Na iPhone-u Safari je sakrije dok sertifikat stranice nije od poverenja. Unesite kod rucno.',
+  NotAllowedError:
+    'Pristup kameri nije dozvoljen. Dozvolite ga u pregledacu ili unesite kod rucno.',
+  NotFoundError: 'Na ovom uredjaju nema kamere. Unesite kod rucno.',
+  NotReadableError:
+    'Kameru drzi druga aplikacija. Zatvorite je pa probajte ponovo, ili unesite kod rucno.',
+  OverconstrainedError: 'Zadnja kamera nije dostupna. Unesite kod rucno.',
+  default: 'Kamera nije dostupna. Unesite kod rucno.',
+};
 
 export default function QrScanner({ active, onScan, onError }) {
   const scannerRef = useRef(null);
-  const lastRef = useRef({ code: null, at: 0 });
   const [status, setStatus] = useState('starting');
   const [message, setMessage] = useState('');
 
@@ -31,7 +65,26 @@ export default function QrScanner({ active, onScan, onError }) {
     let scanner;
     let stopped = false;
 
+    // Kod stoji pred objektivom i cita se vise puta u sekundi. Jedno paljenje
+    // kamere sme da da tacno jedan rezultat: drugo citanje istog koda bi bila
+    // odjava deteta koje je upravo prijavljeno. Roditelj koji hoce jos jedno
+    // dete ponovo pali kameru, i to je namerna radnja.
+    let poslato = false;
+
+    function pukni(tekst) {
+      if (stopped) return;
+      setStatus('error');
+      setMessage(tekst);
+      onError?.(tekst);
+    }
+
     async function start() {
+      const stanje = stanjeKamere();
+      if (stanje !== 'ok') {
+        pukni(PORUKE[stanje]);
+        return;
+      }
+
       try {
         // Biblioteka se dovlaci tek kad se kamera ukljuci - vecina otvaranja
         // ekrana prodje bez skeniranja, pa nema razloga da je svi cekaju.
@@ -43,16 +96,13 @@ export default function QrScanner({ active, onScan, onError }) {
 
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
+          { fps: 10, qrbox },
           (text) => {
+            if (poslato) return;
             const code = String(text || '').trim().toUpperCase();
             if (!code) return;
 
-            const now = Date.now();
-            const last = lastRef.current;
-            if (last.code === code && now - last.at < COOLDOWN_MS) return;
-            lastRef.current = { code, at: now };
-
+            poslato = true;
             onScanRef.current?.(code);
           },
           () => {
@@ -62,14 +112,7 @@ export default function QrScanner({ active, onScan, onError }) {
 
         if (!stopped) setStatus('running');
       } catch (err) {
-        if (stopped) return;
-        setStatus('error');
-        const text =
-          err?.name === 'NotAllowedError'
-            ? 'Pristup kameri nije dozvoljen. Dozvolite ga u pregledacu ili unesite kod rucno.'
-            : 'Kamera nije dostupna. Unesite kod rucno.';
-        setMessage(text);
-        onError?.(text);
+        pukni(PORUKE[err?.name] || PORUKE.default);
       }
     }
 
@@ -89,27 +132,18 @@ export default function QrScanner({ active, onScan, onError }) {
   if (!active) return null;
 
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div className="scanner">
       <div
         id={READER_ID}
-        style={{
-          width: '100%',
-          maxWidth: 320,
-          margin: '0 auto',
-          borderRadius: 'var(--r-md)',
-          overflow: 'hidden',
-          background: '#000',
-          minHeight: status === 'error' ? 0 : 220,
-        }}
+        className="scanner-view"
+        style={{ minHeight: status === 'error' ? 0 : 220 }}
       />
       {status === 'starting' && (
-        <div className="field-hint" style={{ textAlign: 'center' }}>
-          Kamera se pokrece...
-        </div>
+        <div className="field-hint center">Kamera se pokrece...</div>
       )}
       {status === 'error' && <div className="field-hint">{message}</div>}
       {status === 'running' && (
-        <div className="field-hint" style={{ textAlign: 'center' }}>
+        <div className="field-hint center">
           Prinesite QR kod iz roditeljske aplikacije kameri.
         </div>
       )}

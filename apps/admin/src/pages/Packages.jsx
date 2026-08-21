@@ -12,6 +12,9 @@ export default function Packages() {
   const [form, setForm] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Greska pri brisanju ide u sam dijalog. Traka na stranici je iza otvorenog
+  // prozora, pa je radnik ne vidi - vidi samo da se nista nije desilo.
+  const [brisanjeGreska, setBrisanjeGreska] = useState('');
   const [formError, setFormError] = useState('');
 
   async function save(e) {
@@ -43,7 +46,7 @@ export default function Packages() {
       setDeleting(null);
       reload();
     } catch (e) {
-      setFormError(e.message);
+      setBrisanjeGreska(e.message);
     } finally {
       setBusy(false);
     }
@@ -138,13 +141,13 @@ export default function Packages() {
               <button className="btn secondary" onClick={() => setForm(null)} disabled={busy}>
                 Odustani
               </button>
-              <button className="btn" onClick={save} disabled={busy}>
+              <button className="btn" disabled={busy} type="submit" form="paket-forma">
                 {busy ? 'Cuva se...' : 'Sacuvaj'}
               </button>
             </>
           }
         >
-          <form onSubmit={save}>
+          <form id="paket-forma" onSubmit={save}>
             <Alert>{formError}</Alert>
             <Field label="Naziv">
               <input value={form.name} onChange={set('name')} required placeholder="npr. Paket 10h" />
@@ -184,7 +187,11 @@ export default function Packages() {
           confirmLabel="Deaktiviraj"
           busy={busy}
           onConfirm={remove}
-          onClose={() => setDeleting(null)}
+          error={brisanjeGreska}
+          onClose={() => {
+            setDeleting(null);
+            setBrisanjeGreska('');
+          }}
         />
       )}
     </>

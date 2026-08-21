@@ -25,6 +25,9 @@ export default function Users() {
   const [form, setForm] = useState(null);
   const [deactivating, setDeactivating] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Greska pri brisanju ide u sam dijalog. Traka na stranici je iza otvorenog
+  // prozora, pa je radnik ne vidi - vidi samo da se nista nije desilo.
+  const [brisanjeGreska, setBrisanjeGreska] = useState('');
   const [error, setError] = useState('');
 
   const params = new URLSearchParams({ page, limit: 20 });
@@ -68,7 +71,7 @@ export default function Users() {
       setDeactivating(null);
       reload();
     } catch (e) {
-      setError(e.message);
+      setBrisanjeGreska(e.message);
     } finally {
       setBusy(false);
     }
@@ -210,13 +213,13 @@ export default function Users() {
               <button className="btn secondary" onClick={() => setForm(null)} disabled={busy}>
                 Odustani
               </button>
-              <button className="btn" onClick={save} disabled={busy} type="submit">
+              <button className="btn" disabled={busy} type="submit" form="nalog-forma">
                 {busy ? 'Cuva se...' : 'Sacuvaj'}
               </button>
             </>
           }
         >
-          <form onSubmit={save}>
+          <form id="nalog-forma" onSubmit={save}>
             <Alert>{error}</Alert>
             <div className="field-row">
               <Field label="Ime">
@@ -261,6 +264,14 @@ export default function Users() {
         </Modal>
       )}
 
+      {assignTo && (
+        <AssignPackage
+          user={assignTo}
+          onClose={() => setAssignTo(null)}
+          onDone={reload}
+        />
+      )}
+
       {deactivating && (
         <Confirm
           title="Deaktivirati nalog?"
@@ -268,7 +279,11 @@ export default function Users() {
           confirmLabel="Deaktiviraj"
           busy={busy}
           onConfirm={deactivate}
-          onClose={() => setDeactivating(null)}
+          error={brisanjeGreska}
+          onClose={() => {
+            setDeactivating(null);
+            setBrisanjeGreska('');
+          }}
         />
       )}
     </>

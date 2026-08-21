@@ -19,11 +19,6 @@ vi.mock('html5-qrcode', () => ({
   }),
 }));
 
-// Vreme se kontrolise preko Date.now, NE preko vi.useFakeTimers: waitFor
-// prepozna lazne tajmere i predje na rezim u kom pravi tajmeri ne okidaju, pa
-// cekanje na pokretanje kamere nikad ne prodje.
-let sada;
-
 beforeEach(() => {
   h.onSuccess = null;
   h.start.mockReset().mockImplementation(async (cfg, opts, onSuccess) => {
@@ -31,9 +26,6 @@ beforeEach(() => {
   });
   h.stop.mockReset().mockResolvedValue(undefined);
   h.clear.mockReset();
-
-  sada = new Date(2026, 7, 13, 12, 0, 0).getTime();
-  vi.spyOn(Date, 'now').mockImplementation(() => sada);
 });
 
 afterEach(() => {
@@ -96,9 +88,9 @@ describe('QrScanner - citanje koda', () => {
     expect(onScan).not.toHaveBeenCalled();
   });
 
-  // Kod stoji pred kamerom i cita se vise puta u sekundi. Bez pauze bi se
-  // odmah posle prijave okinula i odjava.
-  test('isti kod se ne salje dvaput za redom', async () => {
+  // Kod stoji pred objektivom i cita se vise puta u sekundi. Drugo citanje bi
+  // bila odjava deteta koje je upravo prijavljeno.
+  test('jedno paljenje kamere daje tacno jedan rezultat', async () => {
     const onScan = vi.fn();
     render(<QrScanner active onScan={onScan} />);
     await waitFor(() => expect(h.start).toHaveBeenCalled());
@@ -110,25 +102,31 @@ describe('QrScanner - citanje koda', () => {
     expect(onScan).toHaveBeenCalledTimes(1);
   });
 
-  test('posle pauze isti kod moze ponovo', async () => {
+  // Ni drugo dete ne sme da prodje samo od sebe - radnik izmedju dva deteta
+  // gleda ishod prvog.
+  test('ni drugi kod ne prolazi bez ponovnog paljenja', async () => {
     const onScan = vi.fn();
     render(<QrScanner active onScan={onScan} />);
     await waitFor(() => expect(h.start).toHaveBeenCalled());
 
     skeniraj('IGR-5424914B');
-    sada += 4000; // 4s kasnije, pauza je 3s
-    skeniraj('IGR-5424914B');
+    skeniraj('IGR-C1B0D3C0');
 
-    expect(onScan).toHaveBeenCalledTimes(2);
+    expect(onScan).toHaveBeenCalledTimes(1);
+    expect(onScan).toHaveBeenCalledWith('IGR-5424914B');
   });
 
-  // Drugo dete odmah posle prvog ne sme da ceka pauzu.
-  test('drugi kod prolazi odmah', async () => {
+  test('ponovo upaljena kamera opet cita', async () => {
     const onScan = vi.fn();
-    render(<QrScanner active onScan={onScan} />);
+    const { rerender } = render(<QrScanner active onScan={onScan} />);
+    await waitFor(() => expect(h.start).toHaveBeenCalled());
+    skeniraj('IGR-5424914B');
+
+    rerender(<QrScanner active={false} onScan={onScan} />);
+    h.start.mockClear();
+    rerender(<QrScanner active onScan={onScan} />);
     await waitFor(() => expect(h.start).toHaveBeenCalled());
 
-    skeniraj('IGR-5424914B');
     skeniraj('IGR-C1B0D3C0');
 
     expect(onScan).toHaveBeenCalledTimes(2);
@@ -157,5 +155,52 @@ describe('QrScanner - kada kamera zakaze', () => {
 
     expect(await screen.findByText(/Unesite kod rucno/i)).toBeInTheDocument();
     expect(onError).toHaveBeenCalled();
+  });
+});
+
+// iOS Safari ne postavlja navigator.mediaDevices dok stranica nije na HTTPS-u
+// sa sertifikatom kojem uredjaj veruje. Skener tada ne dobija nikakvu gresku,
+// pa mora sam da prepozna da kamere nema.
+describe('QrScanner - kada pregledac uopste ne nudi kameru', () => {
+  function bezKamere() {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+  }
+
+  test('bez HTTPS-a poruka upucuje na https adresu', async () => {
+    bezKamere();
+    Object.defineProperty(window, 'isSecureContext', {
+      value: false,
+      configurable: true,
+    });
+
+    render(<QrScanner active onScan={vi.fn()} onError={vi.fn()} />);
+
+    expect(await screen.findByText(/HTTPS/i)).toBeInTheDocument();
+  });
+
+  test('na HTTPS-u poruka upucuje na sertifikat', async () => {
+    bezKamere();
+    Object.defineProperty(window, 'isSecureContext', {
+      value: true,
+      configurable: true,
+    });
+
+    render(<QrScanner active onScan={vi.fn()} onError={vi.fn()} />);
+
+    expect(await screen.findByText(/sertifikat/i)).toBeInTheDocument();
+  });
+
+  test('biblioteka se ne dovlaci kad kamere nema', async () => {
+    bezKamere();
+    const onError = vi.fn();
+
+    render(<QrScanner active onScan={vi.fn()} onError={onError} />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+    expect(h.start).not.toHaveBeenCalled();
   });
 });

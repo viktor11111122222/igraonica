@@ -42,7 +42,12 @@ export default function Settings() {
   const [saveError, setSaveError] = useState('');
   const timers = useRef({});
 
-  const settings = data?.settings || [];
+  // Zavisnost mora da bude ono sto stize sa servera, a ne niz koji se pravi u
+  // renderu: `data?.settings || []` je nov niz pri svakom prolazu, pa bi useMemo
+  // racunao nov objekat, effect se okidao, setValues zvao nov render - i tako u
+  // krug dok podaci ne stignu. Kada zahtev padne, `data` ostane null i taj krug
+  // nema kraj.
+  const settings = useMemo(() => data?.settings || [], [data]);
   const original = useMemo(
     () => Object.fromEntries(settings.map((s) => [s.key, s.value])),
     [settings]

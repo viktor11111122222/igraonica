@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { get } from '../lib/api';
+import { useActiveVisits } from '../hooks/useActiveVisits';
 import { initials } from '../lib/format';
 import logo from '../assets/logo.png';
 
@@ -42,30 +42,44 @@ const NAV = [
   },
 ];
 
+// Na telefonu se bocna traka pretvara u fioku. Dugme za nju stoji u zaglavlju
+// stranice, a stranice sve renderuju PageHeader - pa stanje putuje kroz
+// kontekst umesto da ga svaka stranica prosledjuje.
+const SidebarCtx = createContext(null);
+
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const [activeCount, setActiveCount] = useState(0);
 
   // Broj dece koja su trenutno u igraonici stoji uz "Prijave" - to je jedini
-  // podatak koji osoblje mora da vidi bez otvaranja stranice.
+  // podatak koji osoblje mora da vidi bez otvaranja stranice. Izvor je deljen sa
+  // ekranom Prijave, pa se ista ruta ne anketira dvaput.
+  const { count: activeCount } = useActiveVisits();
+
+  // Izbor iz menija vodi na drugu stranicu - fioka tu nema sta vise da radi.
+  useEffect(() => setMenuOpen(false), [pathname]);
+
+  // Dok je fioka preko ekrana, stranica ispod ne sme da se pomera pod prstom.
   useEffect(() => {
-    let alive = true;
-    function load() {
-      get('/visits/active')
-        .then((d) => alive && setActiveCount(d.count || 0))
-        .catch(() => {});
-    }
-    load();
-    const timer = setInterval(load, 30000);
+    if (!menuOpen) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      alive = false;
-      clearInterval(timer);
+      document.body.style.overflow = prev;
     };
-  }, []);
+  }, [menuOpen]);
 
   return (
-    <div className="shell">
+    <SidebarCtx.Provider value={{ menuOpen, setMenuOpen }}>
+    <div className={`shell ${menuOpen ? 'menu-open' : ''}`}>
+      <button
+        type="button"
+        className="scrim"
+        aria-label="Zatvori meni"
+        onClick={() => setMenuOpen(false)}
+      />
       <aside className="sidebar">
         <div className="brand">
           <img className="brand-logo" src={logo} alt="Kids club" />
@@ -125,15 +139,27 @@ export default function Layout() {
         <Outlet />
       </div>
     </div>
+    </SidebarCtx.Provider>
   );
 }
 
 // Zaglavlje stranice. Svaka stranica ga sama renderuje da bi mogla da doda
 // svoje akcije desno.
 export function PageHeader({ title, subtitle, children }) {
+  const sidebar = useContext(SidebarCtx);
+
   return (
     <div className="topbar">
-      <div>
+      <button
+        type="button"
+        className="menu-btn"
+        aria-label="Meni"
+        aria-expanded={!!sidebar?.menuOpen}
+        onClick={() => sidebar?.setMenuOpen((o) => !o)}
+      >
+        ☰
+      </button>
+      <div className="topbar-title">
         <h1>{title}</h1>
         {subtitle && <div className="topbar-sub">{subtitle}</div>}
       </div>

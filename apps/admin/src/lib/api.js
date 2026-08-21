@@ -21,6 +21,21 @@ export class ApiError extends Error {
   }
 }
 
+// Sta uraditi kada server kaze da token vise ne vazi. AuthContext ovde ostavlja
+// svoju odjavu - sloj za pozive ne zna nista o React-u.
+let naIstekluSesiju = null;
+
+export function onSessionExpired(fn) {
+  naIstekluSesiju = fn;
+  return () => {
+    if (naIstekluSesiju === fn) naIstekluSesiju = null;
+  };
+}
+
+// Na ovim rutama 401 znaci "pogresan email ili lozinka", a ne "sesija je
+// istekla" - backend vraca isti status za oba.
+const RUTE_PRIJAVE = ['/auth/login', '/auth/register'];
+
 export async function api(path, { method = 'GET', body, raw } = {}) {
   const headers = {};
   const token = getToken();
@@ -41,6 +56,13 @@ export async function api(path, { method = 'GET', body, raw } = {}) {
   }
 
   if (!res.ok) {
+    // Istekao token ili deaktiviran nalog: bez ovoga bi svaki sledeci zahtev
+    // pucao istom greskom, a jedini izlaz bilo bi rucno brisanje localStorage.
+    if (res.status === 401 && !RUTE_PRIJAVE.includes(path)) {
+      setToken(null);
+      naIstekluSesiju?.();
+    }
+
     const message =
       data?.errors?.map((e) => e.msg).join(' ') ||
       data?.message ||

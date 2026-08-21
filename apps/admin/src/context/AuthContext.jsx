@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { get, post, setToken, getToken, ApiError } from '../lib/api';
+import { get, post, setToken, getToken, onSessionExpired, ApiError } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -24,6 +24,10 @@ export function AuthProvider({ children }) {
       .catch(() => setToken(null))
       .finally(() => setLoading(false));
   }, []);
+
+  // Kada bilo koji poziv naidje na istekao token, korisnik se vraca na prijavu
+  // sam od sebe - umesto da gleda "Greska 401" na svakoj stranici.
+  useEffect(() => onSessionExpired(() => setUser(null)), []);
 
   const login = useCallback(async (email, password) => {
     const { token, user } = await post('/auth/login', { email, password });

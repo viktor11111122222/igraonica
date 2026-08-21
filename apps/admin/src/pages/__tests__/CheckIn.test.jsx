@@ -1,8 +1,9 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CheckIn from '../CheckIn';
 import { get, post } from '../../lib/api';
+import { __resetActiveVisits } from '../../hooks/useActiveVisits';
 
 vi.mock('../../lib/api', () => ({
   get: vi.fn(),
@@ -23,7 +24,35 @@ vi.mock('html5-qrcode', () => ({
 
 const KOD = 'IGR-5424914B';
 
+// Dete koje je vec u igraonici. Smer se cita iz ovog spiska, pa je ovo jedini
+// ulaz koji odlucuje da li ce skeniranje biti prijava ili odjava.
+const poseta = {
+  id: 'v1',
+  checkedInAt: '2026-08-21T09:00:00.000Z',
+  currentDurationMinutes: 45,
+  userPackage: { remainingHours: 8 },
+  child: {
+    firstName: 'Ana',
+    lastName: 'Petrovic',
+    qrCode: KOD,
+    parent: { firstName: 'Jelena', lastName: 'Petrovic' },
+  },
+};
+
+// Ceo ekran razlikuje rucni citac od coveka po razmaku izmedju znakova, pa
+// vreme mora da bude pod kontrolom. Podrazumevano tece ljudskom brzinom - inace
+// bi `userEvent.type`, koji kuca trenutno, bio prepoznat kao citac.
+let sada;
+let korak;
+
 beforeEach(() => {
+  // Izvor prisutnih je deljen modul; bez ovoga stanje curi iz testa u test.
+  __resetActiveVisits();
+
+  sada = 1_000_000;
+  korak = 500;
+  vi.spyOn(Date, 'now').mockImplementation(() => (sada += korak));
+
   h.onSuccess = null;
   h.start.mockReset().mockImplementation(async (cfg, opts, onSuccess) => {
     h.onSuccess = onSuccess;
@@ -33,6 +62,17 @@ beforeEach(() => {
   get.mockResolvedValue({ visits: [] });
   post.mockResolvedValue({ message: 'Ana Petrovic je prijavljen/a.', remainingHours: 12 });
 });
+
+// Citac sa kase "otkuca" kod za nekoliko milisekundi, bilo gde na strani.
+function skenirajCitacem(kod) {
+  korak = 5;
+  for (const znak of kod) {
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', { key: znak, bubbles: true, cancelable: true })
+    );
+  }
+  korak = 500;
+}
 
 async function ukljuciKameru(user) {
   await user.click(screen.getByRole('button', { name: 'Skeniraj kamerom' }));
@@ -72,11 +112,13 @@ describe('CheckIn - kamera', () => {
     );
   });
 
-  test('u rezimu odjave skeniran kod salje odjavu', async () => {
+  // Sustina drugog skeniranja: isti kod, ali je dete sada unutra.
+  test('kod deteta koje je vec unutra salje odjavu', async () => {
     const user = userEvent.setup();
-    render(<CheckIn />);
+    get.mockResolvedValue({ visits: [poseta] });
 
-    await user.click(screen.getByRole('button', { name: 'Odjava' }));
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
     await ukljuciKameru(user);
 
     await h.onSuccess(KOD);
@@ -84,6 +126,46 @@ describe('CheckIn - kamera', () => {
     await waitFor(() =>
       expect(post).toHaveBeenCalledWith('/visits/check-out', { qrCode: KOD })
     );
+  });
+
+  // Bez ovoga bi isti kod pred objektivom odmah okinuo i suprotnu radnju.
+  test('kamera se gasi posle jednog citanja', async () => {
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await ukljuciKameru(user);
+
+    await h.onSuccess(KOD);
+
+    await waitFor(() => expect(h.stop).toHaveBeenCalled());
+    expect(
+      await screen.findByRole('button', { name: 'Skeniraj kamerom' })
+    ).toBeInTheDocument();
+  });
+
+  test('rezultat se objavljuje kao status, van forme', async () => {
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await ukljuciKameru(user);
+
+    await h.onSuccess(KOD);
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Ana Petrovic je prijavljen/a.');
+    expect(status).toHaveTextContent('Preostalo');
+  });
+
+  test('sa rezultata se jednim dugmetom pali sledece skeniranje', async () => {
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await ukljuciKameru(user);
+    await h.onSuccess(KOD);
+    await screen.findByRole('status');
+    h.start.mockClear();
+
+    await user.click(screen.getByRole('button', { name: 'Skeniraj sledece' }));
+
+    await waitFor(() => expect(h.start).toHaveBeenCalled());
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   test('posle skeniranja se osvezava lista prisutnih', async () => {
@@ -122,6 +204,55 @@ describe('CheckIn - kamera', () => {
   });
 });
 
+describe('CheckIn - rucni citac', () => {
+  // Sustina: kod stize i kada fokus nije u polju za unos.
+  test('kod sa citaca salje prijavu i bez fokusa u polju', async () => {
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
+
+    skenirajCitacem(KOD);
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith('/visits/check-in', { qrCode: KOD })
+    );
+  });
+
+  test('drugo citanje istog koda odjavljuje', async () => {
+    get.mockResolvedValue({ visits: [poseta] });
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
+
+    skenirajCitacem(KOD);
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith('/visits/check-out', { qrCode: KOD })
+    );
+  });
+
+  test('ishod citaca se vidi isto kao ishod kamere', async () => {
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
+
+    skenirajCitacem(KOD);
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Ana Petrovic je prijavljen/a.');
+  });
+
+  // Dva citanja u istom dahu ne smeju da posalju dva zahteva - drugi bi odmah
+  // odjavio dete koje je prvi prijavio.
+  test('dva citanja zaredom salju jedan zahtev', async () => {
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
+
+    skenirajCitacem(KOD);
+    skenirajCitacem(KOD);
+
+    await waitFor(() => expect(post).toHaveBeenCalled());
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('CheckIn - rucni unos ostaje', () => {
   test('kod unet rukom radi i bez kamere', async () => {
     const user = userEvent.setup();
@@ -135,6 +266,21 @@ describe('CheckIn - rucni unos ostaje', () => {
       expect(post).toHaveBeenCalledWith('/visits/check-in', { qrCode: KOD })
     );
     expect(h.start).not.toHaveBeenCalled();
+  });
+
+  test('dugme nudi odjavu kada je dete vec unutra', async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue({ visits: [poseta] });
+
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalled());
+
+    const polje = screen.getByPlaceholderText('IGR-XXXXXXXX');
+    await user.type(polje, KOD);
+
+    // U tabeli prisutnih stoji jos jedno "Odjavi", pa se gleda bas dugme forme.
+    const forma = polje.closest('form');
+    expect(within(forma).getByRole('button', { name: 'Odjavi' })).toBeInTheDocument();
   });
 
   test('polje se prazni posle uspesne prijave', async () => {
