@@ -142,7 +142,7 @@ export default function Users() {
                   <tbody>
                     {data.users.map((u) => (
                       <tr key={u.id}>
-                        <td>
+                        <td data-label="Ime">
                           <div className="inline">
                             <div className="avatar">{initials(u.firstName, u.lastName)}</div>
                             <div>
@@ -155,12 +155,12 @@ export default function Users() {
                             </div>
                           </div>
                         </td>
-                        <td className="muted">{u.email}</td>
-                        <td className="muted">{u.phone || '—'}</td>
-                        <td>
+                        <td className="muted" data-label="Email">{u.email}</td>
+                        <td className="muted" data-label="Telefon">{u.phone || '—'}</td>
+                        <td data-label="Uloga">
                           <Badge tone={u.role === 'PARENT' ? 'gray' : 'amber'}>{u.role}</Badge>
                         </td>
-                        <td className="muted">{formatDate(u.createdAt)}</td>
+                        <td className="muted" data-label="Kreiran">{formatDate(u.createdAt)}</td>
                         <td className="actions">
                           {u.role === 'PARENT' && (
                             <>

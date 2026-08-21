@@ -191,8 +191,8 @@ export default function BarChart({
             <tbody>
               {points.map((d, i) => (
                 <tr key={i}>
-                  <td>{formatLabel(d, true)}</td>
-                  <td>{formatValue(d[valueKey])}</td>
+                  <td data-label="Datum">{formatLabel(d, true)}</td>
+                  <td data-label="Vrednost">{formatValue(d[valueKey])}</td>
                 </tr>
               ))}
             </tbody>

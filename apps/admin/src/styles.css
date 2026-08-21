@@ -1023,9 +1023,65 @@ textarea.setting-input {
   color: var(--primary-darker);
 }
 
+/* ============ Red rasporeda ============ */
+/* Bio je sklopljen inline stilovima, pa nije mogao da se prilagodi telefonu -
+   dugmad su ulazila u tekst. */
+.sched-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.sched-row.sakriven {
+  opacity: 0.5;
+}
+.sched-color {
+  flex: 0 0 4px;
+  align-self: stretch;
+  border-radius: 2px;
+}
+.sched-main {
+  flex: 1;
+  min-width: 0;
+}
+.sched-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 /* ============ Skener ============ */
 .scanner {
   margin-bottom: 14px;
+}
+/* Birac kamere. Pojavljuje se samo kada ih ima vise - na recepciji je to izbor
+   izmedju ugradjene i USB kamere uperene u pult. */
+.scanner-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
+  margin: 0 auto 8px;
+}
+.scanner-pick label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+}
+.scanner-pick select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
 }
 .scanner-view {
   width: 100%;
@@ -1215,6 +1271,15 @@ textarea.setting-input {
   .card-head {
     padding: 14px;
   }
+  /* Zaglavlje kartice nosi naslov, znacke i akcije. Bez preloma je guralo
+     dugmad van ekrana (Jelovnik: "Kopiraj prethodni dan" i "Sacuvaj"). */
+  .card-head {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .card-head h2 {
+    flex: 1 1 auto;
+  }
 
   /* Dugmad i polja se hvataju prstom, ne misem. */
   .btn {
@@ -1229,6 +1294,57 @@ textarea.setting-input {
   textarea {
     font-size: 16px;
   }
+  /* Prst trazi bar 40px. Cipovi, prekidaci i padajuci meniji su bili ispod
+     toga i promasivali su se. */
+  select,
+  .toolbar input,
+  .toolbar select {
+    min-height: 42px;
+  }
+  .chip {
+    min-height: 40px;
+    padding: 9px 14px;
+  }
+  /* Kvadratic i njegov natpis su jedno dugme za prst. */
+  .check {
+    min-height: 40px;
+  }
+  .check input {
+    width: 22px;
+    height: 22px;
+  }
+  .switch {
+    width: 58px;
+    height: 36px;
+  }
+  .switch-knob {
+    width: 28px;
+    height: 28px;
+  }
+  .switch.on .switch-knob {
+    transform: translateX(22px);
+  }
+  /* Veza u kartici (ime roditelja, naslov objave) - vise mesta za prst, bez
+     menjanja izgleda reda. */
+  .table-wrap tbody td a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+  }
+
+  /* Pet plocica jedna ispod druge je bilo previse skrolovanja do grafikona.
+     `auto-fit` sa minimumom od 178px na 390px ekrana ne stane u dve kolone, pa
+     se broj kolona ovde zadaje. */
+  .grid.stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .stat {
+    padding: 12px 14px;
+  }
+  .stat-value {
+    font-size: 24px;
+  }
 
   .inline {
     flex-wrap: wrap;
@@ -1238,8 +1354,8 @@ textarea.setting-input {
   td .inline {
     flex-wrap: nowrap;
   }
-  /* Kod je na nekim stranama klasa same celije, na drugima div u njoj. Prelom
-     na crtici ("IGR- / 00148917") se ne moze uporediti sa nalepnicom. */
+  /* Kod se ne lomi: prelomljen "IGR- / 00148917" se ne moze uporediti sa
+     nalepnicom. */
   td.mono,
   td .mono {
     white-space: nowrap;
@@ -1265,13 +1381,122 @@ textarea.setting-input {
     scroll-margin-top: 74px;
   }
 
-  /* Tabele imaju previse kolona za telefon. Umesto da se stisnu do
-     necitljivosti, klize vodoravno unutar svoje kartice. Ime i kod se ne lome
-     - prelomljeni "IGR-0004 / 5227" se ne moze uporediti sa nalepnicom. */
-  .table-wrap table {
-    min-width: 720px;
+  /* Tabela postaje spisak kartica.
+     Klizanje u stranu je bilo prohodno, ali su akcije ("Detalji", "Izmeni",
+     "Deaktiviraj") ostajale van ekrana i nista nije nagovestavalo da su tamo.
+     Oznake kolona dolaze iz `data-label` na celijama. */
+  /* Kartica koja drzi tabelu gubi svoj okvir - redovi su vec kartice, pa bi to
+     bila kartica u kartici. Zaglavlje ostaje, kao naslov sekcije. */
+  .card:has(> .table-wrap) {
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
-  .row-main,
+  .card:has(> .table-wrap) > .card-head {
+    padding-left: 2px;
+    padding-right: 2px;
+    border-bottom: none;
+  }
+  .table-wrap {
+    overflow-x: visible;
+    padding: 0;
+  }
+  .table-wrap table {
+    min-width: 0;
+    display: block;
+  }
+  .table-wrap thead {
+    display: none;
+  }
+  .table-wrap tbody {
+    display: block;
+  }
+  .table-wrap tbody tr {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 12px 14px;
+  }
+  .table-wrap tbody tr + tr {
+    margin-top: 10px;
+  }
+  .card:has(> .table-wrap) > .pagination {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+  .table-wrap tbody tr:hover {
+    background: var(--surface);
+  }
+  .table-wrap tbody td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 5px 0;
+    border: none;
+    text-align: right;
+  }
+  .table-wrap tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    text-align: left;
+  }
+
+  /* Prva celija je ono po cemu se red prepoznaje - stoji kao naslov kartice,
+     bez oznake i preko cele sirine. */
+  .table-wrap tbody td:first-child {
+    display: block;
+    text-align: left;
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+  }
+  .table-wrap tbody td:first-child::before {
+    content: none;
+  }
+
+  /* Celija bez oznake je kolona akcija - dugmad idu u svoj red, razmaknuta. */
+  .table-wrap tbody td:not([data-label]) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+    text-align: left;
+    white-space: normal;
+    padding-top: 10px;
+    margin-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+  .table-wrap tbody td:not([data-label])::before {
+    content: none;
+  }
+  /* Razmaci izmedju dugmadi dolaze iz `gap`, pa razmaci iz JSX-a smetaju. */
+  .table-wrap tbody td:not([data-label]) > .btn {
+    margin: 0;
+  }
+
+  /* Aktivnost u rasporedu: dugmad idu ispod teksta, poravnata sa njim. */
+  .sched-row {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .sched-actions {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    padding-left: 16px;
+  }
+
+  /* U kartici ima mesta za prelom, pa duga imena ne moraju da se seku. */
+  .row-main {
+    white-space: normal;
+  }
   .row-sub {
     white-space: nowrap;
   }

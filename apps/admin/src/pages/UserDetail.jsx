@@ -149,7 +149,7 @@ export default function UserDetail() {
                 <tbody>
                   {user.children.map((c) => (
                     <tr key={c.id}>
-                      <td>
+                      <td data-label="Ime">
                         <div className="inline">
                           <div className="avatar">{initials(c.firstName, c.lastName)}</div>
                           <div>
@@ -160,10 +160,10 @@ export default function UserDetail() {
                           </div>
                         </div>
                       </td>
-                      <td>{ageInYears(c.dateOfBirth)} god.</td>
-                      <td className="mono">{c.qrCode}</td>
-                      <td className="muted">{c.allergies || '—'}</td>
-                      <td className="muted">{c.notes || '—'}</td>
+                      <td data-label="Uzrast">{ageInYears(c.dateOfBirth)} god.</td>
+                      <td className="mono" data-label="QR kod">{c.qrCode}</td>
+                      <td className="muted" data-label="Alergije">{c.allergies || '—'}</td>
+                      <td className="muted" data-label="Napomene">{c.notes || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -200,11 +200,11 @@ export default function UserDetail() {
                     const state = packageState(up);
                     return (
                       <tr key={up.id}>
-                        <td>
+                        <td data-label="Paket">
                           <div className="row-main">{up.package.name}</div>
                           {up.notes && <div className="row-sub">{up.notes}</div>}
                         </td>
-                        <td>
+                        <td data-label="Sati">
                           <div className="row-main">
                             {formatHours(up.remainingHours)} <span className="faint">/</span>{' '}
                             <span className="muted">{formatHours(up.totalHours)}</span>
@@ -216,9 +216,9 @@ export default function UserDetail() {
                             )}
                           </div>
                         </td>
-                        <td className="muted">{formatDate(up.purchasedAt)}</td>
-                        <td className="muted">{formatDate(up.expiresAt)}</td>
-                        <td>
+                        <td className="muted" data-label="Kupljen">{formatDate(up.purchasedAt)}</td>
+                        <td className="muted" data-label="Vazi do">{formatDate(up.expiresAt)}</td>
+                        <td data-label="Status">
                           <Badge tone={state.tone}>{state.label}</Badge>
                         </td>
                         <td className="actions">
@@ -315,11 +315,11 @@ export default function UserDetail() {
                 <tbody>
                   {history.items.map((a) => (
                     <tr key={a.id}>
-                      <td className="muted">{formatDateTime(a.createdAt)}</td>
-                      <td>{formatHours(a.hoursBefore)}</td>
-                      <td className="row-main">{formatHours(a.hoursAfter)}</td>
-                      <td className="muted">{a.reason || '—'}</td>
-                      <td className="muted">
+                      <td className="muted" data-label="Kada">{formatDateTime(a.createdAt)}</td>
+                      <td data-label="Pre">{formatHours(a.hoursBefore)}</td>
+                      <td className="row-main" data-label="Posle">{formatHours(a.hoursAfter)}</td>
+                      <td className="muted" data-label="Razlog">{a.reason || '—'}</td>
+                      <td className="muted" data-label="Ko">
                         {a.adjustedBy.firstName} {a.adjustedBy.lastName}
                       </td>
                     </tr>

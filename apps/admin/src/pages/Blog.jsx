@@ -127,7 +127,7 @@ export default function Blog() {
                   <tbody>
                     {data.posts.map((p) => (
                       <tr key={p.id}>
-                        <td>
+                        <td data-label="Naslov">
                           <div className="inline">
                             {p.coverImageUrl && (
                               <img
@@ -148,13 +148,13 @@ export default function Blog() {
                             </div>
                           </div>
                         </td>
-                        <td className="muted">
+                        <td className="muted" data-label="Autor">
                           {p.author.firstName} {p.author.lastName}
                         </td>
-                        <td className="muted">
+                        <td className="muted" data-label="Objavljen">
                           {p.publishedAt ? formatDate(p.publishedAt) : '—'}
                         </td>
-                        <td>
+                        <td data-label="Status">
                           <div className="inline">
                             <Badge tone={p.isPublished ? 'green' : 'gray'}>
                               {p.isPublished ? 'Objavljen' : 'Nacrt'}

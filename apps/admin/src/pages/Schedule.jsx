@@ -104,25 +104,12 @@ export default function Schedule() {
 
   function Row({ a }) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '10px 0',
-          borderBottom: '1px solid var(--border)',
-          opacity: a.isActive ? 1 : 0.5,
-        }}
-      >
-        <div
-          style={{
-            width: 4,
-            alignSelf: 'stretch',
-            borderRadius: 2,
-            background: a.color || 'var(--primary)',
-          }}
+      <div className={`sched-row ${a.isActive ? '' : 'sakriven'}`}>
+        <span
+          className="sched-color"
+          style={{ background: a.color || 'var(--primary)' }}
         />
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="sched-main">
           <div className="row-main">{a.title}</div>
           <div className="row-sub">
             {a.startTime} – {a.endTime}
@@ -135,16 +122,18 @@ export default function Schedule() {
             </div>
           )}
         </div>
-        {!a.isActive && <Badge tone="gray">Sakriveno</Badge>}
-        <button className="btn ghost sm" onClick={() => toggleActive(a)}>
-          {a.isActive ? 'Sakrij' : 'Prikazi'}
-        </button>
-        <button className="btn secondary sm" onClick={() => edit(a)}>
-          Izmeni
-        </button>
-        <button className="btn ghost sm" onClick={() => setDeleting(a)}>
-          Obrisi
-        </button>
+        <div className="sched-actions">
+          {!a.isActive && <Badge tone="gray">Sakriveno</Badge>}
+          <button className="btn ghost sm" onClick={() => toggleActive(a)}>
+            {a.isActive ? 'Sakrij' : 'Prikazi'}
+          </button>
+          <button className="btn secondary sm" onClick={() => edit(a)}>
+            Izmeni
+          </button>
+          <button className="btn ghost sm" onClick={() => setDeleting(a)}>
+            Obrisi
+          </button>
+        </div>
       </div>
     );
   }

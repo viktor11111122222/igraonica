@@ -248,18 +248,18 @@ export default function CheckIn() {
                 <tbody>
                   {visits.map((v) => (
                     <tr key={v.id}>
-                      <td>
+                      <td data-label="Dete">
                         <div className="row-main">
                           {v.child.firstName} {v.child.lastName}
                         </div>
                         <div className="row-sub mono">{v.child.qrCode}</div>
                       </td>
-                      <td className="muted">
+                      <td className="muted" data-label="Roditelj">
                         {v.child.parent.firstName} {v.child.parent.lastName}
                       </td>
-                      <td className="muted">{formatTime(v.checkedInAt)}</td>
-                      <td>{formatDuration(v.currentDurationMinutes)}</td>
-                      <td>
+                      <td className="muted" data-label="Prijavljen">{formatTime(v.checkedInAt)}</td>
+                      <td data-label="Boravi">{formatDuration(v.currentDurationMinutes)}</td>
+                      <td data-label="Preostalo u paketu">
                         {v.userPackage ? formatHours(v.userPackage.remainingHours) : '—'}
                       </td>
                       <td className="actions">

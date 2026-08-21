@@ -14,13 +14,21 @@ vi.mock('../../lib/api', () => ({
 
 // Kamera ne postoji u testu; `start` zadrzava callback da test moze da
 // "skenira" kad hoce.
-const h = vi.hoisted(() => ({ onSuccess: null, start: vi.fn(), stop: vi.fn() }));
-
-vi.mock('html5-qrcode', () => ({
-  Html5Qrcode: vi.fn(function FakeScanner() {
-    return { start: h.start, stop: h.stop, clear: vi.fn() };
-  }),
+const h = vi.hoisted(() => ({
+  onSuccess: null,
+  start: vi.fn(),
+  stop: vi.fn(),
+  getCameras: vi.fn(),
 }));
+
+vi.mock('html5-qrcode', () => {
+  const Html5Qrcode = vi.fn(function FakeScanner() {
+    return { start: h.start, stop: h.stop, clear: vi.fn() };
+  });
+  // Skener prvo pita koje kamere postoje - na racunaru ih zna biti vise.
+  Html5Qrcode.getCameras = h.getCameras;
+  return { Html5Qrcode };
+});
 
 const KOD = 'IGR-5424914B';
 
@@ -58,6 +66,7 @@ beforeEach(() => {
     h.onSuccess = onSuccess;
   });
   h.stop.mockReset().mockResolvedValue(undefined);
+  h.getCameras.mockReset().mockResolvedValue([{ id: 'cam-back', label: 'Back Camera' }]);
 
   get.mockResolvedValue({ visits: [] });
   post.mockResolvedValue({ message: 'Ana Petrovic je prijavljen/a.', remainingHours: 12 });

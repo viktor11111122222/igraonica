@@ -73,7 +73,7 @@ export default function Children() {
                   <tbody>
                     {data.children.map((c) => (
                       <tr key={c.id}>
-                        <td>
+                        <td data-label="Dete">
                           <div className="inline">
                             <div className="avatar">{initials(c.firstName, c.lastName)}</div>
                             <div>
@@ -84,15 +84,15 @@ export default function Children() {
                             </div>
                           </div>
                         </td>
-                        <td>{ageInYears(c.dateOfBirth)} god.</td>
-                        <td className="mono">{c.qrCode}</td>
-                        <td>
+                        <td data-label="Uzrast">{ageInYears(c.dateOfBirth)} god.</td>
+                        <td className="mono" data-label="QR kod">{c.qrCode}</td>
+                        <td data-label="Roditelj">
                           <Link to={`/korisnici/${c.parent.id}`} className="muted">
                             {c.parent.firstName} {c.parent.lastName}
                           </Link>
                         </td>
-                        <td className="muted">{c.allergies || '—'}</td>
-                        <td>
+                        <td className="muted" data-label="Alergije">{c.allergies || '—'}</td>
+                        <td data-label="Paket roditelja">
                           {c.parentRemainingHours > 0 ? (
                             <span className="badge green">
                               {formatHours(c.parentRemainingHours)}

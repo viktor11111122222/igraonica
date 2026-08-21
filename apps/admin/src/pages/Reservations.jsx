@@ -169,7 +169,7 @@ export default function Reservations() {
                       const s = statusOf(r.status);
                       return (
                         <tr key={r.id}>
-                          <td>
+                          <td data-label="Naziv">
                             <div className="row-main">{r.title}</div>
                             {r.childName && (
                               <div className="row-sub">
@@ -179,17 +179,17 @@ export default function Reservations() {
                             )}
                             {r.notes && <div className="row-sub">{r.notes}</div>}
                           </td>
-                          <td className="muted">{typeLabel(r.type)}</td>
-                          <td className="muted">{formatDate(r.date)}</td>
-                          <td className="muted">
+                          <td className="muted" data-label="Tip">{typeLabel(r.type)}</td>
+                          <td className="muted" data-label="Datum">{formatDate(r.date)}</td>
+                          <td className="muted" data-label="Vreme">
                             {r.isFullDay ? 'Ceo dan' : `${r.startTime} – ${r.endTime}`}
                           </td>
-                          <td>{r.guestCount || '—'}</td>
-                          <td className="muted">
+                          <td data-label="Gosti">{r.guestCount || '—'}</td>
+                          <td className="muted" data-label="Kontakt">
                             {r.contactPhone ||
                               (r.user ? `${r.user.firstName} ${r.user.lastName}` : '—')}
                           </td>
-                          <td>
+                          <td data-label="Status">
                             <Badge tone={s.tone}>{s.label || r.status}</Badge>
                           </td>
                           <td className="actions">
