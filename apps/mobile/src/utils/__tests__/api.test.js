@@ -1,0 +1,155 @@
+import { apiRequest, onSessionExpired } from '../api';
+import * as storage from '../storage';
+
+jest.mock('../storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  deleteItem: jest.fn(),
+}));
+
+function odgovor({ ok = true, status = 200, body = {} } = {}) {
+  return { ok, status, json: async () => body };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  storage.getItem.mockResolvedValue(null);
+  global.fetch = jest.fn().mockResolvedValue(odgovor());
+});
+
+describe('apiRequest - oblik zahteva', () => {
+  test('gadja podesenu adresu servera', async () => {
+    await apiRequest('/children');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/children'),
+      expect.anything()
+    );
+  });
+
+  test('bez tokena nema Authorization zaglavlja', async () => {
+    await apiRequest('/menu');
+    expect(fetch.mock.calls[0][1].headers.Authorization).toBeUndefined();
+  });
+
+  test('sa tokenom salje Bearer', async () => {
+    storage.getItem.mockResolvedValue('abc123');
+    await apiRequest('/children');
+    expect(fetch.mock.calls[0][1].headers.Authorization).toBe('Bearer abc123');
+  });
+
+  test('objekat u telu se pretvara u JSON', async () => {
+    await apiRequest('/children', { method: 'POST', body: { firstName: 'Lena' } });
+
+    const poziv = fetch.mock.calls[0][1];
+    expect(poziv.method).toBe('POST');
+    expect(poziv.body).toBe('{"firstName":"Lena"}');
+    expect(poziv.headers['Content-Type']).toBe('application/json');
+  });
+
+  test('vec pripremljen tekst se ne pakuje ponovo', async () => {
+    await apiRequest('/children', { method: 'POST', body: '{"vec":"tekst"}' });
+    expect(fetch.mock.calls[0][1].body).toBe('{"vec":"tekst"}');
+  });
+
+  test('odgovor se vraca kao objekat', async () => {
+    fetch.mockResolvedValue(odgovor({ body: { children: [{ id: 'c1' }] } }));
+    await expect(apiRequest('/children')).resolves.toEqual({ children: [{ id: 'c1' }] });
+  });
+});
+
+describe('apiRequest - greske', () => {
+  test('poruka sa servera stize do pozivaoca', async () => {
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 400, body: { message: 'Ime je obavezno.' } }));
+    await expect(apiRequest('/children', { method: 'POST' })).rejects.toThrow('Ime je obavezno.');
+  });
+
+  test('bez poruke sa servera ide opsta', async () => {
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 500, body: {} }));
+    await expect(apiRequest('/children')).rejects.toThrow('Greska na serveru.');
+  });
+
+  test('greska nosi status i telo odgovora', async () => {
+    fetch.mockResolvedValue(
+      odgovor({ ok: false, status: 409, body: { message: 'Vec prijavljen.', visit: { id: 'v1' } } })
+    );
+
+    await expect(apiRequest('/visits/check-in', { method: 'POST' })).rejects.toMatchObject({
+      status: 409,
+      data: { visit: { id: 'v1' } },
+    });
+  });
+});
+
+// Token vazi 30 dana. Kada istekne, roditelj nema nikakav izlaz - token je u
+// Keychain-u i nema dugmeta koje ga brise.
+describe('apiRequest - istekla sesija', () => {
+  test('401 brise token', async () => {
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: { message: 'Nevazeci token.' } }));
+
+    await expect(apiRequest('/children')).rejects.toThrow();
+
+    expect(storage.deleteItem).toHaveBeenCalledWith('token');
+  });
+
+  test('401 javlja da je sesija istekla', async () => {
+    const javi = jest.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: {} }));
+
+    await expect(apiRequest('/children')).rejects.toThrow();
+
+    expect(javi).toHaveBeenCalledTimes(1);
+    odjavi();
+  });
+
+  // Backend vraca 401 i za pogresnu lozinku. Da se to pomesa, neuspela prijava
+  // bi izgledala kao istekla sesija.
+  test('pogresna lozinka nije istekla sesija', async () => {
+    const javi = jest.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(
+      odgovor({ ok: false, status: 401, body: { message: 'Pogresan email ili lozinka.' } })
+    );
+
+    await expect(
+      apiRequest('/auth/login', { method: 'POST', body: { email: 'a@b.c', password: 'x' } })
+    ).rejects.toThrow('Pogresan email ili lozinka.');
+
+    expect(javi).not.toHaveBeenCalled();
+    expect(storage.deleteItem).not.toHaveBeenCalled();
+    odjavi();
+  });
+
+  test('neuspela registracija ne obara sesiju', async () => {
+    const javi = jest.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: {} }));
+
+    await expect(apiRequest('/auth/register', { method: 'POST', body: {} })).rejects.toThrow();
+
+    expect(javi).not.toHaveBeenCalled();
+    odjavi();
+  });
+
+  test('403 nije istekla sesija', async () => {
+    const javi = jest.fn();
+    const odjavi = onSessionExpired(javi);
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 403, body: { message: 'Nemate dozvolu.' } }));
+
+    await expect(apiRequest('/users')).rejects.toThrow('Nemate dozvolu.');
+
+    expect(javi).not.toHaveBeenCalled();
+    expect(storage.deleteItem).not.toHaveBeenCalled();
+    odjavi();
+  });
+
+  test('odjava sa osluskivanja prestaje da javlja', async () => {
+    const javi = jest.fn();
+    onSessionExpired(javi)();
+    fetch.mockResolvedValue(odgovor({ ok: false, status: 401, body: {} }));
+
+    await expect(apiRequest('/children')).rejects.toThrow();
+
+    expect(javi).not.toHaveBeenCalled();
+  });
+});

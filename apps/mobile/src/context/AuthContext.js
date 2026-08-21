@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import * as storage from '../utils/storage';
-import { apiRequest } from '../utils/api';
+import { apiRequest, onSessionExpired } from '../utils/api';
 
 const AuthContext = createContext(null);
 
@@ -11,6 +11,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     loadUser();
   }, []);
+
+  // Kada bilo koji poziv naidje na istekao token, aplikacija se sama vrati na
+  // prijavu umesto da svaki ekran pise gresku bez izlaza.
+  useEffect(() => onSessionExpired(() => setUser(null)), []);
 
   async function loadUser() {
     try {

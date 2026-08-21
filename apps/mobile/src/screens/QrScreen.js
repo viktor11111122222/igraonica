@@ -14,6 +14,23 @@ import QRCode from 'react-native-qrcode-svg';
 import { apiRequest } from '../utils/api';
 import { colors, radius, spacing, type, motion, shadow } from '../theme';
 
+// Rucni citac (onaj sa kase) trazi belu marginu oko koda - "quiet zone" - od
+// bar cetiri modula. Bez nje mnogi imageri ne nadju ivicu i kod prosto ne
+// procitaju, dok ga kamera telefona jos uvek uhvati; zato je do sada izgledalo
+// da je sve u redu.
+//
+// Kod je uvek 12 znakova, sto na nivou ispravke Q staje u verziju 1, mrezu od
+// 21 modula. Modul je (QR_SIZE - 2 * QR_QUIET) / 21 = 9.5px, pa je 40px
+// margine oko 4.2 modula - taman iznad praga. Bela podloga kartice dolazi
+// povrh toga.
+//
+// Nivo ispravke Q umesto podrazumevanog M je besplatan: mreza ostaje ista
+// (21 modul), a kod podnosi 25% ostecenja umesto 15% - odsjaj i otisci prstiju
+// na ekranu su upravo to.
+const QR_SIZE = 280;
+const QR_QUIET = 40;
+const QR_ECL = 'Q';
+
 export default function QrScreen({ navigation, route }) {
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -140,7 +157,12 @@ export default function QrScreen({ navigation, route }) {
 
       <View style={styles.qrWrap}>
         <View style={styles.qrCard}>
-          <QRCode value={selected.qrCode} size={220} />
+          <QRCode
+            value={selected.qrCode}
+            size={QR_SIZE}
+            quietZone={QR_QUIET}
+            ecl={QR_ECL}
+          />
         </View>
         <Text style={styles.qrCode}>{selected.qrCode}</Text>
       </View>

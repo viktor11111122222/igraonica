@@ -7,13 +7,18 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vica.kidsclub",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Aplikacija se povezuje na lokalni server igraonice radi ucitavanja podataka."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png"
-      }
+      },
+      "package": "com.vica.kidsclub"
     },
     "web": {
       "favicon": "./assets/favicon.png"

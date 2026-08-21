@@ -4,7 +4,6 @@ import {
   Text,
   Image,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -13,7 +12,8 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { font } from '../theme';
+import PressableScale from '../components/PressableScale';
+import { colors, radius, spacing, type, font } from '../theme';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -38,7 +38,7 @@ export default function LoginScreen({ navigation }) {
     }
   }
 
-  const clubName = (settings.club_name || 'Kids club').trim().split(/\s+/);
+  const clubName = (settings.club_name || 'Kids club').trim();
 
   return (
     <KeyboardAvoidingView
@@ -52,7 +52,7 @@ export default function LoginScreen({ navigation }) {
           source={require('../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
-          accessibilityLabel={clubName.join(' ')}
+          accessibilityLabel={clubName}
         />
       </View>
 
@@ -60,45 +60,51 @@ export default function LoginScreen({ navigation }) {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textFaint}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
+          autoComplete="email"
+          textContentType="username"
         />
 
         <TextInput
           style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
+          placeholder="Lozinka"
+          placeholderTextColor={colors.textFaint}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          autoComplete="current-password"
+          textContentType="password"
+          onSubmitEditing={handleLogin}
+          returnKeyType="go"
         />
 
-        <TouchableOpacity
+        <PressableScale
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}
           disabled={loading}
+          accessibilityRole="button"
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textOnPrimary} />
           ) : (
-            <Text style={styles.buttonText}>Login</Text>
+            <Text style={styles.buttonText}>Prijavi se</Text>
           )}
-        </TouchableOpacity>
+        </PressableScale>
 
+        {/* Jedan izlaz ka registraciji. Ranije su ovde stajala dva dugmeta koja
+            vode na isto mesto, a natpis je pisao "Vec imate nalog? Prijava" -
+            na ekranu za prijavu. */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.linkText}>Login</Text>
-          </TouchableOpacity>
+          <Text style={styles.footerText}>Nemate nalog? </Text>
+          <PressableScale onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.linkText}>Registrujte se</Text>
+          </PressableScale>
         </View>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.createAccountText}>Create Account</Text>
-        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -107,9 +113,9 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
-    paddingHorizontal: 30,
+    paddingHorizontal: spacing.xxxl - 10,
   },
   logoContainer: {
     alignItems: 'center',
@@ -120,64 +126,49 @@ const styles = StyleSheet.create({
     width: 240,
     height: 116,
   },
-  logoText: {
-    fontSize: 48,
-    fontFamily: font.bold,
-    color: '#7c9fc9',
-  },
-  logoSubtext: {
-    fontSize: 28,
-    fontFamily: font.medium,
-    color: '#7c9fc9',
-    marginTop: -8,
-  },
   form: {
     width: '100%',
   },
   input: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.bg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
+    ...type.body,
     fontSize: 16,
+    color: colors.text,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
   },
   button: {
-    backgroundColor: '#7c9fc9',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.textOnPrimary,
     fontSize: 18,
     fontFamily: font.semibold,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    alignItems: 'center',
+    marginTop: spacing.xl,
   },
   footerText: {
-    color: '#666',
-    fontSize: 14,
+    ...type.body,
+    color: colors.textMuted,
   },
   linkText: {
-    color: '#7c9fc9',
-    fontSize: 14,
+    ...type.body,
     fontFamily: font.semibold,
-  },
-  createAccountText: {
-    color: '#7c9fc9',
-    fontSize: 16,
-    fontFamily: font.semibold,
-    textAlign: 'center',
-    marginTop: 16,
+    color: colors.primaryDarker,
   },
 });

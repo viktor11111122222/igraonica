@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -12,7 +11,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { font } from '../theme';
+import PressableScale from '../components/PressableScale';
+import { colors, radius, spacing, type, font } from '../theme';
 
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
@@ -60,70 +60,86 @@ export default function RegisterScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.title}>Otvorite nalog</Text>
 
         <View style={styles.form}>
+          {/* Ime i prezime su odvojena polja - natpis "Full Name" na prvom je
+              obecavao oba. */}
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="#999"
+            placeholder="Ime"
+            placeholderTextColor={colors.textFaint}
             value={firstName}
             onChangeText={setFirstName}
+            autoComplete="given-name"
+            textContentType="givenName"
           />
 
           <TextInput
             style={styles.input}
-            placeholder="Last Name"
-            placeholderTextColor="#999"
+            placeholder="Prezime"
+            placeholderTextColor={colors.textFaint}
             value={lastName}
             onChangeText={setLastName}
+            autoComplete="family-name"
+            textContentType="familyName"
           />
 
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
           />
 
           <TextInput
             style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#999"
+            placeholder="Lozinka"
+            placeholderTextColor={colors.textFaint}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
           />
 
           <TextInput
             style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#999"
+            placeholder="Ponovite lozinku"
+            placeholderTextColor={colors.textFaint}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+            onSubmitEditing={handleRegister}
+            returnKeyType="go"
           />
 
-          <TouchableOpacity
+          <PressableScale
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleRegister}
             disabled={loading}
+            accessibilityRole="button"
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textOnPrimary} />
             ) : (
-              <Text style={styles.buttonText}>Sign Up</Text>
+              <Text style={styles.buttonText}>Otvori nalog</Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.linkText}>Login</Text>
-            </TouchableOpacity>
+            <Text style={styles.footerText}>Vec imate nalog? </Text>
+            <PressableScale onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.linkText}>Prijavite se</Text>
+            </PressableScale>
           </View>
         </View>
       </ScrollView>
@@ -134,61 +150,64 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 40,
+    paddingHorizontal: spacing.xxxl - 10,
+    paddingVertical: spacing.xxxl,
   },
   title: {
-    fontSize: 28,
-    fontFamily: font.bold,
-    color: '#333',
+    ...type.title,
+    fontSize: 30,
+    color: colors.text,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: spacing.xxl,
   },
   form: {
     width: '100%',
   },
   input: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.bg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
+    ...type.body,
     fontSize: 16,
+    color: colors.text,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: colors.border,
   },
   button: {
-    backgroundColor: '#7c9fc9',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.textOnPrimary,
     fontSize: 18,
     fontFamily: font.semibold,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    alignItems: 'center',
+    marginTop: spacing.xl,
   },
   footerText: {
-    color: '#666',
-    fontSize: 14,
+    ...type.body,
+    color: colors.textMuted,
   },
   linkText: {
-    color: '#7c9fc9',
-    fontSize: 14,
+    ...type.body,
     fontFamily: font.semibold,
+    color: colors.primaryDarker,
   },
 });

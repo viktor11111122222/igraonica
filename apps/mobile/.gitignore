@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# izvestaji o pokrivenosti testovima
+coverage/
