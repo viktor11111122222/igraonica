@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const obavestenja = require('../services/notifications');
 
 const router = express.Router();
 
@@ -165,6 +166,9 @@ router.post(
         include: { package: true },
       });
 
+      // Roditelj bi inace saznao za paket tek kad sam otvori aplikaciju.
+      await obavestenja.paketDodeljen({ userPackage, paket: pkg, parentId: userId });
+
       res.status(201).json({ userPackage });
     } catch (err) {
       console.error(err);
@@ -266,6 +270,13 @@ router.post(
           },
         }),
       ]);
+
+      await obavestenja.satiIspravljeni({
+        userPackage: updated,
+        hours: Number(hours),
+        reason,
+        parentId: userPackage.userId,
+      });
 
       res.json({ userPackage: updated, adjustment });
     } catch (err) {

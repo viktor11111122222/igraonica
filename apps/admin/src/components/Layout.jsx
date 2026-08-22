@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useActiveVisits } from '../hooks/useActiveVisits';
+import Notifications from './Notifications';
 import { initials } from '../lib/format';
 import logo from '../assets/logo.png';
 
@@ -169,7 +170,10 @@ export function PageHeader({ title, subtitle, children }) {
         <h1>{title}</h1>
         {subtitle && <div className="topbar-sub">{subtitle}</div>}
       </div>
-      {children && <div className="topbar-actions">{children}</div>}
+      <div className="topbar-actions">
+        <Notifications />
+        {children}
+      </div>
     </div>
   );
 }

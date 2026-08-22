@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
 const { numericSetting } = require('../config/settings');
+const obavestenja = require('../services/notifications');
 
 const router = express.Router();
 
@@ -113,6 +114,8 @@ router.post(
         throw err;
       }
 
+      await obavestenja.detePrijavljeno({ child, visit, byUserId: req.user.id });
+
       res.status(201).json({
         message: `${child.firstName} ${child.lastName} je prijavljen/a.`,
         visit,
@@ -218,6 +221,14 @@ router.post(
       if (!rezultat) {
         return res.status(400).json({ message: 'Dete nije prijavljeno u igraonici.' });
       }
+
+      await obavestenja.deteOdjavljeno({
+        child,
+        visit: rezultat.visit,
+        chargedMinutes: roundedMinutes,
+        remainingHours: rezultat.remainingHours,
+        byUserId: req.user.id,
+      });
 
       res.json({
         message: `${child.firstName} ${child.lastName} je odjavljen/a.`,

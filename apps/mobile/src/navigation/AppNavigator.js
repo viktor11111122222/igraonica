@@ -19,6 +19,7 @@ import GalleryScreen from '../screens/GalleryScreen';
 import ChildrenListScreen from '../screens/ChildrenListScreen';
 import AddChildScreen from '../screens/AddChildScreen';
 import ChildDetailScreen from '../screens/ChildDetailScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -108,6 +109,11 @@ function MainStack() {
         name="Tabs"
         component={MainTabs}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ title: 'Obavestenja' }}
       />
       <Stack.Screen
         name="Gallery"

@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const obavestenja = require('../services/notifications');
 
 const router = express.Router();
 
@@ -178,6 +179,10 @@ router.post(
         },
       });
 
+      // Roditelj dodaje dete iz aplikacije; osoblju treba da zna da je stigao
+      // nov QR kod.
+      await obavestenja.deteDodato({ child, parent: req.user });
+
       res.status(201).json({ child });
     } catch (err) {
       console.error(err);
@@ -250,6 +255,9 @@ router.delete('/:id', async (req, res) => {
       where: { id: req.params.id },
       data: { isActive: false },
     });
+
+    // Osoblju je vazno jer taj QR kod od sada nece raditi na recepciji.
+    await obavestenja.deteUklonjeno({ child, byUserId: req.user.id });
 
     res.json({ message: 'Dete je uklonjeno.' });
   } catch (err) {

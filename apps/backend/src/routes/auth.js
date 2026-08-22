@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const generateToken = require('../utils/generateToken');
+const obavestenja = require('../services/notifications');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -44,6 +45,9 @@ router.post(
 
       const token = generateToken(user.id);
       const { password: _, ...userWithoutPassword } = user;
+
+      // Osoblje inace ne bi videlo nov nalog dok samo ne otvori spisak.
+      await obavestenja.roditeljSeRegistrovao({ user });
 
       res.status(201).json({ token, user: userWithoutPassword });
     } catch (err) {

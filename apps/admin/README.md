@@ -161,6 +161,29 @@ U simulator se isti CA ubacuje jednom komandom:
 xcrun simctl keychain booted add-root-cert ~/.local/share/igraonica-dev-certs/rootCA.crt
 ```
 
+## Obavestenja
+
+Zvono u zaglavlju svake stranice. Broji neprocitana, klik otvara spisak.
+
+Osoblje dobija ono sto se desi **van panela** — roditelj otvori nalog, doda ili
+ukloni dete, ili drugi radnik prijavi dete na drugoj stanici. Ko je sam izvrsio
+radnju ne dobija obavestenje o njoj: ishod mu je vec na ekranu, a feed bi se
+punio sopstvenim klikovima.
+
+Roditelj u aplikaciji dobija ono sto se tice njega: dete je uslo, dete je
+izaslo (sa naplatom i preostalim satima), dobio je paket, ispravljeni su mu
+sati.
+
+Zapis je po primaocu, ne po dogadjaju — jedna prijava deteta pravi obavestenje
+za roditelja i po jedno za svakog admina, sa razlicitim tekstom. Tako svako ima
+svoje "procitano".
+
+**Ovo nisu push obavestenja.** Vide se kada je aplikacija otvorena (osvezava se
+na 15 s u aplikaciji, 30 s u panelu). Za obavestenje na zakljucanom ekranu
+iPhone-a treba `expo-notifications`, nativni build i **placen Apple Developer
+nalog** za APNs kljuc. Kolona `users.push_token` i katalog dogadjaja su vec tu,
+pa se push kaci na isto kada nalog postoji.
+
 ## Struktura
 
 ```

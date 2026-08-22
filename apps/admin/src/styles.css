@@ -1023,6 +1023,146 @@ textarea.setting-input {
   color: var(--primary-darker);
 }
 
+/* ============ Zvono sa obavestenjima ============ */
+.zvono-okvir {
+  position: relative;
+  flex: 0 0 auto;
+}
+.zvono {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: 16px;
+  line-height: 1;
+}
+.zvono:hover {
+  background: var(--primary-tint);
+}
+/* Broj neprocitanih sedi na ivici dugmeta, kao znacka. */
+.zvono-broj {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--danger-solid);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.zvono-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(380px, calc(100vw - 28px));
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
+  z-index: 30;
+  animation: pop 0.14s ease-out;
+}
+.zvono-glava {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.zvono-glava strong {
+  flex: 1;
+  font-size: 14px;
+}
+.zvono-prazno {
+  padding: 26px 14px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.zvono-spisak {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.zvono-red {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 14px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  color: var(--text);
+}
+.zvono-red:hover {
+  background: var(--primary-tint);
+}
+/* Neprocitano nosi i podlogu i tackicu - boja sama ne bi bila dovoljna. */
+.zvono-red.novo {
+  background: var(--primary-soft);
+}
+.zvono-red.novo:hover {
+  background: var(--primary-soft);
+  filter: brightness(0.97);
+}
+.zvono-znak {
+  flex: 0 0 22px;
+  text-align: center;
+  color: var(--primary-darker);
+  font-size: 14px;
+  padding-top: 1px;
+}
+.zvono-tekst {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.zvono-naslov {
+  font-weight: 600;
+  font-size: 13px;
+}
+.zvono-telo {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.zvono-kada {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.zvono-tacka {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--primary-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zvono-panel {
+    animation: none;
+  }
+}
+
 /* ============ Red rasporeda ============ */
 /* Bio je sklopljen inline stilovima, pa nije mogao da se prilagodi telefonu -
    dugmad su ulazila u tekst. */
@@ -1362,6 +1502,16 @@ textarea.setting-input {
   }
   .field-row {
     grid-template-columns: 1fr;
+  }
+
+  /* Panel obavestenja se sidri uz desnu ivicu ekrana, ne uz zvono - inace bi
+     na uskom ekranu izasao van. */
+  .zvono-panel {
+    position: fixed;
+    top: 58px;
+    right: 8px;
+    left: 8px;
+    width: auto;
   }
 
   /* Traka ishoda: dugme za sledece skeniranje ide u svoj red, da naslov ne bi

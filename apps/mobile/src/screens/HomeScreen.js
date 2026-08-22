@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useNotifications } from '../hooks/useNotifications';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useClosedDays } from '../context/ClosedDaysContext';
@@ -33,6 +34,8 @@ export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { isClosed } = useClosedDays();
+  // Pocetnom ekranu treba samo znacka, ne i ceo spisak.
+  const { unreadCount } = useNotifications({ samoBroj: true });
 
   const [packages, setPackages] = useState([]);
   const [menu, setMenu] = useState([]);
@@ -120,9 +123,31 @@ export default function HomeScreen({ navigation }) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.header}>
-        <Text style={styles.greeting}>Zdravo,</Text>
-        <Text style={styles.name}>{user?.firstName}</Text>
-        <Text style={styles.club}>{settings.club_name || 'Kids club'}</Text>
+        <View style={styles.headerRed}>
+          <View style={styles.headerTekst}>
+            <Text style={styles.greeting}>Zdravo,</Text>
+            <Text style={styles.name}>{user?.firstName}</Text>
+            <Text style={styles.club}>{settings.club_name || 'Kids club'}</Text>
+          </View>
+
+          {/* Zvono stoji ovde, a ne u traci tabova: obavestenja se ne gledaju
+              stalno, ali se broj mora videti cim se aplikacija otvori. */}
+          <PressableScale
+            style={styles.zvono}
+            onPress={() => navigation.navigate('Notifications')}
+            accessibilityRole="button"
+            accessibilityLabel={
+              unreadCount > 0 ? `Obavestenja, ${unreadCount} neprocitano` : 'Obavestenja'
+            }
+          >
+            <Ionicons name="notifications-outline" size={22} color={colors.textOnPrimary} />
+            {unreadCount > 0 && (
+              <View style={styles.zvonoBroj}>
+                <Text style={styles.zvonoBrojTekst}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </PressableScale>
+        </View>
       </View>
 
       {/* Sati su ovde samo kao brojka; ceo pregled je na tabu Moj paket. */}
@@ -330,6 +355,30 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
   },
+  headerRed: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg },
+  headerTekst: { flex: 1, minWidth: 0 },
+  zvono: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  zvonoBroj: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zvonoBrojTekst: { ...type.caption, fontSize: 11, color: '#fff' },
+
   greeting: { ...type.body, color: 'rgba(255,255,255,0.85)' },
   name: { ...type.display, fontSize: 30, color: colors.textOnPrimary, marginTop: 2 },
   club: { ...type.label, color: 'rgba(255,255,255,0.8)', marginTop: spacing.xs },

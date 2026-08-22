@@ -24,6 +24,9 @@ vi.mock('../../hooks/useActiveVisits', () => ({
 
 vi.mock('../../assets/logo.png', () => ({ default: 'logo.png' }));
 
+// Zvono ima svoj test; ovde se samo ne dira mreza.
+vi.mock('../Notifications', () => ({ default: () => null }));
+
 function Strana() {
   return <PageHeader title="Prijave" subtitle="Skeniranje QR koda" />;
 }

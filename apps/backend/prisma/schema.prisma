@@ -37,6 +37,18 @@ enum ReservationType {
   GROUP_BOOKING
 }
 
+// Vrste obavestenja. Ime nosi sta se desilo, ne kome se salje - isti dogadjaj
+// ide i roditelju i osoblju, samo sa razlicitim tekstom.
+enum NotificationType {
+  CHILD_CHECKED_IN
+  CHILD_CHECKED_OUT
+  PARENT_REGISTERED
+  CHILD_ADDED
+  CHILD_REMOVED
+  PACKAGE_ASSIGNED
+  HOURS_ADJUSTED
+}
+
 enum ReservationStatus {
   PENDING
   CONFIRMED
@@ -64,6 +76,7 @@ model User {
   checkedInVisits  Visit[]          @relation("CheckedInBy")
   checkedOutVisits Visit[]          @relation("CheckedOutBy")
   hourAdjustments  HourAdjustment[]
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -265,4 +278,32 @@ model HourAdjustment {
   adjustedBy  User        @relation(fields: [adjustedById], references: [id])
 
   @@map("hour_adjustments")
+}
+
+// Obavestenje jednog korisnika o jednom dogadjaju.
+//
+// Zapis po primaocu, ne po dogadjaju: prijava deteta pravi jedno obavestenje za
+// roditelja i po jedno za svakog admina. Tako svako ima svoje "procitano", a
+// tekst moze da bude drugaciji ("Vase dete je prijavljeno" vs "Lena Petrovic je
+// prijavljena").
+//
+// `data` nosi id-jeve (dete, poseta, paket) da bi klik mogao da odvede na pravo
+// mesto, bez razbijanja teksta na delove.
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Spisak se uvek cita po primaocu i po vremenu, a broj neprocitanih po
+  // primaocu i `read_at`.
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
 }

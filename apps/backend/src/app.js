@@ -16,6 +16,7 @@ const scheduleRoutes = require('./routes/schedule');
 const closedDaysRoutes = require('./routes/closedDays');
 const reservationsRoutes = require('./routes/reservations');
 const dashboardRoutes = require('./routes/dashboard');
+const notificationsRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/schedule', scheduleRoutes);
 app.use('/api/closed-days', closedDaysRoutes);
 app.use('/api/reservations', reservationsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use((req, res) => {
