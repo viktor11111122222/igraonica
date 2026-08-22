@@ -263,6 +263,27 @@ describe('Dashboard racuna dan po lokalnom vremenu', () => {
     return d;
   };
 
+  // Baza dozvoljava najvise jednu otvorenu posetu po detetu, pa ovi testovi ne
+  // mogu da koriste dete koje je vec prijavljeno iz ranijih testova.
+  let detePonoc;
+
+  beforeAll(async () => {
+    detePonoc = await prisma.child.create({
+      data: {
+        parentId: child.parentId,
+        firstName: 'Ponoc',
+        lastName: 'Provera',
+        dateOfBirth: new Date('2021-01-01'),
+        qrCode: 'IGR-PONOC001',
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.visit.deleteMany({ where: { childId: detePonoc.id } });
+    await prisma.child.delete({ where: { id: detePonoc.id } });
+  });
+
   async function statistika() {
     const res = await request(app)
       .get('/api/dashboard/stats')
@@ -275,7 +296,7 @@ describe('Dashboard racuna dan po lokalnom vremenu', () => {
 
     const poseta = await prisma.visit.create({
       data: {
-        childId: child.id,
+        childId: detePonoc.id,
         userPackageId: userPkg.id,
         checkedInAt: uPolaJedan(),
         checkedInById: admin.id,
@@ -323,7 +344,7 @@ describe('Dashboard racuna dan po lokalnom vremenu', () => {
   test('grafikon svrstava posetu u 00:30 u danasnji stubic', async () => {
     const poseta = await prisma.visit.create({
       data: {
-        childId: child.id,
+        childId: detePonoc.id,
         userPackageId: userPkg.id,
         checkedInAt: uPolaJedan(),
         checkedInById: admin.id,

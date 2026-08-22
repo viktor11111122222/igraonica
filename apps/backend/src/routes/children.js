@@ -19,9 +19,24 @@ router.get('/', async (req, res) => {
     const children = await prisma.child.findMany({
       where: { parentId: req.user.id, isActive: true },
       orderBy: { createdAt: 'desc' },
+      include: {
+        // Otvorena poseta, ako je ima. Roditelj po istom QR kodu i prijavljuje i
+        // odjavljuje dete, pa mora da vidi u kom je stanju - inace ne zna sta ce
+        // sledece skeniranje uraditi.
+        visits: {
+          where: { status: 'CHECKED_IN' },
+          select: { id: true, checkedInAt: true },
+          take: 1,
+        },
+      },
     });
 
-    res.json({ children });
+    res.json({
+      children: children.map(({ visits, ...dete }) => ({
+        ...dete,
+        activeVisit: visits[0] || null,
+      })),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Greska na serveru.' });

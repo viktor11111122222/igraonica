@@ -77,3 +77,40 @@ describe('QrScreen - da li citac moze da procita kod', () => {
     expect(['Q', 'H']).toContain(ecl);
   });
 });
+
+// Isti kod i prijavljuje i odjavljuje dete. Roditelj koji ga pokazuje mora da
+// vidi u kom je stanju - inace ne zna sta ce skeniranje uraditi.
+describe('QrScreen - stanje deteta', () => {
+  test('dete koje nije unutra to i kaze', async () => {
+    apiRequest.mockResolvedValue({ children: [{ ...dete, activeVisit: null }] });
+    await prikazi();
+
+    expect(screen.getByText('Nije u igraonici')).toBeTruthy();
+    expect(screen.getByText('Pokazite kod na recepciji za prijavu.')).toBeTruthy();
+  });
+
+  test('prijavljeno dete pokazuje od kada je unutra', async () => {
+    apiRequest.mockResolvedValue({
+      children: [
+        { ...dete, activeVisit: { id: 'v1', checkedInAt: '2026-08-22T15:22:00' } },
+      ],
+    });
+    await prikazi();
+
+    expect(screen.getByText(/U igraonici od 15[:.]22/)).toBeTruthy();
+  });
+
+  // Ovo je ono zbog cega traka postoji: da roditelj zna sta sledi.
+  test('prijavljenom detetu pise da ga sledece skeniranje odjavljuje', async () => {
+    apiRequest.mockResolvedValue({
+      children: [
+        { ...dete, activeVisit: { id: 'v1', checkedInAt: '2026-08-22T15:22:00' } },
+      ],
+    });
+    await prikazi();
+
+    expect(
+      screen.getByText('Sledece skeniranje odjavljuje dete i obracunava vreme.')
+    ).toBeTruthy();
+  });
+});

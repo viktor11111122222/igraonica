@@ -57,3 +57,13 @@ export function monthDates(date = new Date()) {
   const count = new Date(year, month + 1, 0).getDate();
   return Array.from({ length: count }, (_, i) => new Date(year, month, i + 1));
 }
+
+// Sat i minut iz vremenske oznake sa servera. Koristi se tamo gde je bitan
+// trenutak u danu, a ne datum - npr. "u igraonici od 15:22".
+export function formatTime(value) {
+  if (!value) return '';
+  return new Date(value).toLocaleTimeString('sr-RS', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

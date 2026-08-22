@@ -767,3 +767,104 @@ describe('Check-in bira ispravan paket', () => {
     expect(res.body.remainingHours).toBeGreaterThan(0);
   });
 });
+
+// ==================== ISTOVREMENA SKENIRANJA ====================
+
+// Provera "da li je dete vec prijavljeno" i skidanje sati bili su citanje pa
+// upis, bez brave izmedju. Dva skeniranja u istom trenutku - dva radnika, ili
+// dupli dodir - prolazila su oba.
+describe('Istovremena skeniranja', () => {
+  let qr;
+
+  beforeEach(async () => {
+    await prisma.visit.deleteMany({});
+    await prisma.userPackage.update({
+      where: { id: userPackageId },
+      data: { remainingHours: 10 },
+    });
+
+    const res = await request(app)
+      .post('/api/children')
+      .set('Authorization', `Bearer ${parentToken}`)
+      .send({ firstName: 'Trka', lastName: 'T', dateOfBirth: '2021-01-01' });
+    qr = res.body.child.qrCode;
+  });
+
+  const prijava = () =>
+    request(app)
+      .post('/api/visits/check-in')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ qrCode: qr });
+
+  const odjava = () =>
+    request(app)
+      .post('/api/visits/check-out')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ qrCode: qr });
+
+  test('pet istovremenih prijava otvara tacno jednu posetu', async () => {
+    const odgovori = await Promise.all(Array.from({ length: 5 }, prijava));
+
+    expect(odgovori.filter((r) => r.status === 201)).toHaveLength(1);
+    expect(odgovori.filter((r) => r.status === 409)).toHaveLength(4);
+
+    const otvorene = await prisma.visit.count({ where: { status: 'CHECKED_IN' } });
+    expect(otvorene).toBe(1);
+  });
+
+  test('odbijena prijava vraca postojecu posetu, ne golu gresku', async () => {
+    await prijava();
+    const odgovori = await Promise.all([prijava(), prijava()]);
+
+    for (const r of odgovori.filter((x) => x.status === 409)) {
+      expect(r.body.message).toBe('Dete je vec prijavljeno u igraonici.');
+      expect(r.body.visit?.status).toBe('CHECKED_IN');
+    }
+  });
+
+  test('pet istovremenih odjava zatvara posetu jednom', async () => {
+    await prijava();
+
+    const odgovori = await Promise.all(Array.from({ length: 5 }, odjava));
+
+    expect(odgovori.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(odgovori.filter((r) => r.status === 400)).toHaveLength(4);
+  });
+
+  test('pet istovremenih odjava skida sate samo jednom', async () => {
+    await prijava();
+
+    await Promise.all(Array.from({ length: 5 }, odjava));
+
+    const up = await prisma.userPackage.findUnique({ where: { id: userPackageId } });
+    expect(Number(up.remainingHours)).toBe(9.5);
+  });
+
+  // Radnik odjavljuje dete, a admin u istom trenutku dodaje sate. Ranije bi
+  // jedna od te dve promene bila pregazena, jer su obe citale staru vrednost.
+  test('odjava i korekcija sati u istom trenutku - obe promene ostaju', async () => {
+    await prijava();
+
+    await Promise.all([
+      odjava(),
+      request(app)
+        .post(`/api/packages/${userPackageId}/adjust-hours`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ hours: 2, reason: 'trka' }),
+    ]);
+
+    const up = await prisma.userPackage.findUnique({ where: { id: userPackageId } });
+    expect(Number(up.remainingHours)).toBe(11.5); // 10 - 0.5 + 2
+  });
+
+  test('posle odjave sledeca prijava opet prolazi', async () => {
+    await prijava();
+    await odjava();
+
+    const opet = await prijava();
+
+    expect(opet.status).toBe(201);
+    const otvorene = await prisma.visit.count({ where: { status: 'CHECKED_IN' } });
+    expect(otvorene).toBe(1);
+  });
+});

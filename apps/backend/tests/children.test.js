@@ -327,3 +327,57 @@ describe('DELETE /api/children/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// Roditelj istim QR kodom i prijavljuje i odjavljuje dete, pa mora da vidi u
+// kom je stanju - inace ne zna sta ce sledece skeniranje uraditi.
+describe('Stanje deteta u listi roditelja', () => {
+  test('dete koje nije prijavljeno nema otvorenu posetu', async () => {
+    const res = await request(app)
+      .get('/api/children')
+      .set('Authorization', `Bearer ${parentToken}`);
+
+    expect(res.status).toBe(200);
+    for (const dete of res.body.children) {
+      expect(dete).toHaveProperty('activeVisit');
+    }
+  });
+
+  test('prijavljeno dete nosi vreme dolaska', async () => {
+    const napravljeno = await request(app)
+      .post('/api/children')
+      .set('Authorization', `Bearer ${parentToken}`)
+      .send({ firstName: 'Stanje', lastName: 'Provera', dateOfBirth: '2021-01-01' });
+    const dete = napravljeno.body.child;
+
+    const pkg = await prisma.package.create({
+      data: { name: 'Stanje 5h', totalHours: 5, validityDays: 30 },
+    });
+    await request(app)
+      .post('/api/packages/assign')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ userId: parentId, packageId: pkg.id });
+
+    await request(app)
+      .post('/api/visits/check-in')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ qrCode: dete.qrCode });
+
+    const res = await request(app)
+      .get('/api/children')
+      .set('Authorization', `Bearer ${parentToken}`);
+    const naslo = res.body.children.find((c) => c.id === dete.id);
+
+    expect(naslo.activeVisit).not.toBeNull();
+    expect(naslo.activeVisit.checkedInAt).toBeTruthy();
+
+    await request(app)
+      .post('/api/visits/check-out')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ qrCode: dete.qrCode });
+
+    const posle = await request(app)
+      .get('/api/children')
+      .set('Authorization', `Bearer ${parentToken}`);
+    expect(posle.body.children.find((c) => c.id === dete.id).activeVisit).toBeNull();
+  });
+});

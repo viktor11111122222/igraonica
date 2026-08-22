@@ -1,13 +1,4 @@
-import {
-  toKey,
-  todayKey,
-  fromKey,
-  dayIndex,
-  daysInMonth,
-  ageInYears,
-  yearsLabel,
-  monthDates,
-} from '../date';
+import { toKey, todayKey, fromKey, dayIndex, daysInMonth, ageInYears, yearsLabel, monthDates, formatTime} from '../date';
 
 describe('toKey', () => {
   test('formatira kao YYYY-MM-DD sa vodecim nulama', () => {
@@ -146,5 +137,17 @@ describe('monthDates', () => {
     const dani = monthDates(new Date(2024, 1, 10));
     expect(dani).toHaveLength(29);
     expect(toKey(dani[28])).toBe('2024-02-29');
+  });
+});
+
+describe('formatTime', () => {
+  test('daje sat i minut', () => {
+    expect(formatTime('2026-08-22T15:22:00')).toMatch(/15[:.]22/);
+  });
+
+  test('prazna vrednost ne daje "Invalid Date"', () => {
+    expect(formatTime(null)).toBe('');
+    expect(formatTime(undefined)).toBe('');
+    expect(formatTime('')).toBe('');
   });
 });

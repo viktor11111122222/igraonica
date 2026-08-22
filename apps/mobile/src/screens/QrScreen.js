@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import { apiRequest } from '../utils/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { formatTime } from '../utils/date';
 import { colors, radius, spacing, type, motion, shadow } from '../theme';
 
 // Rucni citac (onaj sa kase) trazi belu marginu oko koda - "quiet zone" - od
@@ -37,33 +39,25 @@ export default function QrScreen({ navigation, route }) {
     navigation.setParams({ childId: undefined });
   }, [requestedId, navigation]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
+  // Osvezava se dok roditelj drzi ekran otvoren: cim radnik skenira kod, stanje
+  // deteta se menja, a roditelj gleda bas taj ekran. Bez toga bi mu i posle
+  // prijave i dalje pisalo da dete nije u igraonici.
+  const load = useCallback(async () => {
+    try {
+      const data = await apiRequest('/children');
+      const list = data.children || [];
+      setChildren(list);
+      // Ne gazimo izbor koji je stigao kroz parametar. Jedno dete - preskoci
+      // izbor.
+      setSelectedId((prev) => prev ?? (list.length === 1 ? list[0].id : null));
+    } catch {
+      setChildren([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-      async function load() {
-        setLoading(true);
-        try {
-          const data = await apiRequest('/children');
-          if (cancelled) return;
-          const list = data.children || [];
-          setChildren(list);
-          // Ne gazimo izbor koji je stigao kroz parametar. Jedno dete -
-          // preskoci izbor.
-          setSelectedId((prev) => prev ?? (list.length === 1 ? list[0].id : null));
-        } catch {
-          if (!cancelled) setChildren([]);
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      }
-
-      load();
-      return () => {
-        cancelled = true;
-      };
-    }, [])
-  );
+  useAutoRefresh(load);
 
   if (loading) {
     return (
@@ -147,6 +141,26 @@ export default function QrScreen({ navigation, route }) {
         </View>
       ) : null}
 
+      {/* Isti kod i prijavljuje i odjavljuje, pa roditelj mora da vidi u kom je
+          stanju dete - inace ne zna sta ce skeniranje uraditi. */}
+      <View style={[styles.stanje, selected.activeVisit ? styles.stanjeUnutra : styles.stanjeNapolju]}>
+        <Ionicons
+          name={selected.activeVisit ? 'checkmark-circle' : 'ellipse-outline'}
+          size={18}
+          color={selected.activeVisit ? colors.success : colors.textFaint}
+        />
+        <Text
+          style={[
+            styles.stanjeTekst,
+            { color: selected.activeVisit ? colors.success : colors.textMuted },
+          ]}
+        >
+          {selected.activeVisit
+            ? `U igraonici od ${formatTime(selected.activeVisit.checkedInAt)}`
+            : 'Nije u igraonici'}
+        </Text>
+      </View>
+
       <View style={styles.qrWrap}>
         <View style={styles.qrCard}>
           <QRCode
@@ -157,6 +171,11 @@ export default function QrScreen({ navigation, route }) {
           />
         </View>
         <Text style={styles.qrCode}>{selected.qrCode}</Text>
+        <Text style={styles.qrSavet}>
+          {selected.activeVisit
+            ? 'Sledece skeniranje odjavljuje dete i obracunava vreme.'
+            : 'Pokazite kod na recepciji za prijavu.'}
+        </Text>
       </View>
 
       {children.length > 1 && (
@@ -309,6 +328,33 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 1.5,
     marginTop: spacing.xl,
+  },
+  qrSavet: {
+    ...type.caption,
+    color: colors.textFaint,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xxl,
+  },
+  stanje: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    alignSelf: 'center',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+  },
+  stanjeUnutra: {
+    backgroundColor: colors.successSoft,
+  },
+  stanjeNapolju: {
+    backgroundColor: colors.bg,
+  },
+  stanjeTekst: {
+    ...type.label,
   },
   switchBtn: {
     flexDirection: 'row',

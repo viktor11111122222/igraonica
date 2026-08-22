@@ -90,6 +90,12 @@ Ekran Prijave prima ga na tri nacina, i sva tri rade isto:
 
 **Smer se ne bira.** Prvo skeniranje deteta ga prijavljuje, sledece odjavljuje —
 ekran to zna iz spiska prisutnih, pa nema prekidaca koji se moze zaboraviti.
+Isto stanje vidi i roditelj u aplikaciji, iznad svog QR koda.
+
+Dete moze imati najvise **jednu otvorenu posetu**, i to cuva delimicni
+jedinstveni indeks u bazi (`visits_one_open_per_child`) — ne provera u kodu.
+Dva skeniranja u istom trenutku (dva radnika, dupli dodir) zato ne mogu da
+naprave dve posete, a ni da naplate istu dvaput.
 
 ### Rucni citac
 

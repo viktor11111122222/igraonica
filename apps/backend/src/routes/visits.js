@@ -79,19 +79,38 @@ router.post(
       }
 
       // 4. Kreiraj posetu
-      const visit = await prisma.visit.create({
-        data: {
-          childId: child.id,
-          userPackageId: activePackage.id,
-          checkedInAt: new Date(),
-          checkedInById: req.user.id,
-          status: 'CHECKED_IN',
-        },
-        include: {
-          child: true,
-          userPackage: { include: { package: true } },
-        },
-      });
+      //
+      // Provera iznad je citanje, pa izmedju nje i upisa moze da se ubaci drugo
+      // skeniranje (dva radnika, ili dupli dodir). Zato pravu bravu drzi
+      // delimicni jedinstveni indeks u bazi - ovde se samo prepoznaje njegov
+      // sudar i vraca ista poruka kao da je provera uhvatila.
+      let visit;
+      try {
+        visit = await prisma.visit.create({
+          data: {
+            childId: child.id,
+            userPackageId: activePackage.id,
+            checkedInAt: new Date(),
+            checkedInById: req.user.id,
+            status: 'CHECKED_IN',
+          },
+          include: {
+            child: true,
+            userPackage: { include: { package: true } },
+          },
+        });
+      } catch (err) {
+        if (err.code === 'P2002') {
+          const postojeca = await prisma.visit.findFirst({
+            where: { childId: child.id, status: 'CHECKED_IN' },
+          });
+          return res.status(409).json({
+            message: 'Dete je vec prijavljeno u igraonici.',
+            visit: postojeca,
+          });
+        }
+        throw err;
+      }
 
       res.status(201).json({
         message: `${child.firstName} ${child.lastName} je prijavljen/a.`,
@@ -148,17 +167,22 @@ router.post(
       const roundedMinutes = Math.max(minimumChargeMinutes, roundUpMinutes(rawMinutes, roundingMinutes));
       const hoursDeducted = roundedMinutes / 60;
 
-      // 5. Azuriraj posetu i oduzmi sate iz paketa - sve u transakciji
-      let newRemainingHours = 0;
-
-      if (openVisit.userPackage) {
-        const currentHours = Number(openVisit.userPackage.remainingHours);
-        newRemainingHours = Math.max(0, currentHours - hoursDeducted);
-      }
-
-      const [updatedVisit] = await prisma.$transaction([
-        prisma.visit.update({
-          where: { id: openVisit.id },
+      // 5. Zatvori posetu i oduzmi sate - sve u transakciji.
+      //
+      // Dve stvari se ovde brane od trke, jer je odjava tacka na kojoj se
+      // stvarno naplacuje:
+      //
+      //   - posetu zatvara `updateMany` sa uslovom na status. Ako je neko drugi
+      //     bio brzi, uslov ne pogadja nijedan red i vracamo istu poruku kao da
+      //     dete nije prijavljeno. Ranije je `update` po id-u prolazio i drugi
+      //     put, pa je radnik dobijao dve potvrde za istu posetu.
+      //
+      //   - sati se skidaju racunicom u samoj bazi (`GREATEST(0, ... - x)`), a
+      //     ne "procitaj pa upisi". Inace bi korekcija sati koja se desi u istom
+      //     trenutku bila pregazena, ili bi odjava pregazila nju.
+      const rezultat = await prisma.$transaction(async (tx) => {
+        const zatvorena = await tx.visit.updateMany({
+          where: { id: openVisit.id, status: 'CHECKED_IN' },
           data: {
             checkedOutAt: now,
             durationMinutes: roundedMinutes,
@@ -166,30 +190,43 @@ router.post(
             checkedOutById: req.user.id,
             status: 'CHECKED_OUT',
           },
-          include: {
-            child: true,
-            userPackage: { include: { package: true } },
-          },
-        }),
-        ...(openVisit.userPackageId
-          ? [
-              prisma.userPackage.update({
-                where: { id: openVisit.userPackageId },
-                data: { remainingHours: newRemainingHours },
-              }),
-            ]
-          : []),
-      ]);
+        });
+
+        if (zatvorena.count === 0) return null;
+
+        if (openVisit.userPackageId) {
+          await tx.$executeRaw`
+            UPDATE user_packages
+               SET remaining_hours = GREATEST(0, remaining_hours - ${hoursDeducted}::numeric),
+                   updated_at = NOW()
+             WHERE id = ${openVisit.userPackageId}
+          `;
+        }
+
+        const visit = await tx.visit.findUnique({
+          where: { id: openVisit.id },
+          include: { child: true, userPackage: { include: { package: true } } },
+        });
+
+        return {
+          visit,
+          remainingHours: visit.userPackage ? Number(visit.userPackage.remainingHours) : 0,
+        };
+      });
+
+      if (!rezultat) {
+        return res.status(400).json({ message: 'Dete nije prijavljeno u igraonici.' });
+      }
 
       res.json({
         message: `${child.firstName} ${child.lastName} je odjavljen/a.`,
-        visit: updatedVisit,
+        visit: rezultat.visit,
         duration: {
           raw: rawMinutes,
           charged: roundedMinutes,
           hoursDeducted,
         },
-        remainingHours: newRemainingHours,
+        remainingHours: rezultat.remainingHours,
       });
     } catch (err) {
       console.error(err);
