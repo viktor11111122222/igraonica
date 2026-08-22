@@ -95,18 +95,32 @@ export function Stepper({ value, onChange, step = 5, min = 1, max = 240, presets
 }
 
 // Red sa nazivom levo i kontrolom desno.
+//
+// Naziv se vezuje za kontrolu: kada je kontrola obicno polje, kroz `htmlFor`;
+// kada je grupa dugmadi (cipovi, klizac, prekidac), kroz `aria-labelledby` na
+// omotacu. Bez toga citac ekrana procita samo "polje za unos", bez imena.
 export function SettingRow({ label, hint, children, status }) {
+  const id = useId();
+  const jedno = isValidElement(children) && children.props.id === undefined;
+  const jePolje = jedno && ['input', 'textarea', 'select'].includes(children.type);
+  const kontrola = jePolje ? cloneElement(children, { id }) : children;
+
   return (
     <div className="setting-row">
       <div className="setting-text">
-        <div className="setting-label">
-          {label}
+        <div className="setting-label" id={`${id}-naziv`}>
+          {jePolje ? <label htmlFor={id}>{label}</label> : label}
           {status === 'saving' && <span className="setting-status">cuva se...</span>}
           {status === 'saved' && <span className="setting-status ok">sacuvano ✓</span>}
         </div>
         {hint && <div className="setting-hint">{hint}</div>}
       </div>
-      <div className="setting-control">{children}</div>
+      <div
+        className="setting-control"
+        {...(jePolje ? {} : { role: 'group', 'aria-labelledby': `${id}-naziv` })}
+      >
+        {kontrola}
+      </div>
     </div>
   );
 }

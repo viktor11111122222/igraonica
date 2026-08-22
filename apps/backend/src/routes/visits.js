@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const { numericSetting } = require('../config/settings');
 
 const router = express.Router();
 
@@ -159,10 +160,10 @@ router.post(
       const rawMinutes = Math.max(1, Math.round((now - checkedInAt) / 60000));
 
       // 4. Zaokruzi na osnovu podesavanja
-      const roundingStr = await getSetting('rounding_minutes', '15');
-      const minimumStr = await getSetting('minimum_charge_minutes', '30');
-      const roundingMinutes = parseInt(roundingStr);
-      const minimumChargeMinutes = parseInt(minimumStr);
+      // `numericSetting` vraca podrazumevanu vrednost ako je u bazi nesto
+      // neupotrebljivo. Naplata ne sme da zavisi od toga sta je neko upisao.
+      const roundingMinutes = numericSetting('rounding_minutes', await getSetting('rounding_minutes'));
+      const minimumChargeMinutes = numericSetting('minimum_charge_minutes', await getSetting('minimum_charge_minutes'));
 
       const roundedMinutes = Math.max(minimumChargeMinutes, roundUpMinutes(rawMinutes, roundingMinutes));
       const hoursDeducted = roundedMinutes / 60;
@@ -379,10 +380,10 @@ router.post(
         return res.json({ message: 'Nema otvorenih poseta.', closed: 0 });
       }
 
-      const roundingStr = await getSetting('rounding_minutes', '15');
-      const minimumStr = await getSetting('minimum_charge_minutes', '30');
-      const roundingMinutes = parseInt(roundingStr);
-      const minimumChargeMinutes = parseInt(minimumStr);
+      // `numericSetting` vraca podrazumevanu vrednost ako je u bazi nesto
+      // neupotrebljivo. Naplata ne sme da zavisi od toga sta je neko upisao.
+      const roundingMinutes = numericSetting('rounding_minutes', await getSetting('rounding_minutes'));
+      const minimumChargeMinutes = numericSetting('minimum_charge_minutes', await getSetting('minimum_charge_minutes'));
       const now = new Date();
 
       const operations = [];

@@ -314,3 +314,57 @@ describe('DELETE /api/schedule/:id', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// Aktivnost od 18:00 do 09:00 se cuvala bez pogovora, pa je roditelj u
+// aplikaciji video besmislen termin.
+describe('Vreme zavrsetka mora biti posle pocetka', () => {
+  test('nova aktivnost sa krajem pre pocetka se odbija', async () => {
+    const res = await request(app)
+      .post('/api/schedule')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ title: 'Naopako', dayOfWeek: 1, startTime: '18:00', endTime: '09:00' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('kraj jednak pocetku se odbija', async () => {
+    const res = await request(app)
+      .post('/api/schedule')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ title: 'Nulto trajanje', dayOfWeek: 1, startTime: '10:00', endTime: '10:00' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('ispravan raspon prolazi', async () => {
+    const res = await request(app)
+      .post('/api/schedule')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ title: 'Uredno', dayOfWeek: 1, startTime: '10:00', endTime: '11:30' });
+
+    expect(res.status).toBe(201);
+    await request(app)
+      .delete(`/api/schedule/${res.body.activity.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+  });
+
+  // Izmena moze da posalje samo jedno od dva vremena.
+  test('pomeranje samo pocetka preko kraja se odbija', async () => {
+    const napravljena = await request(app)
+      .post('/api/schedule')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ title: 'Za izmenu', dayOfWeek: 1, startTime: '10:00', endTime: '11:00' });
+
+    const res = await request(app)
+      .patch(`/api/schedule/${napravljena.body.activity.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ startTime: '23:00' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/posle vremena pocetka/);
+
+    await request(app)
+      .delete(`/api/schedule/${napravljena.body.activity.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+  });
+});

@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const { krajPoslePocetka } = require('../utils/time');
 
 const router = express.Router();
 
@@ -117,6 +118,11 @@ router.post(
     body('date').isISO8601().withMessage('Datum nije validan.'),
     body('startTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('Format HH:MM.'),
     body('endTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('Format HH:MM.'),
+    // Rezervacija od 20:00 do 17:00 se cuvala bez pogovora. Kod celodnevne
+    // rezervacije vremena se ne koriste, pa se tada ne proverava.
+    body('endTime')
+      .custom((kraj, { req }) => req.body.isFullDay === true || krajPoslePocetka(req.body.startTime, kraj))
+      .withMessage('Vreme zavrsetka mora biti posle vremena pocetka.'),
     body('guestCount').optional().isInt({ min: 1 }).withMessage('Broj gostiju mora biti pozitivan.'),
     body('childAge').optional().isInt({ min: 0 }).withMessage('Uzrast mora biti pozitivan.'),
   ],
@@ -191,6 +197,21 @@ router.patch(
 
       if (req.body.date) {
         data.date = new Date(req.body.date + 'T00:00:00.000Z');
+      }
+
+      // Izmena moze da posalje samo jedno od dva vremena, pa se drugo uzima iz
+      // zapisa - inace bi se pomeranjem pocetka moglo dobiti "od 20:00 do 17:00".
+      if (data.startTime !== undefined || data.endTime !== undefined || data.isFullDay !== undefined) {
+        const postojeca = await prisma.reservation.findUnique({ where: { id: req.params.id } });
+        if (!postojeca) {
+          return res.status(404).json({ message: 'Rezervacija nije pronadjena.' });
+        }
+        const celodnevna = data.isFullDay ?? postojeca.isFullDay;
+        const pocetak = data.startTime ?? postojeca.startTime;
+        const kraj = data.endTime ?? postojeca.endTime;
+        if (!celodnevna && !krajPoslePocetka(pocetak, kraj)) {
+          return res.status(400).json({ message: 'Vreme zavrsetka mora biti posle vremena pocetka.' });
+        }
       }
 
       const reservation = await prisma.reservation.update({

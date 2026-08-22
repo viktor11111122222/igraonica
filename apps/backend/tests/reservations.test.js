@@ -371,3 +371,48 @@ describe('DELETE /api/reservations/:id', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// Rezervacija od 20:00 do 17:00 se cuvala bez pogovora.
+describe('Vreme zavrsetka mora biti posle pocetka', () => {
+  const osnovno = { type: 'BIRTHDAY', title: 'Provera vremena', date: '2026-12-05' };
+
+  test('nova rezervacija sa krajem pre pocetka se odbija', async () => {
+    const res = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, startTime: '20:00', endTime: '17:00' });
+
+    expect(res.status).toBe(400);
+  });
+
+  // Kod celodnevne rezervacije vremena se ne koriste, pa se ne proveravaju.
+  test('celodnevna rezervacija ne mari za vremena', async () => {
+    const res = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, startTime: '20:00', endTime: '17:00', isFullDay: true });
+
+    expect(res.status).toBe(201);
+    await request(app)
+      .delete(`/api/reservations/${res.body.reservation.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+  });
+
+  test('pomeranje samo kraja ispod pocetka se odbija', async () => {
+    const napravljena = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, startTime: '17:00', endTime: '20:00' });
+
+    const res = await request(app)
+      .patch(`/api/reservations/${napravljena.body.reservation.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ endTime: '16:00' });
+
+    expect(res.status).toBe(400);
+
+    await request(app)
+      .delete(`/api/reservations/${napravljena.body.reservation.id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+  });
+});

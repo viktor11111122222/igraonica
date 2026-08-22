@@ -88,6 +88,40 @@ const CATALOG = [
 // cime da je skine. Nepoznata imena se sada odbacuju pri cuvanju.
 const ANNOUNCEMENT_SCREENS = ['home', 'menu', 'schedule', 'package'];
 
+const DEFAULTS = Object.fromEntries(CATALOG.map((s) => [s.key, s.value]));
+
+// Podesavanja koja moraju biti broj, sa granicama. Vrednost van granica ne bi
+// bila samo "cudna" - `rounding_minutes` od 0 ili "abc" daje NaN u racunici pri
+// odjavi, a odatle poseta bez trajanja i paket obrisan na nulu.
+//
+// Granice prate ono sto panel nudi na klizacima.
+const NUMERIC_SETTINGS = {
+  rounding_minutes: { min: 1, max: 60 },
+  minimum_charge_minutes: { min: 0, max: 180 },
+};
+
+// Ceo broj iz teksta, ili null ako vrednost nije upotrebljiva.
+function parseNumericSetting(key, value) {
+  const pravila = NUMERIC_SETTINGS[key];
+  if (!pravila) return null;
+
+  const tekst = String(value ?? '').trim();
+  // `parseInt` bi progutao "15abc" i "1.9"; ovde mora ceo broj i nista vise.
+  if (!/^-?\d+$/.test(tekst)) return null;
+
+  const broj = Number(tekst);
+  if (broj < pravila.min || broj > pravila.max) return null;
+  return broj;
+}
+
+// Broj iz podesavanja, sa povratkom na podrazumevanu vrednost kada je zapisano
+// neupotrebljivo. Racunica naplate ne sme da zavisi od toga sta je u bazi.
+function numericSetting(key, value) {
+  const iz = parseNumericSetting(key, value);
+  if (iz !== null) return iz;
+  return parseNumericSetting(key, DEFAULTS[key]);
+}
+
 // Zadrzava samo poznate ekrane, bez duplikata i praznih delova.
 function cleanAnnouncementTabs(value) {
   const trazeni = String(value || '')
@@ -100,12 +134,13 @@ function cleanAnnouncementTabs(value) {
 
 const PUBLIC_KEYS = CATALOG.filter((s) => s.public).map((s) => s.key);
 
-const DEFAULTS = Object.fromEntries(CATALOG.map((s) => [s.key, s.value]));
-
 module.exports = {
   CATALOG,
   PUBLIC_KEYS,
   DEFAULTS,
   ANNOUNCEMENT_SCREENS,
+  NUMERIC_SETTINGS,
   cleanAnnouncementTabs,
+  parseNumericSetting,
+  numericSetting,
 };

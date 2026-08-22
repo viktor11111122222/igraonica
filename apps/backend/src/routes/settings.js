@@ -7,6 +7,8 @@ const {
   DEFAULTS,
   PUBLIC_KEYS,
   cleanAnnouncementTabs,
+  NUMERIC_SETTINGS,
+  parseNumericSetting,
 } = require('../config/settings');
 
 const router = express.Router();
@@ -130,6 +132,16 @@ router.patch(
         req.body.description !== undefined
           ? req.body.description
           : setting?.description || known?.description || null;
+
+      // Brojcana podesavanja ulaze u racunicu naplate, pa se proveravaju ovde.
+      // Bez toga je "abc" ili 0 prolazilo, a onda pri odjavi davalo NaN: poseta
+      // bi se zatvorila bez trajanja i bez naplate, a paket bi ostao na nuli.
+      if (NUMERIC_SETTINGS[key] && parseNumericSetting(key, req.body.value) === null) {
+        const { min, max } = NUMERIC_SETTINGS[key];
+        return res.status(400).json({
+          message: `Vrednost mora biti ceo broj izmedju ${min} i ${max}.`,
+        });
+      }
 
       // Spisak ekrana za obavestenje se cisti od imena koja vise ne postoje,
       // da stara vrednost ne bi ostala u bazi kao nevidljivo smece.

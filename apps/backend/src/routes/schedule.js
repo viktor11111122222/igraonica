@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const { krajPoslePocetka } = require('../utils/time');
 
 const router = express.Router();
 
@@ -103,6 +104,11 @@ router.post(
     body('title').notEmpty().withMessage('Naziv je obavezan.'),
     body('startTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('Vreme pocetka mora biti u formatu HH:MM (00:00-23:59).'),
     body('endTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('Vreme zavrsetka mora biti u formatu HH:MM (00:00-23:59).'),
+    // Aktivnost od 18:00 do 09:00 se cuvala bez pogovora, pa je roditelj u
+    // aplikaciji video besmislen termin.
+    body('endTime')
+      .custom((kraj, { req }) => krajPoslePocetka(req.body.startTime, kraj))
+      .withMessage('Vreme zavrsetka mora biti posle vremena pocetka.'),
     body('dayOfWeek').optional().isInt({ min: 0, max: 6 }).withMessage('Dan mora biti 0-6.'),
     body('isRecurring').optional().isBoolean(),
     body('specificDate').optional().isISO8601().withMessage('Datum nije validan.'),
@@ -176,6 +182,20 @@ router.patch(
 
       if (req.body.specificDate !== undefined) {
         data.specificDate = req.body.specificDate ? new Date(req.body.specificDate + 'T00:00:00.000Z') : null;
+      }
+
+      // Izmena moze da posalje samo jedno od dva vremena, pa se drugo uzima iz
+      // zapisa - inace bi se pomeranjem pocetka moglo dobiti "od 18:00 do 09:00".
+      if (data.startTime !== undefined || data.endTime !== undefined) {
+        const postojeca = await prisma.activity.findUnique({ where: { id: req.params.id } });
+        if (!postojeca) {
+          return res.status(404).json({ message: 'Aktivnost nije pronadjena.' });
+        }
+        const pocetak = data.startTime ?? postojeca.startTime;
+        const kraj = data.endTime ?? postojeca.endTime;
+        if (!krajPoslePocetka(pocetak, kraj)) {
+          return res.status(400).json({ message: 'Vreme zavrsetka mora biti posle vremena pocetka.' });
+        }
       }
 
       const activity = await prisma.activity.update({

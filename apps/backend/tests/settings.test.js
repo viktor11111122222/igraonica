@@ -293,3 +293,68 @@ describe('PATCH /api/settings/announcement_tabs', () => {
     expect(res.body.setting.value).toBe('home,gallery');
   });
 });
+
+// Brojcana podesavanja ulaze u racunicu naplate. Dok se nisu proveravala, "abc"
+// je prolazilo, a onda pri odjavi davalo NaN: poseta bi se zatvorila bez
+// trajanja i bez naplate, a paket bi ostao obrisan na nulu.
+describe('Provera brojcanih podesavanja', () => {
+  const losi = [
+    ['rounding_minutes', 'abc', 'tekst umesto broja'],
+    ['rounding_minutes', '0', 'nula bi delila sa nulom'],
+    ['rounding_minutes', '-5', 'negativan korak'],
+    ['rounding_minutes', '61', 'iznad gornje granice'],
+    ['rounding_minutes', '15abc', 'broj sa repom'],
+    ['rounding_minutes', '1.9', 'decimalan broj'],
+    ['rounding_minutes', '', 'prazno'],
+    ['minimum_charge_minutes', 'abc', 'tekst umesto broja'],
+    ['minimum_charge_minutes', '-100', 'negativna naplata'],
+    ['minimum_charge_minutes', '181', 'iznad gornje granice'],
+  ];
+
+  for (const [key, value, zasto] of losi) {
+    test(`${key} = "${value}" se odbija (${zasto})`, async () => {
+      const res = await request(app)
+        .patch(`/api/settings/${key}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ value });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/ceo broj/);
+    });
+  }
+
+  const dobri = [
+    ['rounding_minutes', '1'],
+    ['rounding_minutes', '60'],
+    ['minimum_charge_minutes', '0'],
+    ['minimum_charge_minutes', '180'],
+  ];
+
+  for (const [key, value] of dobri) {
+    test(`${key} = "${value}" prolazi`, async () => {
+      const res = await request(app)
+        .patch(`/api/settings/${key}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ value });
+
+      expect(res.status).toBe(200);
+      expect(res.body.setting.value).toBe(value);
+    });
+  }
+
+  // Druga brana: cak i ako u bazi zavrsi neupotrebljiva vrednost (rucni upis,
+  // stariji podatak, migracija), naplata mora da radi po podrazumevanom umesto
+  // da racuna sa NaN.
+  test('neupotrebljiva vrednost pada na podrazumevanu, ne na NaN', () => {
+    const { numericSetting } = require('../src/config/settings');
+
+    expect(numericSetting('rounding_minutes', 'pokvareno')).toBe(15);
+    expect(numericSetting('rounding_minutes', '0')).toBe(15);
+    expect(numericSetting('rounding_minutes', null)).toBe(15);
+    expect(numericSetting('minimum_charge_minutes', 'abc')).toBe(30);
+
+    // Ispravna vrednost se postuje.
+    expect(numericSetting('rounding_minutes', '10')).toBe(10);
+    expect(numericSetting('minimum_charge_minutes', '0')).toBe(0);
+  });
+});
