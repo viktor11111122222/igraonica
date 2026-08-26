@@ -3,10 +3,13 @@ import { View, Text, StyleSheet, Pressable, Animated, ActivityIndicator, ScrollV
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
+import Banner from '../components/Banner';
 import { apiRequest } from '../utils/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { formatTime } from '../utils/date';
-import { colors, radius, spacing, type, motion, shadow } from '../theme';
+import { radius, spacing, type, motion, shadow } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 // Rucni citac (onaj sa kase) trazi belu marginu oko koda - "quiet zone" - od
 // bar cetiri modula. Bez nje mnogi imageri ne nadju ivicu i kod prosto ne
@@ -26,6 +29,8 @@ const QR_QUIET = 40;
 const QR_ECL = 'Q';
 
 export default function QrScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -92,10 +97,7 @@ export default function QrScreen({ navigation, route }) {
   if (!selected) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Ko ulazi?</Text>
-          <Text style={styles.headerSub}>Izaberite dete za QR kod</Text>
-        </View>
+        <Banner rounded title="Ko ulazi?" subtitle="Izaberite dete za QR kod" />
         <ScrollView contentContainerStyle={styles.pickerList}>
           {children.map((child, i) => (
             <PickerRow
@@ -111,13 +113,19 @@ export default function QrScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {selected.firstName} {selected.lastName}
-        </Text>
-        <Text style={styles.headerSub}>Pokazite kod na recepciji</Text>
-      </View>
+    // Dete sa alergijama I napomenom popuni ekran do vrha: dve kartice
+    // upozorenja, stanje, kod i savet. Bez skrolovanja bi se to preklopilo -
+    // beli karton bi legao preko pilule sa stanjem, a dugme preko saveta.
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.detalj}
+      showsVerticalScrollIndicator={false}
+    >
+      <Banner
+        rounded
+        title={`${selected.firstName} ${selected.lastName}`}
+        subtitle="Pokazite kod na recepciji"
+      />
 
       {/* Ono zbog cega se alergije i unose - osoblje ih vidi tacno u trenutku
           prijave, dok jos nema admin panela. */}
@@ -187,11 +195,13 @@ export default function QrScreen({ navigation, route }) {
           <Text style={styles.switchText}>Promeni dete</Text>
         </PressableScale>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 function PickerRow({ child, index, onPress }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const enter = useAnimatedValue(0);
 
   useFocusEffect(
@@ -264,7 +274,7 @@ function PressableScale({ children, style, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -275,23 +285,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xxl,
-  },
-  header: {
-    paddingTop: 64,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
-  },
-  headerTitle: {
-    ...type.title,
-    color: colors.textOnPrimary,
-  },
-  headerSub: {
-    ...type.body,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: spacing.xs,
   },
   alertCard: {
     flexDirection: 'row',
@@ -312,10 +305,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   alertText: { ...type.body, color: colors.text, marginTop: 2 },
+  detalj: { flexGrow: 1, paddingBottom: spacing.lg },
   qrWrap: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.lg,
   },
   qrCard: {
     backgroundColor: colors.surface,

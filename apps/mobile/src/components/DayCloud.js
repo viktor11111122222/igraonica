@@ -1,7 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Rect } from 'react-native-svg';
 import PressableScale from './PressableScale';
-import { colors, type } from '../theme';
+import { type } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 export const CLOUD_W = 72;
 export const CLOUD_H = 76;
@@ -73,6 +75,8 @@ function cloudFor(seed) {
 // danasnji i neradni istovremeno.
 export default function DayCloud({ name, number, active, today, filled, closed, onPress }) {
   const puffs = cloudFor(number);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   return (
     <PressableScale style={styles.chip} onPress={onPress}>
@@ -104,7 +108,7 @@ export default function DayCloud({ name, number, active, today, filled, closed, 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   chip: {
     width: CLOUD_W,
     height: CLOUD_H,
@@ -119,9 +123,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  name: { ...type.caption, color: 'rgba(255,255,255,0.9)' },
+  name: { ...type.caption, color: colors.dayTextMuted },
   nameActive: { color: colors.textMuted },
-  number: { ...type.heading, color: colors.textOnPrimary, marginTop: 2 },
+  number: { ...type.heading, color: colors.dayText, marginTop: 2 },
   numberActive: { color: colors.text },
   numberClosed: { textDecorationLine: 'line-through' },
   dot: {

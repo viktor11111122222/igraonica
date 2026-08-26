@@ -5,8 +5,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { isOn, useSettings } from '../context/SettingsContext';
-import { colors, font } from '../theme';
+import { font } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import TabBar from '../components/TabBar';
+import { BannerBackground } from '../components/Banner';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -77,7 +79,7 @@ function MainTabs() {
 // izlaz. Kada istorija postoji, strelicu crta sam navigator. Ako je nema
 // (ekran otvoren direktno, obnovljeno stanje), korisnik bi ostao zarobljen -
 // zato se tada ubacuje dugme koje vraca na tabove.
-function escapeHatch(navigation) {
+function escapeHatch(navigation, colors) {
   if (navigation.canGoBack()) return {};
   return {
     headerLeft: () => (
@@ -95,14 +97,22 @@ function escapeHatch(navigation) {
 }
 
 function MainStack() {
+  const { colors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: colors.primary },
+        // Zaglavlja ekrana van tabova nose istu podlogu kao baneri u tabovima,
+        // pa sara ne prestaje cim se otvori Galerija ili Obavestenja.
+        //
+        // Boja NE sme da ide kroz headerStyle: native-stack uzima traku kao
+        // providnu samo ako backgroundColor nije zadat, pa bi puna boja
+        // prekrila podlogu i sara se ne bi videla. Boju daje sama podloga.
+        headerBackground: () => <BannerBackground />,
         headerTintColor: colors.textOnPrimary,
         headerTitleStyle: { fontFamily: font.bold },
         headerBackTitle: 'Nazad',
-        ...escapeHatch(navigation),
+        ...escapeHatch(navigation, colors),
       })}
     >
       <Stack.Screen
@@ -143,10 +153,11 @@ function MainStack() {
 
 export default function AppNavigator() {
   const { user, loading } = useAuth();
+  const { colors } = useTheme();
 
   if (loading) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: colors.bg }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -164,6 +175,5 @@ const styles = {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.bg,
   },
 };

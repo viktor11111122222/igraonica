@@ -11,14 +11,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../utils/api';
 import { useDaySelection } from '../hooks/useDay';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import Banner from '../components/Banner';
 import DayStrip from '../components/DayStrip';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
 import { useClosedDays } from '../context/ClosedDaysContext';
 import { MEALS } from '../data/meals';
-import { colors, radius, spacing, type, shadow } from '../theme';
+import { radius, spacing, type, shadow } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 export default function MenuScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [days, setDays] = useState({});
   const { today, selected: selectedDay, setSelected: setSelectedDay } =
     useDaySelection();
@@ -69,18 +74,15 @@ export default function MenuScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Jelovnik</Text>
-        <Text style={styles.headerSub}>Sta se jede ove nedelje</Text>
-      </View>
-
-      <DayStrip
-        today={today}
-        selected={selectedDay}
-        onSelect={setSelectedDay}
-        marked={marked}
-        closed={closed}
-      />
+      <Banner doodles="head" title="Jelovnik" subtitle="Sta se jede ove nedelje">
+        <DayStrip
+          today={today}
+          selected={selectedDay}
+          onSelect={setSelectedDay}
+          marked={marked}
+          closed={closed}
+        />
+      </Banner>
 
       <ClosedNotice date={selectedDay} today={selectedDay === today} />
       <Announcement screen="menu" />
@@ -139,21 +141,9 @@ export default function MenuScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    paddingTop: 64,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.primary,
-  },
-  headerTitle: { ...type.title, color: colors.textOnPrimary },
-  headerSub: {
-    ...type.body,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: spacing.xs,
-  },
   list: {
     padding: spacing.xl,
     gap: spacing.md,

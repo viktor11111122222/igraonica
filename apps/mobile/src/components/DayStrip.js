@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import DayCloud, { CLOUD_W } from './DayCloud';
 import { dayIndex, monthDates, toKey } from '../utils/date';
-import { colors, spacing } from '../theme';
+import { spacing } from '../theme';
 
 const DAY_NAMES = ['Pon', 'Uto', 'Sre', 'Cet', 'Pet', 'Sub', 'Ned'];
 
@@ -60,6 +60,8 @@ export default function DayStrip({ today, selected, onSelect, marked, closed }) 
 }
 
 const styles = StyleSheet.create({
-  strip: { backgroundColor: colors.primary, paddingBottom: spacing.lg },
+  // Bez svoje pozadine: traka stoji unutar banera, pa se kroz nju vidi
+  // njegova boja i nastavak sare.
+  strip: { paddingBottom: spacing.lg },
   content: { paddingHorizontal: spacing.xl, gap: spacing.sm },
 });

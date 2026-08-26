@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, font } from '../theme';
+import { spacing, font } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 import QrTabButton, { QR_SIZE } from './QrTabButton';
 
 const BAR_HEIGHT = 68;
@@ -33,7 +34,7 @@ const EASE = 16;
 //
 // Ovaj SVG je JEDINA bela povrsina trake. Ako bi i `wrap` imao backgroundColor,
 // pun pravougaonik bi presekao kupolu.
-function BarShape({ width, height }) {
+function BarShape({ width, height, fill }) {
   const cx = width / 2;
   const left = cx - DOME_HALF;
   const right = cx + DOME_HALF;
@@ -66,12 +67,13 @@ function BarShape({ width, height }) {
       style={{ position: 'absolute', top: -DOME_RISE, left: 0 }}
       pointerEvents="none"
     >
-      <Path d={d} fill={colors.surface} />
+      <Path d={d} fill={fill} />
     </Svg>
   );
 }
 
 export default function TabBar({ state, descriptors, navigation }) {
+  const { colors } = useTheme();
   const [width, setWidth] = useState(0);
   const inset = Platform.OS === 'ios' ? 24 : 8;
 
@@ -110,7 +112,11 @@ export default function TabBar({ state, descriptors, navigation }) {
       {/* Pozadina pokriva kupolu, traku i sigurnu zonu ispod nje, pa mora da
           bude izvan `bar` - inace bi kupola i zona ispod ostale providne. */}
       {width > 0 && (
-        <BarShape width={width} height={DOME_RISE + BAR_HEIGHT + inset} />
+        <BarShape
+          width={width}
+          height={DOME_RISE + BAR_HEIGHT + inset}
+          fill={colors.surface}
+        />
       )}
 
       <View style={[styles.bar, { height: BAR_HEIGHT }]}>

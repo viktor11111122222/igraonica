@@ -12,9 +12,13 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import PressableScale from '../components/PressableScale';
-import { colors, radius, spacing, type, font } from '../theme';
+import { radius, spacing, type, font } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 export default function RegisterScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { register } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -147,7 +151,7 @@ export default function RegisterScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface,

@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { Animated, StyleSheet, View, useAnimatedValue } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // Prsten sa preostalim satima. Luk se pri ulasku popunjava od nule, da se
 // odmah vidi koliko je ostalo, a ne da broj samo "iskoci".
 export default function HoursRing({ size = 116, stroke = 10, progress = 0, children }) {
+  const { colors } = useTheme();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = useAnimatedValue(circumference);

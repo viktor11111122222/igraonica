@@ -5,12 +5,16 @@ import { useAuth } from '../context/AuthContext';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { useSettings } from '../context/SettingsContext';
 import Announcement from '../components/Announcement';
+import Banner from '../components/Banner';
+import ThemeSwitch from '../components/ThemeSwitch';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
 import HoursRing from '../components/HoursRing';
 import { ageInYears, yearsLabel } from '../utils/date';
 import { summarize } from '../utils/packages';
-import { colors, radius, spacing, type, shadow } from '../theme';
+import { radius, spacing, type, shadow } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 // Bez suvisne decimale: 12,5 h ali 20 h.
 const num = (value) =>
@@ -18,6 +22,8 @@ const num = (value) =>
 const hours = (value) => `${num(value)} h`;
 
 export default function PackageScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user, logout } = useAuth();
   const { settings } = useSettings();
   const [packages, setPackages] = useState([]);
@@ -63,22 +69,22 @@ export default function PackageScreen({ navigation }) {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.greeting}>Zdravo,</Text>
-          <Text style={styles.name}>
-            {user?.firstName} {user?.lastName}
-          </Text>
-        </View>
-        <PressableScale
-          style={styles.logoutBtn}
-          onPress={logout}
-          accessibilityRole="button"
-          accessibilityLabel="Odjava"
-        >
-          <Ionicons name="log-out-outline" size={20} color={colors.textOnPrimary} />
-        </PressableScale>
-      </View>
+      <Banner
+        rounded
+        style={styles.header}
+        eyebrow="Zdravo,"
+        title={`${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim()}
+        right={
+          <PressableScale
+            style={styles.logoutBtn}
+            onPress={logout}
+            accessibilityRole="button"
+            accessibilityLabel="Odjava"
+          >
+            <Ionicons name="log-out-outline" size={20} color={colors.textOnPrimary} />
+          </PressableScale>
+        }
+      />
 
       {sum.hasAny ? (
         <View style={styles.card}>
@@ -254,32 +260,26 @@ export default function PackageScreen({ navigation }) {
           </View>
         </>
       )}
+
+      {/* Prekidac boje stoji ovde, u podnozju jednog ekrana, a ne u baneru -
+          bira se jednom, pa ne treba da stoji na vrhu svakog ekrana. */}
+      <ThemeSwitch />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: spacing.xxxl * 2 },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 64,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxxl,
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
-  },
-  headerText: { flex: 1 },
-  greeting: { ...type.body, color: 'rgba(255,255,255,0.85)' },
-  name: { ...type.title, color: colors.textOnPrimary, marginTop: 2 },
+  // Kartica sa satima ulazi u baner odozdo, pa mu treba vise vazduha ispod
+  // naslova nego sto Banner podrazumevano ima. Dodaje se na vazduh zaglavlja.
+  header: { paddingBottom: spacing.xl },
   logoutBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: colors.onPrimaryVeil,
     alignItems: 'center',
     justifyContent: 'center',
   },

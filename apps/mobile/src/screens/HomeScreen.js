@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useClosedDays } from '../context/ClosedDaysContext';
 import { apiRequest } from '../utils/api';
+import Banner from '../components/Banner';
 import PressableScale from '../components/PressableScale';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
@@ -23,7 +24,9 @@ import { mailUrl, mapsUrl, open, parseCoords, telUrl } from '../utils/contact';
 import { summarize } from '../utils/packages';
 import { photos } from '../data/gallery';
 import { MEALS } from '../data/meals';
-import { colors, radius, spacing, type, shadow } from '../theme';
+import { radius, spacing, type, shadow } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 const num = (value) =>
   (Math.round((Number(value) || 0) * 10) / 10).toString().replace('.', ',');
@@ -31,6 +34,8 @@ const num = (value) =>
 // Pocetni ekran je pregled dana: koliko sati ima, sta se danas jede, sta se
 // danas radi i nekoliko slika. Detalji su na svojim tabovima.
 export default function HomeScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
   const { settings } = useSettings();
   const { isClosed } = useClosedDays();
@@ -122,7 +127,7 @@ export default function HomeScreen({ navigation }) {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={styles.header}>
+      <Banner rounded style={styles.header}>
         <View style={styles.headerRed}>
           <View style={styles.headerTekst}>
             <Text style={styles.greeting}>Zdravo,</Text>
@@ -148,7 +153,7 @@ export default function HomeScreen({ navigation }) {
             )}
           </PressableScale>
         </View>
-      </View>
+      </Banner>
 
       {/* Sati su ovde samo kao brojka; ceo pregled je na tabu Moj paket. */}
       <PressableScale
@@ -242,7 +247,7 @@ export default function HomeScreen({ navigation }) {
       {showGallery && (
         <>
           <Section
-            title="Iz igraonice"
+            title="Galerija"
             action="Sve fotografije"
             onPress={() => navigation.navigate('Gallery')}
           />
@@ -331,6 +336,8 @@ export default function HomeScreen({ navigation }) {
 }
 
 function Section({ title, action, onPress }) {
+  const styles = useThemedStyles(makeStyles);
+
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -343,17 +350,15 @@ function Section({ title, action, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: spacing.xxxl * 2 },
 
+  // Boju, saru i zaobljeno dno crta Banner; ovde ostaje samo vazduh oko teksta.
   header: {
     paddingTop: 64,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
   },
   headerRed: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg },
   headerTekst: { flex: 1, minWidth: 0 },
@@ -363,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: colors.onPrimaryVeil,
   },
   zvonoBroj: {
     position: 'absolute',
@@ -379,9 +384,9 @@ const styles = StyleSheet.create({
   },
   zvonoBrojTekst: { ...type.caption, fontSize: 11, color: '#fff' },
 
-  greeting: { ...type.body, color: 'rgba(255,255,255,0.85)' },
+  greeting: { ...type.body, color: colors.onPrimaryMuted },
   name: { ...type.display, fontSize: 30, color: colors.textOnPrimary, marginTop: 2 },
-  club: { ...type.label, color: 'rgba(255,255,255,0.8)', marginTop: spacing.xs },
+  club: { ...type.label, color: colors.onPrimaryMuted, marginTop: spacing.xs },
 
   hoursCard: {
     flexDirection: 'row',

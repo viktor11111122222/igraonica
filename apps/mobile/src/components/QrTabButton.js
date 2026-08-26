@@ -1,11 +1,15 @@
 import { Animated, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, motion, shadow } from '../theme';
+import { motion, shadow } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 export const QR_SIZE = 64;
 
 // Kruzno dugme koje sedi u useku tab bara.
 export default function QrTabButton({ onPress, focused }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const scale = useAnimatedValue(1);
 
   function animateTo(value, duration) {
@@ -32,13 +36,16 @@ export default function QrTabButton({ onPress, focused }) {
           { transform: [{ scale }] },
         ]}
       >
-        <Ionicons name="qr-code" size={30} color={colors.primaryDarker} />
+        {/* Krug je u sporednoj boji, pa i ikona mora da se cita na njoj.
+            Ranije je uzimala primaryDarker, pa je u zutoj temi ispadala
+            braon ikona na plavom krugu. */}
+        <Ionicons name="qr-code" size={30} color={colors.textOnAccent} />
       </Animated.View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   button: {
     width: QR_SIZE,
     height: QR_SIZE,

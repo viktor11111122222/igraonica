@@ -12,11 +12,14 @@ import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { apiRequest } from '../utils/api';
 import { dayIndex, fromKey, monthDates, toKey } from '../utils/date';
 import { useDaySelection } from '../hooks/useDay';
+import Banner from '../components/Banner';
 import DayStrip from '../components/DayStrip';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
 import { useClosedDays } from '../context/ClosedDaysContext';
-import { colors, radius, spacing, type, shadow } from '../theme';
+import { radius, spacing, type, shadow } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 // Backend koristi 0 = ponedeljak (ne JS konvenciju gde je 0 = nedelja).
 // Imena stoje u akuzativu jer se koriste samo u recenici "Za <dan> nije
@@ -32,6 +35,8 @@ const DAY_NAMES_ACC = [
 ];
 
 export default function ScheduleScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [week, setWeek] = useState({});
   const { today, selected: selectedDay, setSelected: setSelectedDay } =
     useDaySelection();
@@ -80,18 +85,15 @@ export default function ScheduleScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Raspored</Text>
-        <Text style={styles.headerSub}>Nedeljne aktivnosti</Text>
-      </View>
-
-      <DayStrip
-        today={today}
-        selected={selectedDay}
-        onSelect={setSelectedDay}
-        marked={marked}
-        closed={closed}
-      />
+      <Banner doodles="head" title="Raspored" subtitle="Nedeljne aktivnosti">
+        <DayStrip
+          today={today}
+          selected={selectedDay}
+          onSelect={setSelectedDay}
+          marked={marked}
+          closed={closed}
+        />
+      </Banner>
 
       <ClosedNotice date={selectedDay} today={selectedDay === today} />
       <Announcement screen="schedule" />
@@ -154,21 +156,9 @@ export default function ScheduleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    paddingTop: 64,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.primary,
-  },
-  headerTitle: { ...type.title, color: colors.textOnPrimary },
-  headerSub: {
-    ...type.body,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: spacing.xs,
-  },
   list: {
     padding: spacing.xl,
     gap: spacing.md,

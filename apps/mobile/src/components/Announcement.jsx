@@ -1,13 +1,17 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSettings } from '../context/SettingsContext';
-import { colors, radius, spacing, type } from '../theme';
+import { radius, spacing, type } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 // Traka sa obavestenjem koje admin upisuje u web panelu.
 // `screen` je ime ekrana (package, menu, schedule, gallery) - traka se
 // prikazuje samo ako je taj ekran izabran u podesavanjima i ako tekst postoji.
 export default function Announcement({ screen, style }) {
   const { settings } = useSettings();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const text = (settings.mobile_announcement || '').trim();
   if (!text) return null;
@@ -26,7 +30,7 @@ export default function Announcement({ screen, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -3,14 +3,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '../hooks/useNotifications';
 import PressableScale from '../components/PressableScale';
 import { formatTime } from '../utils/date';
-import { colors, radius, spacing, type, shadow } from '../theme';
+import { radius, spacing, type, shadow } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 
 // Ikona uz vrstu dogadjaja - brze se prepoznaje nego iz samog teksta.
+// Boja stoji kao ime uloge, ne kao gotova vrednost: mapa se racuna jednom pri
+// uvozu modula, pa bi inace zamrzla paletu one teme koja je tada vazila.
 const IKONA = {
-  CHILD_CHECKED_IN: { name: 'log-in-outline', boja: colors.success },
-  CHILD_CHECKED_OUT: { name: 'log-out-outline', boja: colors.primaryDarker },
-  PACKAGE_ASSIGNED: { name: 'cube-outline', boja: colors.accentText },
-  HOURS_ADJUSTED: { name: 'swap-vertical-outline', boja: colors.accentText },
+  CHILD_CHECKED_IN: { name: 'log-in-outline', uloga: 'success' },
+  CHILD_CHECKED_OUT: { name: 'log-out-outline', uloga: 'primaryDarker' },
+  PACKAGE_ASSIGNED: { name: 'cube-outline', uloga: 'accentText' },
+  HOURS_ADJUSTED: { name: 'swap-vertical-outline', uloga: 'accentText' },
 };
 
 // Koliko je proslo, grubo. Tacan sat stoji uz red.
@@ -25,7 +29,10 @@ function pre(datum) {
 }
 
 function Red({ obavestenje, onPress }) {
-  const ikona = IKONA[obavestenje.type] || { name: 'notifications-outline', boja: colors.textMuted };
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+
+  const ikona = IKONA[obavestenje.type] || { name: 'notifications-outline', uloga: 'textMuted' };
   const novo = !obavestenje.readAt;
 
   return (
@@ -35,7 +42,7 @@ function Red({ obavestenje, onPress }) {
       accessibilityRole="button"
     >
       <View style={[styles.ikona, { backgroundColor: novo ? colors.surface : colors.bg }]}>
-        <Ionicons name={ikona.name} size={20} color={ikona.boja} />
+        <Ionicons name={ikona.name} size={20} color={colors[ikona.uloga]} />
       </View>
 
       <View style={styles.telo}>
@@ -53,6 +60,8 @@ function Red({ obavestenje, onPress }) {
 }
 
 export default function NotificationsScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { notifications, unreadCount, loading, reload, oznaciProcitano, oznaciSve } =
     useNotifications();
 
@@ -96,7 +105,7 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
 

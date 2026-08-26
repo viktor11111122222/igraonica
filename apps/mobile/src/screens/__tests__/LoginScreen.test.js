@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoginScreen from '../LoginScreen';
 
 const mockLogin = jest.fn();
@@ -11,9 +12,22 @@ jest.mock('../../context/SettingsContext', () => ({
 }));
 
 const navigation = { navigate: jest.fn() };
+
+// Ekran racuna gornju ivicu iz sigurne zone, a ona van providera puca, pa
+// test zadaje meru uredjaja umesto simulatora.
+const metrika = {
+  frame: { x: 0, y: 0, width: 393, height: 852 },
+  insets: { top: 59, left: 0, right: 0, bottom: 34 },
+};
+
 // `render` je u ovoj verziji RNTL-a asinhron - bez await-a `screen` ostaje
 // nevezan i svaki upit javi da render nije ni pozvan.
-const prikazi = () => render(<LoginScreen navigation={navigation} />);
+const prikazi = () =>
+  render(
+    <SafeAreaProvider initialMetrics={metrika}>
+      <LoginScreen navigation={navigation} />
+    </SafeAreaProvider>
+  );
 
 beforeEach(() => {
   jest.clearAllMocks();
