@@ -372,6 +372,34 @@ describe('CheckIn - minus sati', () => {
 
   // Stari minus se vidi i kad je ovaj boravak pokriven paketom - roditelj je
   // bas tada na pultu.
+  // Kod deteta bez paketa "Preostalo: 0,0 h" bi zvucalo kao da je paket
+  // ispraznjen, a paketa uopste nema.
+  test('odjava bez paketa ne pominje preostale sate', async () => {
+    get.mockResolvedValue({ visits: [poseta] });
+    post.mockResolvedValue({
+      message: 'Ana Petrovic je odjavljen/a.',
+      duration: { raw: 140, charged: 180, hoursDeducted: 3 },
+      remainingHours: 0,
+      withoutPackage: true,
+      debtAdded: 3,
+      debtHours: 3,
+    });
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
+
+    const polje = screen.getByPlaceholderText('IGR-XXXXXXXX');
+    await user.type(polje, KOD);
+    await user.click(within(polje.closest('form')).getByRole('button', { name: 'Odjavi' }));
+
+    await screen.findByText(/Minus ukupno: 3,0 h/);
+    // "Preostalo u paketu" stoji i kao zaglavlje spiska prisutnih, pa se gleda
+    // samo traka ishoda.
+    const traka = screen.getByRole('status');
+    expect(within(traka).getByText(/Naplaceno 3 h/)).toBeInTheDocument();
+    expect(within(traka).queryByText(/Preostalo/)).toBeNull();
+  });
+
   test('odjava sa pokricem i dalje pokazuje stari minus', async () => {
     get.mockResolvedValue({ visits: [poseta] });
     post.mockResolvedValue({

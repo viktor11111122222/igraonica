@@ -279,6 +279,9 @@ router.post(
           hoursDeducted,
         },
         remainingHours: rezultat.remainingHours,
+        // Bez paketa "Preostalo: 0,0 h" bi zvucalo kao da je paket ispraznjen;
+        // radnik tada treba da vidi samo minus.
+        withoutPackage: !openVisit.userPackageId,
         // Koliko je ova poseta dodala u minus i koliko roditelj sada duguje.
         debtAdded: rezultat.uMinus,
         debtHours: rezultat.dugUkupno,

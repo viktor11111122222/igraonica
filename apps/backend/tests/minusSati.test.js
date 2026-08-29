@@ -132,6 +132,8 @@ describe('Odjava bez paketa upisuje minus', () => {
     expect(res.body.duration.hoursDeducted).toBe(2);
     expect(res.body.debtAdded).toBe(2);
     expect(res.body.debtHours).toBe(2);
+    // Radnik ne treba da vidi "Preostalo: 0,0 h" - paketa nema.
+    expect(res.body.withoutPackage).toBe(true);
     expect(await dugRoditelja(roditelj.id)).toBe(2);
   });
 
@@ -232,6 +234,7 @@ describe('Paket koji ne pokriva ceo boravak', () => {
     expect(res.body.debtAdded).toBe(0);
     expect(res.body.debtHours).toBe(0);
     expect(res.body.remainingHours).toBe(3);
+    expect(res.body.withoutPackage).toBe(false);
     expect(await dugRoditelja(roditelj.id)).toBe(0);
   });
 });
