@@ -82,6 +82,11 @@ export default function CheckIn() {
         message: data.message,
         remainingHours: data.remainingHours,
         duration: data.duration,
+        // Bez paketa boravak ide u minus; radnik to mora da vidi odmah, a ne
+        // tek kad roditelj dodje da plati.
+        withoutPackage: data.withoutPackage,
+        debtAdded: data.debtAdded,
+        debtHours: data.debtHours,
       });
       setCode('');
       loadVisits();
@@ -150,8 +155,16 @@ export default function CheckIn() {
               {(result.duration || result.remainingHours != null) && (
                 <div className="scan-result-meta">
                   {result.duration && `Naplaceno ${formatDuration(result.duration.charged)}. `}
-                  {result.remainingHours != null &&
+                  {!result.withoutPackage &&
+                    result.remainingHours != null &&
                     `Preostalo: ${formatHours(result.remainingHours)}.`}
+                </div>
+              )}
+              {result.ok && (result.withoutPackage || result.debtHours > 0) && (
+                <div className="scan-result-meta warn">
+                  {result.withoutPackage && 'Roditelj nema aktivan paket - boravak ide u minus. '}
+                  {result.debtAdded > 0 && `Ova poseta: +${formatHours(result.debtAdded)}. `}
+                  {result.debtHours > 0 && `Minus ukupno: ${formatHours(result.debtHours)}.`}
                 </div>
               )}
             </div>

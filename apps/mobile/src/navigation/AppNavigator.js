@@ -5,8 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { isOn, useSettings } from '../context/SettingsContext';
-import { font } from '../theme';
-import { useTheme } from '../context/ThemeContext';
+import { colors, font } from '../theme';
 import TabBar from '../components/TabBar';
 import { BannerBackground } from '../components/Banner';
 
@@ -79,7 +78,7 @@ function MainTabs() {
 // izlaz. Kada istorija postoji, strelicu crta sam navigator. Ako je nema
 // (ekran otvoren direktno, obnovljeno stanje), korisnik bi ostao zarobljen -
 // zato se tada ubacuje dugme koje vraca na tabove.
-function escapeHatch(navigation, colors) {
+function escapeHatch(navigation) {
   if (navigation.canGoBack()) return {};
   return {
     headerLeft: () => (
@@ -97,8 +96,6 @@ function escapeHatch(navigation, colors) {
 }
 
 function MainStack() {
-  const { colors } = useTheme();
-
   return (
     <Stack.Navigator
       screenOptions={({ navigation }) => ({
@@ -112,7 +109,7 @@ function MainStack() {
         headerTintColor: colors.textOnPrimary,
         headerTitleStyle: { fontFamily: font.bold },
         headerBackTitle: 'Nazad',
-        ...escapeHatch(navigation, colors),
+        ...escapeHatch(navigation),
       })}
     >
       <Stack.Screen
@@ -153,11 +150,10 @@ function MainStack() {
 
 export default function AppNavigator() {
   const { user, loading } = useAuth();
-  const { colors } = useTheme();
 
   if (loading) {
     return (
-      <View style={[styles.loading, { backgroundColor: colors.bg }]}>
+      <View style={styles.loading}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -175,5 +171,6 @@ const styles = {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.bg,
   },
 };

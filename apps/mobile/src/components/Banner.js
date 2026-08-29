@@ -1,20 +1,20 @@
 import { View, Text, Image, StyleSheet, useWindowDimensions } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
-import { font, radius, spacing, type } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, font, radius, spacing, type } from '../theme';
 
 // Zaglavlje ekrana: puna glavna boja sa belom decjom sarom preko nje.
 //
-// Sara je jedan fajl - bela sa alfom - a ne dve slike u boji. Sa prilozena
-// dva banera izmereno je da je crtez u oba isti i beo, samo razlicite
-// prozirnosti, pa je dovoljno da se ista sara polozi preko boje teme. Time
-// baner prati prekidac bez menjanja slike.
+// Sara je jedan fajl - bela sa alfom - a ne slika u boji. Sa prilozenog
+// predloska (Pattern 1170x381px novi.psd) izmereno je da je crtez beo i samo
+// providan, pa je dovoljno da se polozi preko boje. Boja tako ostaje na
+// jednom mestu, u temi.
+//
 // Prirodna razmera sare. Sirina je puna sirina ekrana, pa crtezi ispadnu
 // tacno onoliko krupni koliko su i u predlosku.
 //
 // Fajl je visi od prilozenog banera: gornjih 381 redova je original, a ostatak
 // je dopuna istim crtezima na novim mestima (deo ogledalno), da bi sara mogla
-// da se produzi i ispod trake sa datumima a da se nigde ne ponovi.
+// da pokrije i traku sa datumima a da se nigde ne ponovi.
 const SARA = { width: 1170, height: 780 };
 
 // Sama sara, bez podloge. Uvek se kaci za vrh onoga u sta je stavljena, pa
@@ -24,8 +24,6 @@ const SARA = { width: 1170, height: 780 };
 // videlo samo par uvecanih komada. Sirina je puna sirina ekrana, a visina ide
 // iz razmere fajla - tako crtezi ostaju sitni i cita se cela sara.
 function Doodles() {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const { width } = useWindowDimensions();
 
   return (
@@ -46,7 +44,6 @@ function Doodles() {
 // koristi i zaglavlje stack navigatora (headerBackground), gde nema mesta za
 // naslov i decu - njih crta sam navigator.
 export function BannerBackground({ style, plain }) {
-  const styles = useThemedStyles(makeStyles);
 
   return (
     <View testID="banner-bg" style={[styles.podloga, style]}>
@@ -73,13 +70,17 @@ export default function Banner({
   doodles = 'full',
   children,
 }) {
-  const styles = useThemedStyles(makeStyles);
+
+  // Gornji vazduh mora da krene ispod sistemske trake, a ona nije svuda ista:
+  // ~59 na iPhone-u sa ostrvom, 20 na starom SE, 24-49 na Androidu. Fiksnih 64
+  // je zato na Androidu ostavljalo dvostruko vise vazduha nego na iOS-u.
+  const insets = useSafeAreaInsets();
 
   // Pocetna nosi svoje zaglavlje (ime, zvono sa brojacem), pa od banera uzima
   // samo obojenu podlogu sa sarom - tada ovoga nema.
   const zaglavlje =
     title || eyebrow || right ? (
-      <View style={styles.head}>
+      <View style={[styles.head, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.texts}>
           {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
           {title ? <Text style={styles.title}>{title}</Text> : null}
@@ -109,6 +110,11 @@ export default function Banner({
         zaglavlje
       )}
 
+      {/* Donji vazduh zaglavlja stoji IZVAN isecka. Da je unutra (kao padding
+          na samom zaglavlju), sara bi se videla i u razmaku iznad datuma -
+          isecak se sece po svojoj ivici, a ivica bi tada bila ispod razmaka. */}
+      {zaglavlje ? <View style={styles.podZaglavljem} /> : null}
+
       {/* Traka sa datumima stoji unutar banera, bez svoje pozadine, pa se kroz
           nju vidi ono sto je iza. */}
       {children && doodles === 'content' ? (
@@ -123,8 +129,7 @@ export default function Banner({
   );
 }
 
-const makeStyles = (colors) =>
-  StyleSheet.create({
+const styles = StyleSheet.create({
     podloga: {
       flex: 1,
       backgroundColor: colors.primary,
@@ -139,12 +144,13 @@ const makeStyles = (colors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
-      paddingTop: 64,
+      // paddingTop dolazi iz sigurne zone, u samoj komponenti.
       paddingHorizontal: spacing.xl,
-      // Donji vazduh nosi zaglavlje, ne ceo baner - inace bi se dodao i ispod
-      // trake sa datumima kada ona stoji unutra.
-      paddingBottom: spacing.xl,
     },
+    // Vazduh ispod naslova. Zaseban je, a ne padding zaglavlja, iz razloga
+    // objasnjenog gore - i ne dodaje se ispod trake sa datumima, jer ga nosi
+    // zaglavlje a ne ceo baner.
+    podZaglavljem: { height: spacing.xl },
     doodles: {
       position: 'absolute',
       top: 0,

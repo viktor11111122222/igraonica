@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
+import { Platform, StyleSheet } from 'react-native';
 import TabBar from '../TabBar';
 
 function napravi(imena, index = 0) {
@@ -16,7 +17,10 @@ function napravi(imena, index = 0) {
   return { state: { routes, index }, descriptors, navigation };
 }
 
-const prikazi = (props) => render(<TabBar {...props} />);
+const prikazi = (props, bottom = 34) => {
+  global.__sigurnaZona = { top: 59, right: 0, bottom, left: 0 };
+  return render(<TabBar {...props} />);
+};
 
 describe('TabBar', () => {
   test('prikazuje sve tabove osim QR-a kao dugmad sa natpisom', async () => {
@@ -95,5 +99,35 @@ describe('TabBar', () => {
     });
 
     expect(props.navigation.navigate).toHaveBeenCalledWith('Qr');
+  });
+});
+
+// Na Androidu sistemska navigacija zauzima dno ekrana: gestovna traka 24dp, a
+// tri dugmeta 48dp. Sa fiksnih 8 je donji deo trake zavrsavao ispod njih.
+describe('TabBar - donja sigurna zona', () => {
+  const donjiVazduh = () =>
+    StyleSheet.flatten(screen.getByLabelText('Home').parent.parent.props.style).paddingBottom;
+
+  const staraPlatforma = Platform.OS;
+  afterEach(() => {
+    Platform.OS = staraPlatforma;
+  });
+
+  test('Android uzima zonu sistemske navigacije', async () => {
+    Platform.OS = 'android';
+    await prikazi(napravi(['Home', 'Qr', 'Package']), 48);
+    expect(donjiVazduh()).toBe(48);
+  });
+
+  test('bez sistemske navigacije ostaje mali vazduh', async () => {
+    Platform.OS = 'android';
+    await prikazi(napravi(['Home', 'Qr', 'Package']), 0);
+    expect(donjiVazduh()).toBe(8);
+  });
+
+  test('iOS zadrzava meru po kojoj je traka crtana', async () => {
+    Platform.OS = 'ios';
+    await prikazi(napravi(['Home', 'Qr', 'Package']), 34);
+    expect(donjiVazduh()).toBe(24);
   });
 });

@@ -10,15 +10,12 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
 import PressableScale from '../components/PressableScale';
-import { radius, spacing, type, font } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type, font } from '../theme';
 
 export default function RegisterScreen({ navigation }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const { register } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -59,9 +56,17 @@ export default function RegisterScreen({ navigation }) {
   }
 
   return (
-    <KeyboardAvoidingView
+    <>
+      {/* Ekran je beo, pa ikone sistemske trake moraju da budu tamne. Bez ovoga
+          nasledjuje se ono sto je zadao prethodni ekran. */}
+      <StatusBar style="dark" />
+      <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      // Android sam skuplja prozor kad se tastatura podigne
+        // (`adjustResize` u manifestu), pa mu ovde ne treba jos jedno
+        // podesavanje visine - sa 'height' je posle zatvaranja tastature
+        // ostajala prazna traka na dnu ekrana.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Otvorite nalog</Text>
@@ -147,11 +152,12 @@ export default function RegisterScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface,

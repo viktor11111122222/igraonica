@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../components/Layout';
-import { Alert, Badge, Empty, Field, Modal, Spinner } from '../components/ui';
+import { Alert, Badge, Confirm, Empty, Field, Modal, Spinner } from '../components/ui';
 import { useFetch } from '../hooks/useFetch';
 import { get, post } from '../lib/api';
 import AssignPackage from '../components/AssignPackage';
@@ -38,6 +38,9 @@ export default function UserDetail() {
 
   const [assigning, setAssigning] = useState(false);
   const [adjusting, setAdjusting] = useState(null);
+  // Naplata minusa je novac, pa ide preko potvrde - ne jednim klikom.
+  const [settling, setSettling] = useState(false);
+  const [settleError, setSettleError] = useState('');
   const [adjustForm, setAdjustForm] = useState({ hours: '', reason: '' });
   const [history, setHistory] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -45,6 +48,7 @@ export default function UserDetail() {
 
   const user = data?.user;
   const sum = summarize(user?.userPackages);
+  const dug = Number(user?.debtHours || 0);
 
   async function adjust(e) {
     e.preventDefault();
@@ -60,6 +64,20 @@ export default function UserDetail() {
       reload();
     } catch (e) {
       setFormError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function settleDebt() {
+    setBusy(true);
+    try {
+      await post(`/users/${id}/settle-debt`);
+      setSettling(false);
+      setSettleError('');
+      reload();
+    } catch (e) {
+      setSettleError(e.message);
     } finally {
       setBusy(false);
     }
@@ -126,6 +144,21 @@ export default function UserDetail() {
               {formatHours(sum.remaining)}
             </div>
           </div>
+          {dug > 0 && (
+            <div className="stat">
+              <div className="stat-label">Minus sati</div>
+              <div className="stat-value" style={{ color: 'var(--danger-solid)' }}>
+                -{formatHours(dug)}
+              </div>
+              <div className="stat-hint">Odigrano bez paketa</div>
+              {/* Dugme stoji uz sam iznos, ne u zaglavlju stranice: na telefonu
+                  zaglavlje vec nosi "Nazad" i "Dodeli paket", pa bi treca akcija
+                  isterala naslov sa ekrana. */}
+              <button className="btn secondary sm stat-action" onClick={() => setSettling(true)}>
+                Naplati minus
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="card">
@@ -289,6 +322,21 @@ export default function UserDetail() {
             </Field>
           </form>
         </Modal>
+      )}
+
+      {settling && (
+        <Confirm
+          title="Naplaceno?"
+          text={`Minus od ${formatHours(dug)} se ponistava. Uradite ovo tek kad roditelj plati.`}
+          confirmLabel="Naplaceno"
+          busy={busy}
+          onConfirm={settleDebt}
+          error={settleError}
+          onClose={() => {
+            setSettling(false);
+            setSettleError('');
+          }}
+        />
       )}
 
       {history && (

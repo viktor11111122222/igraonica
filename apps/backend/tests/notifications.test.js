@@ -124,9 +124,43 @@ describe('Dogadjaji koji prave obavestenja', () => {
 
     const kodRoditelja = await mojaObavestenja(parentToken);
     const o = kodRoditelja.notifications.find((n) => n.type === 'CHILD_CHECKED_OUT');
-    expect(o.body).toContain('Naplaceno 30 min');
-    expect(o.body).toContain('ostaje 9,5 h');
-    expect(o.data.chargedMinutes).toBe(30);
+    expect(o.body).toContain('Naplaceno 1 h');
+    expect(o.body).toContain('ostaje 9,0 h');
+    expect(o.data.chargedMinutes).toBe(60);
+  });
+
+  // Bez pokrica u paketu roditelju ne znaci "u paketu ostaje 0 h" - mora da
+  // vidi da je u minusu.
+  test('odjava bez paketa javi roditelju minus, a ne preostalo', async () => {
+    const bezPaketa = await createTestUser({
+      email: `bezpaketa.${Date.now()}@primer.rs`,
+      password: 'tajna123',
+      firstName: 'Bez',
+      lastName: 'Paketa',
+    });
+    const prijava = await request(app)
+      .post('/api/auth/login')
+      .send({ email: bezPaketa.email, password: 'tajna123' });
+
+    const dete = await request(app)
+      .post('/api/children')
+      .set('Authorization', `Bearer ${prijava.body.token}`)
+      .send({ firstName: 'Minus', lastName: 'Dete', dateOfBirth: '2021-05-05' });
+
+    await request(app)
+      .post('/api/visits/check-in')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ qrCode: dete.body.child.qrCode });
+    await request(app)
+      .post('/api/visits/check-out')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ qrCode: dete.body.child.qrCode });
+
+    const kodRoditelja = await mojaObavestenja(prijava.body.token);
+    const o = kodRoditelja.notifications.find((n) => n.type === 'CHILD_CHECKED_OUT');
+    expect(o.body).toContain('u minusu 1,0 h');
+    expect(o.body).not.toContain('u paketu ostaje');
+    expect(o.data.debtHours).toBe(1);
   });
 
   test('ispravka sati javi roditelju iznos i razlog', async () => {

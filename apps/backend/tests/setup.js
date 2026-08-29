@@ -35,7 +35,10 @@ async function cleanDB() {
   await prisma.menuItem.deleteMany();
   await prisma.activity.deleteMany();
   await prisma.closedDay.deleteMany();
+  await prisma.promotion.deleteMany();
+  await prisma.promoBanner.deleteMany();
   await prisma.reservation.deleteMany();
+  await prisma.event.deleteMany();
   await prisma.setting.deleteMany();
   await prisma.package.deleteMany();
   await prisma.user.deleteMany();

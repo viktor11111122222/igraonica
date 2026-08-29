@@ -58,11 +58,10 @@ beforeAll(async () => {
     .send({ userId: parentId, packageId });
   userPackageId = assignRes.body.userPackage.id;
 
-  // Kreiraj settings za rounding
+  // Naplata: puni sati, sa pragom od 15 min preko punog sata
   await prisma.setting.createMany({
     data: [
-      { key: 'rounding_minutes', value: '15' },
-      { key: 'minimum_charge_minutes', value: '30' },
+      { key: 'hour_grace_minutes', value: '15' },
       { key: 'closing_time', value: '21:00' },
     ],
   });
@@ -167,7 +166,7 @@ describe('POST /api/visits/check-in', () => {
     expect(res.body.message).toContain('deaktiviran');
   });
 
-  test('odbija check-in kad roditelj nema aktivan paket', async () => {
+  test('prijavljuje dete i kad roditelj nema paket - sati idu u minus', async () => {
     // Kreiraj novog roditelja bez paketa
     const noPackageParent = await createTestUser({
       email: 'bezpaketa@test.com',
@@ -191,13 +190,13 @@ describe('POST /api/visits/check-in', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ qrCode: 'IGR-NOPKG01' });
 
-    expect(res.status).toBe(400);
-    expect(res.body.message).toContain('nema aktivan paket');
-    expect(res.body.child).toBeDefined();
-    expect(res.body.parent).toBeDefined();
+    expect(res.status).toBe(201);
+    expect(res.body.withoutPackage).toBe(true);
+    expect(res.body.visit.userPackageId).toBeNull();
+    expect(res.body.remainingHours).toBe(0);
   });
 
-  test('odbija check-in kad su svi sati potroseni', async () => {
+  test('prijavljuje dete i kad su svi sati potroseni', async () => {
     // Postavi preostale sate na 0 za istekli paket
     const emptyParent = await createTestUser({
       email: 'prazansati@test.com',
@@ -233,11 +232,11 @@ describe('POST /api/visits/check-in', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ qrCode: 'IGR-EMPTY01' });
 
-    expect(res.status).toBe(400);
-    expect(res.body.message).toContain('nema aktivan paket');
+    expect(res.status).toBe(201);
+    expect(res.body.withoutPackage).toBe(true);
   });
 
-  test('odbija check-in kad je paket istekao', async () => {
+  test('prijavljuje dete i kad je paket istekao', async () => {
     const expiredParent = await createTestUser({
       email: 'istekao@test.com',
       password: 'test123',
@@ -272,8 +271,8 @@ describe('POST /api/visits/check-in', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ qrCode: 'IGR-EXPRD01' });
 
-    expect(res.status).toBe(400);
-    expect(res.body.message).toContain('nema aktivan paket');
+    expect(res.status).toBe(201);
+    expect(res.body.withoutPackage).toBe(true);
   });
 });
 
@@ -306,28 +305,29 @@ describe('POST /api/visits/check-out', () => {
     expect(res.body.visit.durationMinutes).toBeDefined();
     expect(res.body.visit.child.firstName).toBe('Marko');
 
-    // 70 min zaokruzeno na 15 = 75 min, ali minimum je 30 → 75 min
+    // 70 min = pun sat + 10 min preko, a 10 nije preko praga od 15 → 1 sat
     expect(res.body.duration.raw).toBe(70);
-    expect(res.body.duration.charged).toBe(75);
-    expect(res.body.duration.hoursDeducted).toBe(1.25);
+    expect(res.body.duration.charged).toBe(60);
+    expect(res.body.duration.hoursDeducted).toBe(1);
+    expect(res.body.debtAdded).toBe(0);
 
-    // Preostali sati: 10 - 1.25 = 8.75
-    expect(res.body.remainingHours).toBe(8.75);
+    // Preostali sati: 10 - 1 = 9
+    expect(res.body.remainingHours).toBe(9);
   });
 
   test('provera da su sati zaista oduzeti iz paketa', async () => {
     const up = await prisma.userPackage.findUnique({ where: { id: userPackageId } });
-    expect(Number(up.remainingHours)).toBe(8.75);
+    expect(Number(up.remainingHours)).toBe(9);
   });
 
-  test('minimum charge se primenjuje za kratke posete', async () => {
+  test('kratak boravak se naplacuje kao ceo sat', async () => {
     // Check-in child1 ponovo
     await request(app)
       .post('/api/visits/check-in')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ qrCode: child1QR });
 
-    // Postavi check-in na pre 10 minuta (ispod minimuma od 30 min)
+    // Postavi check-in na pre 10 minuta
     const visit = await prisma.visit.findFirst({
       where: { childId: child1Id, status: 'CHECKED_IN' },
     });
@@ -341,17 +341,17 @@ describe('POST /api/visits/check-out', () => {
       .send({ qrCode: child1QR });
 
     expect(res.status).toBe(200);
-    // 10 min raw, ali minimum charge = 30 min
+    // Svaki boravak je najmanje jedan sat
     expect(res.body.duration.raw).toBe(10);
-    expect(res.body.duration.charged).toBe(30);
-    expect(res.body.duration.hoursDeducted).toBe(0.5);
+    expect(res.body.duration.charged).toBe(60);
+    expect(res.body.duration.hoursDeducted).toBe(1);
 
-    // 8.75 - 0.5 = 8.25
-    expect(res.body.remainingHours).toBe(8.25);
+    // 9 - 1 = 8
+    expect(res.body.remainingHours).toBe(8);
   });
 
-  test('zaokruzivanje na 15 min radi ispravno', async () => {
-    // Check-in child1, postavi na pre 46 min (zaokruzuje na 60)
+  test('preko praga od 15 min ide ceo sat', async () => {
+    // Check-in child1, postavi na pre 46 min
     await request(app)
       .post('/api/visits/check-in')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -369,16 +369,16 @@ describe('POST /api/visits/check-out', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ qrCode: child1QR });
 
-    // 46 min → zaokruzeno na 15 = ceil(46/15)*15 = 60
+    // 46 min je preko praga → ceo sat
     expect(res.body.duration.raw).toBe(46);
     expect(res.body.duration.charged).toBe(60);
     expect(res.body.duration.hoursDeducted).toBe(1);
 
-    // 8.25 - 1 = 7.25
-    expect(res.body.remainingHours).toBe(7.25);
+    // 8 - 1 = 7
+    expect(res.body.remainingHours).toBe(7);
   });
 
-  test('sati ne idu ispod 0 pri check-out', async () => {
+  test('sati ne idu ispod 0, a nepokriveno ide u minus', async () => {
     // Postavi preostale sate na 0.25 (15 min)
     await prisma.userPackage.update({
       where: { id: userPackageId },
@@ -406,8 +406,19 @@ describe('POST /api/visits/check-out', () => {
     expect(res.status).toBe(200);
     expect(res.body.remainingHours).toBe(0);
 
+    // Paket je imao 0.25 h, boravak je 2 sata - razlika ide roditelju u minus.
+    expect(res.body.duration.hoursDeducted).toBe(2);
+    expect(res.body.debtAdded).toBe(1.75);
+    expect(res.body.debtHours).toBe(1.75);
+
     const up = await prisma.userPackage.findUnique({ where: { id: userPackageId } });
     expect(Number(up.remainingHours)).toBe(0);
+
+    const roditelj = await prisma.user.findUnique({ where: { id: parentId } });
+    expect(Number(roditelj.debtHours)).toBe(1.75);
+
+    // Minus se posle ovoga ne prenosi na ostale testove.
+    await prisma.user.update({ where: { id: parentId }, data: { debtHours: 0 } });
   });
 
   test('ne moze check-out dete koje nije checked-in', async () => {
@@ -837,7 +848,7 @@ describe('Istovremena skeniranja', () => {
     await Promise.all(Array.from({ length: 5 }, odjava));
 
     const up = await prisma.userPackage.findUnique({ where: { id: userPackageId } });
-    expect(Number(up.remainingHours)).toBe(9.5);
+    expect(Number(up.remainingHours)).toBe(9);
   });
 
   // Radnik odjavljuje dete, a admin u istom trenutku dodaje sate. Ranije bi
@@ -854,7 +865,7 @@ describe('Istovremena skeniranja', () => {
     ]);
 
     const up = await prisma.userPackage.findUnique({ where: { id: userPackageId } });
-    expect(Number(up.remainingHours)).toBe(11.5); // 10 - 0.5 + 2
+    expect(Number(up.remainingHours)).toBe(11); // 10 - 1 + 2
   });
 
   test('posle odjave sledeca prijava opet prolazi', async () => {

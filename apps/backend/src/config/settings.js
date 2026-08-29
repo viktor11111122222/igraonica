@@ -5,17 +5,14 @@
 // GET /api/settings/public. Sve sto nije javno vide samo admini.
 
 const CATALOG = [
-  // ---- Obracun vremena (cita ih visits.js pri odjavi) ----
+  // ---- Obracun vremena (cita ga visits.js pri odjavi) ----
+  //
+  // Boravak se naplacuje u punim satima. Ovaj prag kaze koliko minuta preko
+  // punog sata prolazi bez naplate; preko njega se racuna ceo sat.
   {
-    key: 'rounding_minutes',
+    key: 'hour_grace_minutes',
     value: '15',
-    description: 'Boravak se pri odjavi zaokruzuje navise na ovaj broj minuta.',
-    public: false,
-  },
-  {
-    key: 'minimum_charge_minutes',
-    value: '30',
-    description: 'Najmanji broj minuta koji se naplacuje, i za kraci boravak.',
+    description: 'Minuti preko punog sata koji se ne naplacuju. Preko toga se racuna ceo sat.',
     public: false,
   },
 
@@ -91,13 +88,14 @@ const ANNOUNCEMENT_SCREENS = ['home', 'menu', 'schedule', 'package'];
 const DEFAULTS = Object.fromEntries(CATALOG.map((s) => [s.key, s.value]));
 
 // Podesavanja koja moraju biti broj, sa granicama. Vrednost van granica ne bi
-// bila samo "cudna" - `rounding_minutes` od 0 ili "abc" daje NaN u racunici pri
+// bila samo "cudna" - `hour_grace_minutes` kao "abc" daje NaN u racunici pri
 // odjavi, a odatle poseta bez trajanja i paket obrisan na nulu.
 //
 // Granice prate ono sto panel nudi na klizacima.
 const NUMERIC_SETTINGS = {
-  rounding_minutes: { min: 1, max: 60 },
-  minimum_charge_minutes: { min: 0, max: 180 },
+  // Prag ne sme da bude 60 ili vise: tada nijedan zapoceti sat ne bi presao
+  // prag, pa bi se svaki boravak naplacivao kao jedan sat.
+  hour_grace_minutes: { min: 0, max: 59 },
 };
 
 // Ceo broj iz teksta, ili null ako vrednost nije upotrebljiva.

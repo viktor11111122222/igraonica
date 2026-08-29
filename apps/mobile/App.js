@@ -7,7 +7,6 @@ import {
   Montserrat_700Bold,
 } from '@expo-google-fonts/montserrat';
 import { AuthProvider } from './src/context/AuthContext';
-import { ThemeProvider } from './src/context/ThemeContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ClosedDaysProvider } from './src/context/ClosedDaysContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -33,10 +32,8 @@ export default function App() {
     <SettingsProvider>
       <ClosedDaysProvider>
         <AuthProvider>
-          <ThemeProvider>
-            <StatusBar style="light" />
-            <AppNavigator />
-          </ThemeProvider>
+          <StatusBar style="light" />
+          <AppNavigator />
         </AuthProvider>
       </ClosedDaysProvider>
     </SettingsProvider>

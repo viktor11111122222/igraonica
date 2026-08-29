@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
 const { numericSetting } = require('../config/settings');
+const { naplativiSati } = require('../utils/naplata');
 const obavestenja = require('../services/notifications');
 
 const router = express.Router();
@@ -13,8 +14,10 @@ async function getSetting(key, fallback) {
   return setting ? setting.value : fallback;
 }
 
-function roundUpMinutes(minutes, roundTo) {
-  return Math.ceil(minutes / roundTo) * roundTo;
+// `numericSetting` vraca podrazumevanu vrednost kad je u bazi nesto
+// neupotrebljivo. Naplata ne sme da zavisi od toga sta je neko upisao.
+async function pragMinuta() {
+  return numericSetting('hour_grace_minutes', await getSetting('hour_grace_minutes'));
 }
 
 function findActivePackage(userPackages) {
@@ -70,15 +73,10 @@ router.post(
       }
 
       // 3. Nadji aktivan paket roditelja sa preostalim satima
+      //
+      // Dete ulazi i kad paketa nema. Boravak se tada pri odjavi upisuje
+      // roditelju u minus sate - radnik na pultu ne vraca dete zbog naplate.
       const activePackage = findActivePackage(child.parent.userPackages);
-
-      if (!activePackage) {
-        return res.status(400).json({
-          message: 'Roditelj nema aktivan paket sa preostalim satima.',
-          child: { id: child.id, firstName: child.firstName, lastName: child.lastName },
-          parent: { id: child.parent.id, firstName: child.parent.firstName, lastName: child.parent.lastName },
-        });
-      }
 
       // 4. Kreiraj posetu
       //
@@ -91,7 +89,7 @@ router.post(
         visit = await prisma.visit.create({
           data: {
             childId: child.id,
-            userPackageId: activePackage.id,
+            userPackageId: activePackage ? activePackage.id : null,
             checkedInAt: new Date(),
             checkedInById: req.user.id,
             status: 'CHECKED_IN',
@@ -119,7 +117,10 @@ router.post(
       res.status(201).json({
         message: `${child.firstName} ${child.lastName} je prijavljen/a.`,
         visit,
-        remainingHours: Number(activePackage.remainingHours),
+        remainingHours: activePackage ? Number(activePackage.remainingHours) : 0,
+        // Radnik mora da vidi na traci ishoda da ovaj boravak ide u minus.
+        withoutPackage: !activePackage,
+        debtHours: Number(child.parent.debtHours),
       });
     } catch (err) {
       console.error(err);
@@ -162,14 +163,9 @@ router.post(
       const checkedInAt = new Date(openVisit.checkedInAt);
       const rawMinutes = Math.max(1, Math.round((now - checkedInAt) / 60000));
 
-      // 4. Zaokruzi na osnovu podesavanja
-      // `numericSetting` vraca podrazumevanu vrednost ako je u bazi nesto
-      // neupotrebljivo. Naplata ne sme da zavisi od toga sta je neko upisao.
-      const roundingMinutes = numericSetting('rounding_minutes', await getSetting('rounding_minutes'));
-      const minimumChargeMinutes = numericSetting('minimum_charge_minutes', await getSetting('minimum_charge_minutes'));
-
-      const roundedMinutes = Math.max(minimumChargeMinutes, roundUpMinutes(rawMinutes, roundingMinutes));
-      const hoursDeducted = roundedMinutes / 60;
+      // 4. Naplata: puni sati, sa pragom minuta preko punog sata
+      const hoursDeducted = naplativiSati(rawMinutes, await pragMinuta());
+      const roundedMinutes = hoursDeducted * 60;
 
       // 5. Zatvori posetu i oduzmi sate - sve u transakciji.
       //
@@ -198,13 +194,54 @@ router.post(
 
         if (zatvorena.count === 0) return null;
 
+        // Koliko je paket stvarno pokrio. Stanje pre izmene se cita u istom
+        // upitu (`FOR UPDATE` drzi red do kraja transakcije) - da se cita
+        // posebno pa upisuje, dve odjave nad istim paketom bi se pregazile.
+        let pokriveno = 0;
         if (openVisit.userPackageId) {
-          await tx.$executeRaw`
-            UPDATE user_packages
-               SET remaining_hours = GREATEST(0, remaining_hours - ${hoursDeducted}::numeric),
+          const [red] = await tx.$queryRaw`
+            UPDATE user_packages up
+               SET remaining_hours = GREATEST(0, up.remaining_hours - ${hoursDeducted}::numeric),
                    updated_at = NOW()
-             WHERE id = ${openVisit.userPackageId}
+              FROM (
+                SELECT id, remaining_hours AS pre
+                  FROM user_packages
+                 WHERE id = ${openVisit.userPackageId}
+                   FOR UPDATE
+              ) s
+             WHERE up.id = s.id
+            RETURNING s.pre AS pre, up.remaining_hours AS posle
           `;
+          if (red) pokriveno = Number(red.pre) - Number(red.posle);
+        }
+
+        // Ostatak ide roditelju u minus. Bez paketa je to ceo boravak, a sa
+        // paketom koji nije dogurao do kraja - samo razlika.
+        const uMinus = Math.max(0, hoursDeducted - pokriveno);
+        let dugUkupno = 0;
+
+        if (uMinus > 0) {
+          const [korisnik] = await tx.$queryRaw`
+            UPDATE users
+               SET debt_hours = debt_hours + ${uMinus}::numeric,
+                   updated_at = NOW()
+             WHERE id = ${child.parentId}
+            RETURNING debt_hours
+          `;
+          dugUkupno = korisnik ? Number(korisnik.debt_hours) : 0;
+
+          await tx.visit.update({
+            where: { id: openVisit.id },
+            data: { debtHours: uMinus },
+          });
+        } else {
+          // Odjava je trenutak kad je roditelj na pultu, pa se stanje minusa
+          // vraca i kad ga ova poseta nije menjala - radnik ima sta da naplati.
+          const korisnik = await tx.user.findUnique({
+            where: { id: child.parentId },
+            select: { debtHours: true },
+          });
+          dugUkupno = Number(korisnik?.debtHours || 0);
         }
 
         const visit = await tx.visit.findUnique({
@@ -215,6 +252,8 @@ router.post(
         return {
           visit,
           remainingHours: visit.userPackage ? Number(visit.userPackage.remainingHours) : 0,
+          uMinus,
+          dugUkupno,
         };
       });
 
@@ -227,6 +266,7 @@ router.post(
         visit: rezultat.visit,
         chargedMinutes: roundedMinutes,
         remainingHours: rezultat.remainingHours,
+        debtHours: rezultat.dugUkupno,
         byUserId: req.user.id,
       });
 
@@ -239,6 +279,9 @@ router.post(
           hoursDeducted,
         },
         remainingHours: rezultat.remainingHours,
+        // Koliko je ova poseta dodala u minus i koliko roditelj sada duguje.
+        debtAdded: rezultat.uMinus,
+        debtHours: rezultat.dugUkupno,
       });
     } catch (err) {
       console.error(err);
@@ -391,18 +434,37 @@ router.post(
         return res.json({ message: 'Nema otvorenih poseta.', closed: 0 });
       }
 
-      // `numericSetting` vraca podrazumevanu vrednost ako je u bazi nesto
-      // neupotrebljivo. Naplata ne sme da zavisi od toga sta je neko upisao.
-      const roundingMinutes = numericSetting('rounding_minutes', await getSetting('rounding_minutes'));
-      const minimumChargeMinutes = numericSetting('minimum_charge_minutes', await getSetting('minimum_charge_minutes'));
+      const prag = await pragMinuta();
       const now = new Date();
 
       const operations = [];
+      // Dvoje dece istog roditelja trose isti paket, pa stanje paketa ide kroz
+      // petlju. Da se svaka poseta racuna od pocetnog broja, druga izmena bi
+      // pregazila prvu i sati bi se skinuli samo za jedno dete.
+      const stanjePaketa = new Map();
+      const dugPoRoditelju = new Map();
 
       for (const visit of openVisits) {
         const rawMinutes = Math.max(1, Math.round((now - new Date(visit.checkedInAt)) / 60000));
-        const roundedMinutes = Math.max(minimumChargeMinutes, roundUpMinutes(rawMinutes, roundingMinutes));
-        const hoursDeducted = roundedMinutes / 60;
+        const hoursDeducted = naplativiSati(rawMinutes, prag);
+        const roundedMinutes = hoursDeducted * 60;
+
+        let pokriveno = 0;
+        if (visit.userPackage) {
+          const pre = stanjePaketa.has(visit.userPackage.id)
+            ? stanjePaketa.get(visit.userPackage.id)
+            : Number(visit.userPackage.remainingHours);
+          pokriveno = Math.min(pre, hoursDeducted);
+          stanjePaketa.set(visit.userPackage.id, pre - pokriveno);
+        }
+
+        // Sto paket nije pokrio ide roditelju u minus - i kad paketa nema, i
+        // kad je ostao kraci od boravka.
+        const uMinus = Math.max(0, hoursDeducted - pokriveno);
+        if (uMinus > 0) {
+          const dosad = dugPoRoditelju.get(visit.child.parentId) || 0;
+          dugPoRoditelju.set(visit.child.parentId, dosad + uMinus);
+        }
 
         operations.push(
           prisma.visit.update({
@@ -411,22 +473,30 @@ router.post(
               checkedOutAt: now,
               durationMinutes: roundedMinutes,
               hoursDeducted,
+              debtHours: uMinus > 0 ? uMinus : null,
               checkedOutById: req.user.id,
               status: 'AUTO_CLOSED',
             },
           })
         );
+      }
 
-        if (visit.userPackage) {
-          const currentHours = Number(visit.userPackage.remainingHours);
-          const newHours = Math.max(0, currentHours - hoursDeducted);
-          operations.push(
-            prisma.userPackage.update({
-              where: { id: visit.userPackage.id },
-              data: { remainingHours: newHours },
-            })
-          );
-        }
+      for (const [userPackageId, preostalo] of stanjePaketa) {
+        operations.push(
+          prisma.userPackage.update({
+            where: { id: userPackageId },
+            data: { remainingHours: preostalo },
+          })
+        );
+      }
+
+      for (const [parentId, sati] of dugPoRoditelju) {
+        operations.push(prisma.$executeRaw`
+          UPDATE users
+             SET debt_hours = debt_hours + ${sati}::numeric,
+                 updated_at = NOW()
+           WHERE id = ${parentId}
+        `);
       }
 
       await prisma.$transaction(operations);

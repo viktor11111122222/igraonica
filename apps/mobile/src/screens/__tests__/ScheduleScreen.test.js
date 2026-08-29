@@ -30,6 +30,18 @@ beforeEach(() => {
   mockZatvoreni = {};
 });
 
+// Ekran povlaci tri stvari: plan izabranog dana (spisak koji se prikazuje),
+// nedeljni raspored i rezervacije (oboje samo da traka datuma zna gde ima
+// sadrzaja). Mock zato mora da razlikuje rutu, a ne da svima vraca isto.
+function mockApi({ items = [], week = {}, reservations = [] } = {}) {
+  apiRequest.mockImplementation((put) => {
+    if (put.startsWith('/schedule/plan')) return Promise.resolve({ items });
+    if (put === '/schedule') return Promise.resolve({ week });
+    if (put === '/reservations') return Promise.resolve({ reservations });
+    return Promise.resolve({});
+  });
+}
+
 // Datum se zamrzava, inace bi test menjao rezultat u zavisnosti od dana kada
 // se pokrece.
 function zamrzniDan(godina, mesecOd0, dan) {
@@ -43,7 +55,7 @@ afterEach(() => {
 
 describe('ScheduleScreen - prazan dan', () => {
   beforeEach(() => {
-    apiRequest.mockResolvedValue({ week: {} });
+    mockApi();
   });
 
   // Recenica glasi "Za <dan> nije zakazana...", sto trazi akuzativ. Zenski
@@ -75,21 +87,20 @@ describe('ScheduleScreen - prazan dan', () => {
 
 describe('ScheduleScreen - dan sa aktivnostima', () => {
   test('prikazuje aktivnosti izabranog dana', async () => {
-    zamrzniDan(2026, 7, 12); // sreda -> dayIndex 2
-    apiRequest.mockResolvedValue({
-      week: {
-        2: [
-          {
-            id: 'a1',
-            title: 'Mali kuvari',
-            description: 'Pravimo kolacice bez pecenja.',
-            startTime: '10:30',
-            endTime: '11:30',
-            ageGroup: '3-6 godina',
-            color: '#e76f51',
-          },
-        ],
-      },
+    zamrzniDan(2026, 7, 12); // sreda
+    mockApi({
+      items: [
+        {
+          id: 'a1',
+          kind: 'ACTIVITY',
+          title: 'Mali kuvari',
+          description: 'Pravimo kolacice bez pecenja.',
+          startTime: '10:30',
+          endTime: '11:30',
+          ageGroup: '3-6 godina',
+          color: '#e76f51',
+        },
+      ],
     });
 
     await render(<ScheduleScreen />);
@@ -101,18 +112,15 @@ describe('ScheduleScreen - dan sa aktivnostima', () => {
   });
 
   // Raspored se ponavlja nedeljno, pa se cita po danu u nedelji - aktivnost
-  // drugog dana ne sme da procuri u izabrani.
-  test('ne prikazuje aktivnosti drugog dana', async () => {
-    zamrzniDan(2026, 7, 12); // sreda -> 2
-    apiRequest.mockResolvedValue({
-      week: {
-        0: [{ id: 'p1', title: 'Jutarnja gimnastika', startTime: '09:30', endTime: '10:15' }],
-      },
-    });
+  // drugog dana ne sme da procuri u izabrani. Spajanje po danu sada radi
+  // server, pa se ovde proverava da se plan trazi bas za izabrani datum.
+  test('trazi plan za izabrani datum', async () => {
+    zamrzniDan(2026, 7, 12); // sreda
+    mockApi();
 
     await render(<ScheduleScreen />);
 
-    expect(screen.queryByText('Jutarnja gimnastika')).toBeNull();
+    expect(apiRequest).toHaveBeenCalledWith('/schedule/plan?date=2026-08-12');
     expect(screen.getByText('Nema aktivnosti')).toBeTruthy();
   });
 
@@ -130,16 +138,16 @@ describe('ScheduleScreen - neradni dan', () => {
   const SREDA = '2026-08-12';
 
   const saAktivnostima = () =>
-    apiRequest.mockResolvedValue({
-      week: {
-        2: [{ id: 'a1', title: 'Mali kuvari', startTime: '10:30', endTime: '11:30' }],
-      },
+    mockApi({
+      items: [
+        { id: 'a1', kind: 'ACTIVITY', title: 'Mali kuvari', startTime: '10:30', endTime: '11:30' },
+      ],
     });
 
   test('prikazuje obavestenje sa razlogom', async () => {
     zamrzniDan(2026, 7, 12);
     mockZatvoreni = { [SREDA]: { date: SREDA, reason: 'Rodjendan', note: null } };
-    apiRequest.mockResolvedValue({ week: {} });
+    mockApi();
 
     await render(<ScheduleScreen />);
 
@@ -162,7 +170,7 @@ describe('ScheduleScreen - neradni dan', () => {
   test('ne prikazuje prazno stanje pored obavestenja', async () => {
     zamrzniDan(2026, 7, 12);
     mockZatvoreni = { [SREDA]: { date: SREDA, reason: 'Rodjendan', note: null } };
-    apiRequest.mockResolvedValue({ week: {} });
+    mockApi();
 
     await render(<ScheduleScreen />);
 
@@ -185,10 +193,91 @@ describe('ScheduleScreen - neradni dan', () => {
   test('kada je neradni dan danasnji, tekst je izricit', async () => {
     zamrzniDan(2026, 7, 12);
     mockZatvoreni = { [SREDA]: { date: SREDA, reason: 'Praznik', note: null } };
-    apiRequest.mockResolvedValue({ week: {} });
+    mockApi();
 
     await render(<ScheduleScreen />);
 
     expect(screen.getByText('Danas ne radimo')).toBeTruthy();
+  });
+});
+
+describe('ScheduleScreen - rodjendani', () => {
+  const rodjendan = {
+    id: 'r1',
+    kind: 'BIRTHDAY',
+    title: 'Rodjendan - Lena',
+    startTime: '17:00',
+    endTime: '20:00',
+    isFullDay: false,
+  };
+
+  const aktivnost = {
+    id: 'a1',
+    kind: 'ACTIVITY',
+    title: 'Mali kuvari',
+    startTime: '10:30',
+    endTime: '11:30',
+  };
+
+  test('rodjendan se vidi u rasporedu', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({ items: [rodjendan] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.getByText('Rodjendan - Lena')).toBeTruthy();
+    expect(screen.getByText('17:00 - 20:00')).toBeTruthy();
+  });
+
+  test('nosi oznaku, da se razlikuje od redovne aktivnosti', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({ items: [rodjendan] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.getByText('Rodjendan')).toBeTruthy();
+  });
+
+  // Sustina: rodjendan je dogadjaj dana i stoji iznad ostalog, a ostalo tog
+  // dana ostaje - i ono pre i ono posle njega.
+  test('stoji iznad aktivnosti, a one ostaju', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({
+      items: [
+        rodjendan,
+        aktivnost,
+        { ...aktivnost, id: 'a2', title: 'Vecernja igra', startTime: '20:30', endTime: '21:00' },
+      ],
+    });
+
+    await render(<ScheduleScreen />);
+
+    const naslovi = ['Rodjendan - Lena', 'Mali kuvari', 'Vecernja igra'];
+    for (const naslov of naslovi) expect(screen.getByText(naslov)).toBeTruthy();
+
+    // Redosled na ekranu prati redosled koji je server poslao.
+    const redosled = naslovi.map((n) => screen.getByText(n));
+    expect(redosled).toHaveLength(3);
+  });
+
+  // Celodnevni rodjendan nema smislen termin - "00:00 - 23:59" ne govori nista.
+  test('celodnevni rodjendan pise "Ceo dan" umesto termina', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({ items: [{ ...rodjendan, isFullDay: true, startTime: '00:00', endTime: '23:59' }] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.getByText('Ceo dan')).toBeTruthy();
+    expect(screen.queryByText('00:00 - 23:59')).toBeNull();
+  });
+
+  test('neradnog dana se ni rodjendan ne prikazuje', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockZatvoreni = { '2026-08-12': { date: '2026-08-12', reason: 'Praznik', note: null } };
+    mockApi({ items: [rodjendan] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.queryByText('Rodjendan - Lena')).toBeNull();
   });
 });

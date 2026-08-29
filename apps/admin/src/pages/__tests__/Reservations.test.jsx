@@ -197,3 +197,96 @@ describe('Reservations - brisanje', () => {
     expect(await within(dijalog).findByText('Rezervacija je vec obrisana.')).toBeInTheDocument();
   });
 });
+
+// Uz tipove iz spiska (sada i "Mesecni dogadjaji") osoblje moze da upise svoj,
+// bez cekanja na izmenu koda.
+describe('Reservations - tipovi', () => {
+  test('filter nudi mesecne dogadjaje', async () => {
+    const user = userEvent.setup();
+    render(<Reservations />);
+    await screen.findByText('05.09.2026.');
+
+    const [, tip] = screen.getAllByRole('combobox');
+    await user.selectOptions(tip, 'MONTHLY_EVENT');
+
+    await waitFor(() =>
+      expect(get).toHaveBeenCalledWith(expect.stringContaining('type=MONTHLY_EVENT'))
+    );
+  });
+
+  test('tabela prikazuje upisani naziv umesto "Drugo"', async () => {
+    get.mockResolvedValue(odgovor([{ ...rezervacija, type: 'OTHER', customType: 'Skolska ekskurzija' }]));
+    render(<Reservations />);
+
+    await screen.findByText('05.09.2026.');
+    // "Drugo" i dalje stoji u filteru, pa se gleda samo tabela.
+    const tabela = screen.getByRole('table');
+    expect(within(tabela).getByText('Skolska ekskurzija')).toBeInTheDocument();
+    expect(within(tabela).queryByText('Drugo')).toBeNull();
+  });
+
+  test('polje za naziv tipa se vidi tek kad se izabere "Drugo"', async () => {
+    const user = userEvent.setup();
+    render(<Reservations />);
+    await screen.findByText('05.09.2026.');
+    await user.click(screen.getByRole('button', { name: 'Nova rezervacija' }));
+
+    const dijalog = screen.getByRole('dialog');
+    expect(within(dijalog).queryByLabelText('Naziv tipa')).toBeNull();
+
+    await user.selectOptions(within(dijalog).getByLabelText('Tip'), 'OTHER');
+    expect(within(dijalog).getByLabelText('Naziv tipa')).toBeInTheDocument();
+  });
+
+  test('upisani tip ide u zahtev', async () => {
+    const user = userEvent.setup();
+    render(<Reservations />);
+    await screen.findByText('05.09.2026.');
+    await user.click(screen.getByRole('button', { name: 'Nova rezervacija' }));
+
+    const dijalog = screen.getByRole('dialog');
+    await user.selectOptions(within(dijalog).getByLabelText('Tip'), 'OTHER');
+    await user.type(within(dijalog).getByLabelText('Naziv tipa'), 'Skolska ekskurzija');
+    await user.type(within(dijalog).getByLabelText('Naziv'), 'Vrtic Sunce');
+    await user.click(screen.getByRole('button', { name: 'Sacuvaj' }));
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith('/reservations', expect.objectContaining({
+        type: 'OTHER',
+        customType: 'Skolska ekskurzija',
+        title: 'Vrtic Sunce',
+      }))
+    );
+  });
+
+  test('tip iz spiska ne salje naziv tipa', async () => {
+    const user = userEvent.setup();
+    render(<Reservations />);
+    await screen.findByText('05.09.2026.');
+    await user.click(screen.getByRole('button', { name: 'Nova rezervacija' }));
+
+    const dijalog = screen.getByRole('dialog');
+    await user.selectOptions(within(dijalog).getByLabelText('Tip'), 'MONTHLY_EVENT');
+    await user.type(within(dijalog).getByLabelText('Naziv'), 'Mesecna radionica');
+    await user.click(screen.getByRole('button', { name: 'Sacuvaj' }));
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith('/reservations', expect.objectContaining({
+        type: 'MONTHLY_EVENT',
+        customType: undefined,
+      }))
+    );
+  });
+
+  test('izmena ucitava upisani naziv u formu', async () => {
+    get.mockResolvedValue(odgovor([{ ...rezervacija, type: 'OTHER', customType: 'Skolska ekskurzija' }]));
+    const user = userEvent.setup();
+    render(<Reservations />);
+    await screen.findByText('05.09.2026.');
+
+    await user.click(screen.getByRole('button', { name: 'Izmeni' }));
+
+    const dijalog = screen.getByRole('dialog');
+    expect(within(dijalog).getByLabelText('Naziv tipa')).toHaveValue('Skolska ekskurzija');
+  });
+});

@@ -88,7 +88,7 @@ async function detePrijavljeno({ child, visit, byUserId }) {
 }
 
 // Dete je izaslo. Roditelja zanima koliko je naplaceno i koliko je ostalo.
-async function deteOdjavljeno({ child, visit, chargedMinutes, remainingHours, byUserId }) {
+async function deteOdjavljeno({ child, visit, chargedMinutes, remainingHours, debtHours, byUserId }) {
   const ime = imeDeteta(child);
   const sat = uSat(visit.checkedOutAt);
   const rec = oblik(child.gender, 'odjavljen', 'odjavljena', 'odjavljen/a');
@@ -96,15 +96,21 @@ async function deteOdjavljeno({ child, visit, chargedMinutes, remainingHours, by
   const sati = Math.floor(chargedMinutes / 60);
   const minuti = chargedMinutes % 60;
   const naplata = sati === 0 ? `${minuti} min` : minuti === 0 ? `${sati} h` : `${sati} h ${minuti} min`;
-  const preostalo = `${Number(remainingHours).toFixed(1).replace('.', ',')} h`;
+
+  // Kad boravak nije imao pokrice u paketu, roditelja zanima minus, a ne
+  // preostalo - "u paketu ostaje 0 h" ne kaze da nesto duguje.
+  const uMinusu = Number(debtHours) > 0;
+  const stanje = uMinusu
+    ? `u minusu ${Number(debtHours).toFixed(1).replace('.', ',')} h`
+    : `u paketu ostaje ${Number(remainingHours).toFixed(1).replace('.', ',')} h`;
 
   await obeStrane({
     parentId: child.parentId,
     type: 'CHILD_CHECKED_OUT',
-    data: { childId: child.id, visitId: visit.id, chargedMinutes, remainingHours },
+    data: { childId: child.id, visitId: visit.id, chargedMinutes, remainingHours, debtHours: debtHours ?? null },
     roditelju: {
       title: 'Dete je izaslo iz igraonice',
-      body: `${child.firstName} je ${rec} u ${sat}. Naplaceno ${naplata}, u paketu ostaje ${preostalo}.`,
+      body: `${child.firstName} je ${rec} u ${sat}. Naplaceno ${naplata}, ${stanje}.`,
     },
     osoblju: {
       title: 'Odjava',
@@ -159,13 +165,20 @@ async function deteUklonjeno({ child, byUserId }) {
 }
 
 // Osoblje je dodelilo paket - roditelj to vidi tek ako sam otvori aplikaciju.
-async function paketDodeljen({ userPackage, paket, parentId }) {
+async function paketDodeljen({ userPackage, paket, parentId, pokrivenDug = 0 }) {
+  // Kad je paket pokrio minus, roditelj bi inace video manje sati nego sto
+  // paket nosi i ne bi znao zasto.
+  const minus =
+    Number(pokrivenDug) > 0
+      ? ` Skinuto ${Number(pokrivenDug).toFixed(1).replace('.', ',')} h minusa.`
+      : '';
+
   await upisi([
     {
       userId: parentId,
       type: 'PACKAGE_ASSIGNED',
       title: 'Dobili ste paket',
-      body: `${paket.name} - ${Number(userPackage.remainingHours).toFixed(1).replace('.', ',')} h. Vazi do ${new Date(userPackage.expiresAt).toLocaleDateString('sr-RS')}.`,
+      body: `${paket.name} - ${Number(userPackage.remainingHours).toFixed(1).replace('.', ',')} h. Vazi do ${new Date(userPackage.expiresAt).toLocaleDateString('sr-RS')}.${minus}`,
       data: { userPackageId: userPackage.id },
     },
   ]);

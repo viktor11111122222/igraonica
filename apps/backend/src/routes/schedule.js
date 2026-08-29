@@ -76,6 +76,79 @@ router.get('/events', async (req, res) => {
   }
 });
 
+// GET /api/schedule/plan?date=YYYY-MM-DD - javno, sve sto se tog dana desava.
+//
+// Spaja tri izvora koja je aplikacija ranije morala sama da trazi (i nije):
+// nedeljne aktivnosti za taj dan u nedelji, jednokratne dogadjaje bas tog
+// datuma i rodjendane iz rezervacija.
+//
+// Rodjendan ide na vrh spiska bez obzira na sat. Ostale aktivnosti tog dana
+// ostaju - i one pre i one posle rodjendana - samo idu ispod njega.
+router.get('/plan', async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ message: 'Datum mora biti u formatu YYYY-MM-DD.' });
+    }
+
+    const dan = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(dan.getTime())) {
+      return res.status(400).json({ message: 'Datum nije validan.' });
+    }
+
+    // Backend racuna 0 = ponedeljak, a getUTCDay vraca 0 = nedelja.
+    const dayOfWeek = (dan.getUTCDay() + 6) % 7;
+
+    const [nedeljne, jednokratne, rodjendani] = await Promise.all([
+      prisma.activity.findMany({
+        where: { isActive: true, isRecurring: true, dayOfWeek },
+        orderBy: { startTime: 'asc' },
+      }),
+      prisma.activity.findMany({
+        where: { isActive: true, isRecurring: false, specificDate: dan },
+        orderBy: { startTime: 'asc' },
+      }),
+      prisma.reservation.findMany({
+        where: { type: 'BIRTHDAY', date: dan, status: { not: 'CANCELLED' } },
+        orderBy: { startTime: 'asc' },
+        // Ime deteta se namerno ne salje - spisak vidi svaki roditelj.
+        select: { id: true, title: true, startTime: true, endTime: true, isFullDay: true },
+      }),
+    ]);
+
+    const aktivnost = (a) => ({
+      id: a.id,
+      kind: 'ACTIVITY',
+      title: a.title,
+      description: a.description,
+      startTime: a.startTime,
+      endTime: a.endTime,
+      ageGroup: a.ageGroup,
+      color: a.color,
+    });
+
+    const items = [
+      ...rodjendani.map((r) => ({
+        id: r.id,
+        kind: 'BIRTHDAY',
+        title: r.title,
+        description: null,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        isFullDay: r.isFullDay,
+      })),
+      ...[...nedeljne, ...jednokratne]
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+        .map(aktivnost),
+    ];
+
+    res.json({ date, dayOfWeek, items });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Greska na serveru.' });
+  }
+});
+
 // GET /api/schedule/all - admin vidi sve (ukljucujuci neaktivne)
 router.get(
   '/all',

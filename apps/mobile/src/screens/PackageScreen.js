@@ -6,15 +6,12 @@ import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { useSettings } from '../context/SettingsContext';
 import Announcement from '../components/Announcement';
 import Banner from '../components/Banner';
-import ThemeSwitch from '../components/ThemeSwitch';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
 import HoursRing from '../components/HoursRing';
 import { ageInYears, yearsLabel } from '../utils/date';
 import { summarize } from '../utils/packages';
-import { radius, spacing, type, shadow } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type, shadow } from '../theme';
 
 // Bez suvisne decimale: 12,5 h ali 20 h.
 const num = (value) =>
@@ -22,12 +19,12 @@ const num = (value) =>
 const hours = (value) => `${num(value)} h`;
 
 export default function PackageScreen({ navigation }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const { user, logout } = useAuth();
   const { settings } = useSettings();
   const [packages, setPackages] = useState([]);
   const [children, setChildren] = useState([]);
+  // Minus sati stizu uz pakete: boravci odigrani bez pokrica u paketu.
+  const [debtHours, setDebtHours] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -35,7 +32,10 @@ export default function PackageScreen({ navigation }) {
       apiRequest('/packages/my').catch(() => null),
       apiRequest('/children').catch(() => null),
     ]);
-    if (pkgs) setPackages(pkgs.userPackages || []);
+    if (pkgs) {
+      setPackages(pkgs.userPackages || []);
+      setDebtHours(Number(pkgs.debtHours) || 0);
+    }
     if (kids) setChildren(kids.children || []);
   }, []);
 
@@ -166,9 +166,26 @@ export default function PackageScreen({ navigation }) {
           </View>
           <Text style={styles.emptyTitle}>Nemate aktivan paket</Text>
           <Text style={styles.emptyText}>
-            Kontaktirajte igraonicu za kupovinu paketa. Sati se trose kada dete
-            prijavite QR kodom.
+            {debtHours > 0
+              ? 'Dete moze da se prijavi i bez paketa - odigrani sati se skupljaju kao minus i placaju u igraonici.'
+              : 'Kontaktirajte igraonicu za kupovinu paketa. Sati se trose kada dete prijavite QR kodom.'}
           </Text>
+        </View>
+      )}
+
+      {/* Minus nastaje kad dete udje bez paketa ili kad paket ne pokrije ceo
+          boravak. Stoji odmah ispod sati, jer je to isti podatak - samo sa
+          druge strane nule. */}
+      {debtHours > 0 && (
+        <View style={styles.debtCard}>
+          <Ionicons name="alert-circle-outline" size={22} color={colors.danger} />
+          <View style={styles.debtTextWrap}>
+            <Text style={styles.debtValue}>-{hours(debtHours)}</Text>
+            <Text style={styles.debtText}>
+              Sati odigrani bez paketa. Placaju se u igraonici, a novi paket ih
+              pokriva pre nego sto krene da se trosi.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -260,15 +277,11 @@ export default function PackageScreen({ navigation }) {
           </View>
         </>
       )}
-
-      {/* Prekidac boje stoji ovde, u podnozju jednog ekrana, a ne u baneru -
-          bira se jednom, pa ne treba da stoji na vrhu svakog ekrana. */}
-      <ThemeSwitch />
     </ScrollView>
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: spacing.xxxl * 2 },
 
@@ -352,6 +365,20 @@ const makeStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
+  debtCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+  },
+  debtTextWrap: { flex: 1 },
+  debtValue: { ...type.heading, color: colors.danger },
+  debtText: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+
   emptyTitle: { ...type.heading, color: colors.text, textAlign: 'center' },
   emptyText: {
     ...type.body,

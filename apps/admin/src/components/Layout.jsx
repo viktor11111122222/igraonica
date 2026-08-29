@@ -28,11 +28,14 @@ const NAV = [
     items: [
       { to: '/paketi', label: 'Paketi', icon: '▦' },
       { to: '/rezervacije', label: 'Rezervacije', icon: '✿' },
+      { to: '/dogadjaji', label: 'Dogadjaji', icon: '✧' },
+      { to: '/akcije', label: 'Akcije', icon: '％' },
     ],
   },
   {
     group: 'Sadrzaj',
     items: [
+      { to: '/promocije', label: 'Promocije', icon: '★' },
       { to: '/jelovnik', label: 'Jelovnik', icon: '☕' },
       { to: '/raspored', label: 'Raspored', icon: '▤' },
     ],

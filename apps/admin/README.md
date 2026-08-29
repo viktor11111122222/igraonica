@@ -46,11 +46,12 @@ preko `GET /api/auth/me` — rola je mogla da se promeni od poslednje prijave.
 | `/` | Statistike dana, grafikoni poseta i sati, poslednje aktivnosti |
 | `/prijave` | Skener QR koda za prijavu/odjavu + lista dece koja su trenutno unutra |
 | `/korisnici` | Nalozi roditelja i osoblja (pretraga, kreiranje, deaktivacija) |
-| `/korisnici/:id` | Deca, paketi, dodela paketa, korekcija sati i istorija korekcija |
+| `/korisnici/:id` | Deca, paketi, dodela paketa, korekcija sati, istorija korekcija i naplata minus sati |
 | `/deca` | Sva deca sa QR kodovima i alergijama |
 | `/posete` | Istorija poseta sa filterima po statusu i datumu |
 | `/paketi` | CRUD ponude paketa sati |
-| `/rezervacije` | Rodjendani i proslave, potvrda i otkazivanje |
+| `/rezervacije` | Rodjendani, proslave, grupne posete i mesecni dogadjaji; potvrda i otkazivanje. Tip se bira iz spiska ili se upisuje rucno pod "Drugo" |
+| `/dogadjaji` | Interna evidencija dogadjaja, ista polja kao rezervacije ali samo za osoblje (`/api/events` nema javnu rutu). Tip se bira iz spiska ili se upisuje rucno pod "Drugo" |
 | `/jelovnik` | Unos obroka za celu nedelju odjednom (`POST /menu/bulk`) |
 | `/raspored` | Nedeljne aktivnosti i jednokratni dogadjaji |
 | `/blog` | Objave za roditelje, upload naslovne slike, objavljivanje |
@@ -65,8 +66,10 @@ Tri vrste:
 
 - **Tema panela** (`system` / `light` / `dark`) je licna preferenca uredjaja i
   cuva se u `localStorage`, ne u bazi — drugi admin na drugom racunaru bira svoju.
-- **Pravila obracuna** (`rounding_minutes`, `minimum_charge_minutes`) cita
-  backend u trenutku odjave deteta.
+- **Pravilo obracuna** (`hour_grace_minutes`) cita backend u trenutku odjave
+  deteta. Naplata ide u punim satima: minuti preko punog sata se ne naplacuju
+  do praga (podrazumevano 15), a preko praga povlace ceo sat — 1h 15min je
+  1 sat, 1h 16min su 2 sata. Svaki boravak je najmanje 1 sat.
 - **Podaci o igraonici i ponasanje mobilne** su oznaceni kao javni i mobilna
   aplikacija ih cita sa `GET /api/settings/public` bez prijave. Menjaju se
   odmah kod roditelja, bez nove verzije aplikacije: naziv i kontakt, obavestenje

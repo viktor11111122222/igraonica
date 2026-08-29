@@ -17,9 +17,7 @@ import DayStrip from '../components/DayStrip';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
 import { useClosedDays } from '../context/ClosedDaysContext';
-import { radius, spacing, type, shadow } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type, shadow } from '../theme';
 
 // Backend koristi 0 = ponedeljak (ne JS konvenciju gde je 0 = nedelja).
 // Imena stoje u akuzativu jer se koriste samo u recenici "Za <dan> nije
@@ -35,48 +33,66 @@ const DAY_NAMES_ACC = [
 ];
 
 export default function ScheduleScreen() {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const [week, setWeek] = useState({});
+  const [items, setItems] = useState([]);
+  const [rodjendanski, setRodjendanski] = useState([]);
   const { today, selected: selectedDay, setSelected: setSelectedDay } =
     useDaySelection();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await apiRequest('/schedule');
-      setWeek(data.week || {});
-    } catch {
-      setWeek({});
-    } finally {
-      setLoading(false);
+  // Spisak dana dolazi sa servera vec spojen i poredjan: rodjendani na vrhu,
+  // pa aktivnosti po vremenu. Nedeljni raspored se i dalje povlaci, ali samo
+  // da bi traka datuma znala koji dani imaju sadrzaja.
+  const load = useCallback(async (dateKey) => {
+    const [plan, nedelja, rezervacije] = await Promise.all([
+      apiRequest(`/schedule/plan?date=${dateKey}`).catch(() => null),
+      apiRequest('/schedule').catch(() => null),
+      apiRequest('/reservations').catch(() => null),
+    ]);
+
+    setItems(plan?.items || []);
+    if (nedelja) setWeek(nedelja.week || {});
+    if (rezervacije) {
+      setRodjendanski(
+        (rezervacije.reservations || [])
+          .filter((r) => r.type === 'BIRTHDAY')
+          .map((r) => String(r.date).split('T')[0])
+      );
     }
+    setLoading(false);
   }, []);
 
-  useAutoRefresh(load);
+  // selectedDay je u zavisnostima, pa promena dana odmah povlaci njegov plan
+  // umesto da se ceka sledece osvezavanje.
+  useAutoRefresh(useCallback(() => load(selectedDay), [load, selectedDay]));
 
   async function onRefresh() {
     setRefreshing(true);
-    await load();
+    await load(selectedDay);
     setRefreshing(false);
   }
 
   const { isClosed, closedDays } = useClosedDays();
 
-  // Raspored se ponavlja svake nedelje, pa datum iz trake svodimo na dan
-  // u nedelji i tim kljucem citamo aktivnosti.
   const day = dayIndex(fromKey(selectedDay));
   const zatvoreno = isClosed(selectedDay);
   // Neradnog dana aktivnosti se ne odrzavaju, pa se i ne prikazuju - inace bi
   // roditelj video "Mali kuvari 10:30" ispod obavestenja da se ne dolazi.
-  const activities = zatvoreno ? [] : week[day] || [];
+  const activities = zatvoreno ? [] : items;
 
   // Raspored se ponavlja nedeljno, pa se oznacava svaki datum ciji dan u
-  // nedelji ima aktivnosti. Neradni dani se ne oznacavaju.
+  // nedelji ima aktivnosti. Rodjendani se dodaju posebno: oni padaju na tacan
+  // datum, pa bez njih dan sa rodjendanom a bez nedeljne aktivnosti ne bi bio
+  // oznacen. Neradni dani se ne oznacavaju.
+  const saRodjendanom = new Set(rodjendanski);
   const marked = new Set(
     monthDates()
-      .filter((d) => (week[dayIndex(d)] || []).length > 0 && !isClosed(toKey(d)))
+      .filter((d) => {
+        const kljuc = toKey(d);
+        if (isClosed(kljuc)) return false;
+        return (week[dayIndex(d)] || []).length > 0 || saRodjendanom.has(kljuc);
+      })
       .map(toKey)
   );
 
@@ -122,20 +138,36 @@ export default function ScheduleScreen() {
               </Text>
             </View>
           ) : (
-            activities.map((a) => (
-              <View key={a.id} style={styles.card}>
+            activities.map((a) => {
+              const rodjendan = a.kind === 'BIRTHDAY';
+
+              return (
+              <View key={a.id} style={[styles.card, rodjendan && styles.cardRodjendan]}>
                 <View
                   style={[
                     styles.stripe,
-                    { backgroundColor: a.color || colors.primary },
+                    { backgroundColor: rodjendan ? colors.accent : a.color || colors.primary },
                   ]}
                 />
                 <View style={styles.cardBody}>
                   <View style={styles.timeRow}>
-                    <Ionicons name="time-outline" size={14} color={colors.textFaint} />
-                    <Text style={styles.time}>
-                      {a.startTime} - {a.endTime}
+                    <Ionicons
+                      name={rodjendan ? 'gift-outline' : 'time-outline'}
+                      size={14}
+                      color={rodjendan ? colors.accentText : colors.textFaint}
+                    />
+                    {/* Celodnevni rodjendan nema smislen termin, pa se umesto
+                        "00:00 - 23:59" pise sta to zapravo znaci. */}
+                    <Text style={[styles.time, rodjendan && styles.timeRodjendan]}>
+                      {rodjendan && a.isFullDay
+                        ? 'Ceo dan'
+                        : `${a.startTime} - ${a.endTime}`}
                     </Text>
+                    {rodjendan ? (
+                      <View style={styles.oznaka}>
+                        <Text style={styles.oznakaTekst}>Rodjendan</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <Text style={styles.activityTitle}>{a.title}</Text>
                   {a.description ? (
@@ -148,7 +180,8 @@ export default function ScheduleScreen() {
                   ) : null}
                 </View>
               </View>
-            ))
+              );
+            })
           )}
         </ScrollView>
       )}
@@ -156,7 +189,7 @@ export default function ScheduleScreen() {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: {
@@ -171,10 +204,21 @@ const makeStyles = (colors) => StyleSheet.create({
     overflow: 'hidden',
     ...shadow.card,
   },
+  // Rodjendan je dogadjaj dana - stoji na vrhu spiska i ima svoju boju, da se
+  // razlikuje od redovnih aktivnosti koje se ponavljaju svake nedelje.
+  cardRodjendan: { backgroundColor: colors.accentSoft },
   stripe: { width: 5 },
   cardBody: { flex: 1, padding: spacing.lg },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   time: { ...type.caption, color: colors.textFaint },
+  timeRodjendan: { color: colors.accentText },
+  oznaka: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accent,
+  },
+  oznakaTekst: { ...type.caption, fontSize: 11, color: colors.textOnAccent },
   activityTitle: {
     ...type.heading,
     color: colors.text,

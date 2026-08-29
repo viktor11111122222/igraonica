@@ -6,7 +6,7 @@ const { krajPoslePocetka } = require('../utils/time');
 
 const router = express.Router();
 
-const VALID_TYPES = ['BIRTHDAY', 'PRIVATE_EVENT', 'GROUP_BOOKING'];
+const VALID_TYPES = ['BIRTHDAY', 'PRIVATE_EVENT', 'GROUP_BOOKING', 'MONTHLY_EVENT', 'OTHER'];
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'CANCELLED'];
 
 // GET /api/reservations - javno, nadolazece rezervacije (da roditelji vide kad je zauzeto)
@@ -24,6 +24,7 @@ router.get('/', async (req, res) => {
       select: {
         id: true,
         type: true,
+        customType: true,
         title: true,
         date: true,
         startTime: true,
@@ -114,6 +115,11 @@ router.post(
   authorize('ADMIN', 'SUPERADMIN'),
   [
     body('type').isIn(VALID_TYPES).withMessage('Nevazeci tip rezervacije.'),
+    // Tip OTHER nosi ime koje osoblje samo upisuje, pa bez njega red u tabeli
+    // ne bi imao sta da prikaze.
+    body('customType')
+      .custom((naziv, { req }) => req.body.type !== 'OTHER' || String(naziv || '').trim() !== '')
+      .withMessage('Za tip "Drugo" upisite naziv tipa.'),
     body('title').notEmpty().withMessage('Naziv je obavezan.'),
     body('date').isISO8601().withMessage('Datum nije validan.'),
     body('startTime').matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('Format HH:MM.'),
@@ -133,7 +139,7 @@ router.post(
     }
 
     try {
-      const { type, title, date, startTime, endTime, guestCount, childName, childAge, contactPhone, notes, userId, isFullDay } = req.body;
+      const { type, customType, title, date, startTime, endTime, guestCount, childName, childAge, contactPhone, notes, userId, isFullDay } = req.body;
 
       if (userId) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -145,6 +151,7 @@ router.post(
       const reservation = await prisma.reservation.create({
         data: {
           type,
+          customType: type === 'OTHER' ? String(customType).trim() : null,
           title,
           date: new Date(date + 'T00:00:00.000Z'),
           startTime,
@@ -175,6 +182,7 @@ router.patch(
   authorize('ADMIN', 'SUPERADMIN'),
   [
     body('type').optional().isIn(VALID_TYPES).withMessage('Nevazeci tip.'),
+    body('customType').optional({ nullable: true }).isString().withMessage('Naziv tipa mora biti tekst.'),
     body('status').optional().isIn(VALID_STATUSES).withMessage('Nevazeci status.'),
     body('title').optional().notEmpty().withMessage('Naziv ne moze biti prazan.'),
     body('startTime').optional().matches(/^([01]\d|2[0-3]):[0-5]\d$/).withMessage('Format HH:MM.'),
@@ -187,7 +195,7 @@ router.patch(
     }
 
     try {
-      const allowedFields = ['type', 'title', 'startTime', 'endTime', 'guestCount', 'childName', 'childAge', 'contactPhone', 'notes', 'status', 'isFullDay'];
+      const allowedFields = ['type', 'customType', 'title', 'startTime', 'endTime', 'guestCount', 'childName', 'childAge', 'contactPhone', 'notes', 'status', 'isFullDay'];
       const data = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
@@ -199,18 +207,41 @@ router.patch(
         data.date = new Date(req.body.date + 'T00:00:00.000Z');
       }
 
-      // Izmena moze da posalje samo jedno od dva vremena, pa se drugo uzima iz
-      // zapisa - inace bi se pomeranjem pocetka moglo dobiti "od 20:00 do 17:00".
-      if (data.startTime !== undefined || data.endTime !== undefined || data.isFullDay !== undefined) {
+      // Izmena moze da posalje samo deo polja, pa se ostatak uzima iz zapisa -
+      // inace bi se pomeranjem pocetka moglo dobiti "od 20:00 do 17:00", a
+      // prelaskom na tip "Drugo" rezervacija bez upisanog naziva tipa.
+      const menjaVreme =
+        data.startTime !== undefined || data.endTime !== undefined || data.isFullDay !== undefined;
+      const menjaTip = data.type !== undefined || data.customType !== undefined;
+
+      if (menjaVreme || menjaTip) {
         const postojeca = await prisma.reservation.findUnique({ where: { id: req.params.id } });
         if (!postojeca) {
           return res.status(404).json({ message: 'Rezervacija nije pronadjena.' });
         }
-        const celodnevna = data.isFullDay ?? postojeca.isFullDay;
-        const pocetak = data.startTime ?? postojeca.startTime;
-        const kraj = data.endTime ?? postojeca.endTime;
-        if (!celodnevna && !krajPoslePocetka(pocetak, kraj)) {
-          return res.status(400).json({ message: 'Vreme zavrsetka mora biti posle vremena pocetka.' });
+
+        if (menjaVreme) {
+          const celodnevna = data.isFullDay ?? postojeca.isFullDay;
+          const pocetak = data.startTime ?? postojeca.startTime;
+          const kraj = data.endTime ?? postojeca.endTime;
+          if (!celodnevna && !krajPoslePocetka(pocetak, kraj)) {
+            return res.status(400).json({ message: 'Vreme zavrsetka mora biti posle vremena pocetka.' });
+          }
+        }
+
+        if (menjaTip) {
+          const tip = data.type ?? postojeca.type;
+          if (tip === 'OTHER') {
+            const naziv = String(data.customType ?? postojeca.customType ?? '').trim();
+            if (!naziv) {
+              return res.status(400).json({ message: 'Za tip "Drugo" upisite naziv tipa.' });
+            }
+            data.customType = naziv;
+          } else {
+            // Prelazak na tip iz spiska brise stari upisani naziv - inace bi
+            // ostao u bazi i vratio se ako se tip vrati na "Drugo".
+            data.customType = null;
+          }
         }
       }
 

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, font } from '../theme';
-import { useTheme } from '../context/ThemeContext';
+import { colors, spacing, font } from '../theme';
 import QrTabButton, { QR_SIZE } from './QrTabButton';
 
 const BAR_HEIGHT = 68;
@@ -73,9 +73,13 @@ function BarShape({ width, height, fill }) {
 }
 
 export default function TabBar({ state, descriptors, navigation }) {
-  const { colors } = useTheme();
   const [width, setWidth] = useState(0);
-  const inset = Platform.OS === 'ios' ? 24 : 8;
+  const insets = useSafeAreaInsets();
+
+  // Na iOS-u ostaje mera po kojoj je traka i crtana. Na Androidu se uzima
+  // stvarna zona sistemske navigacije: gestovna traka trazi 24dp, a tri dugmeta
+  // 48dp - sa fiksnih 8 bi donji deo trake zavrsio ispod njih.
+  const inset = Platform.OS === 'ios' ? 24 : Math.max(insets.bottom, 8);
 
   function onPress(route, index) {
     const focused = state.index === index;

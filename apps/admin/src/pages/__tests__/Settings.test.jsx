@@ -176,3 +176,30 @@ describe('Settings - cuvanje', () => {
     expect(get).toHaveBeenCalledTimes(2);
   });
 });
+
+// Naplata ide u punim satima, sa pragom minuta preko punog sata. Panel mora da
+// objasni pravilo, jer je jedini put do njega.
+describe('Settings - prag naplate', () => {
+  test('hint objasnjava pravilo brojevima iz podesavanja', async () => {
+    get.mockResolvedValue({ settings: [...podesavanja, { key: 'hour_grace_minutes', value: '15' }] });
+    render(<Settings />);
+
+    expect(await screen.findByText('Prag preko punog sata')).toBeInTheDocument();
+    expect(screen.getByText(/1h 15min je 1 sat/)).toBeInTheDocument();
+    expect(screen.getByText(/1h 16min su 2 sata/)).toBeInTheDocument();
+    expect(screen.getByText(/najmanje 1 sat/)).toBeInTheDocument();
+  });
+
+  test('izbor praga se cuva', async () => {
+    get.mockResolvedValue({ settings: [...podesavanja, { key: 'hour_grace_minutes', value: '15' }] });
+    const user = userEvent.setup();
+    render(<Settings />);
+    await screen.findByText('Prag preko punog sata');
+
+    await user.click(screen.getByRole('button', { name: '30' }));
+
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/settings/hour_grace_minutes', { value: '30' })
+    );
+  });
+});

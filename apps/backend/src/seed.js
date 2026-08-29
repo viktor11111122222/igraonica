@@ -27,8 +27,7 @@ const seed = async () => {
   await prisma.setting.createMany({
     data: [
       { key: 'closing_time', value: '21:00', description: 'Vreme zatvaranja igraonice' },
-      { key: 'rounding_minutes', value: '15', description: 'Zaokruzivanje minuta pri checkout-u' },
-      { key: 'minimum_charge_minutes', value: '30', description: 'Minimalna naplata u minutima' },
+      { key: 'hour_grace_minutes', value: '15', description: 'Minuti preko punog sata koji se ne naplacuju' },
       { key: 'app_name', value: 'Kids Club', description: 'Naziv aplikacije' },
       { key: 'contact_phone', value: '', description: 'Kontakt telefon' },
       { key: 'address', value: '', description: 'Adresa igraonice' },

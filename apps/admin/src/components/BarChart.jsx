@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 // Boje se citaju iz tokena teme (styles.css), jer tamna tema ima svoje
 // korake provereno birane prema tamnoj podlozi - nisu obrnute svetle.
@@ -28,18 +28,33 @@ export default function BarChart({
   valueKey = 'value',
 }) {
   const wrapRef = useRef(null);
-  const [width, setWidth] = useState(640);
+  const [measured, setMeasured] = useState(0);
   const [hover, setHover] = useState(null);
   const [showTable, setShowTable] = useState(false);
 
-  // SVG se crta u pikselima da tekst ne bi bio razvucen skaliranjem.
-  useEffect(() => {
+  // SVG se crta u pikselima da tekst ne bi bio razvucen skaliranjem, pa mora da
+  // zna sirinu kartice. Meri se pre prvog crtanja (`useLayoutEffect`), a ne tek
+  // kad se javi `ResizeObserver`: ako on iz bilo kog razloga izostane, grafikon
+  // bi ostao na podrazumevanoj sirini i gurao celu stranicu u stranu.
+  useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+
+    const izmeri = () => setMeasured(el.clientWidth);
+    izmeri();
+
+    const ro = new ResizeObserver(izmeri);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener('resize', izmeri);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', izmeri);
+    };
   }, []);
+
+  // Do prvog merenja se crta uzak grafikon; `max-width` na SVG-u ionako ne da
+  // da izadje iz kartice, pa i pogresna procena ostaje unutar ekrana.
+  const width = measured || 320;
 
   const points = data || [];
   const values = points.map((d) => Number(d[valueKey]) || 0);
@@ -65,7 +80,13 @@ export default function BarChart({
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <svg width={width} height={height} role="img" aria-label="Grafikon po danima">
+      <svg
+        width={width}
+        height={height}
+        role="img"
+        aria-label="Grafikon po danima"
+        style={{ display: 'block', maxWidth: '100%' }}
+      >
         {ticks.map((t, i) => (
           <g key={i}>
             {/* Mreza je namerno jedva vidljiva - podaci su ti koji nose paznju. */}

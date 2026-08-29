@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import PressableScale from './PressableScale';
 import { ageInYears, daysInMonth, yearsLabel } from '../utils/date';
-import { radius, spacing, type } from '../theme';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type } from '../theme';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Avg', 'Sep', 'Okt', 'Nov', 'Dec'];
 const MONTHS_LONG = [
@@ -17,7 +16,6 @@ const pad = (n) => String(n).padStart(2, '0');
 // Datum rodjenja se bira, ne kuca. Opseg je mali (dete do ~16 godina), pa su
 // tri reda dovoljna i nemoguce je uneti nepostojeci datum.
 export default function BirthDatePicker({ value, onChange }) {
-  const styles = useThemedStyles(makeStyles);
   const [year, setYear] = useState(value ? Number(value.slice(0, 4)) : null);
   const [month, setMonth] = useState(value ? Number(value.slice(5, 7)) : null);
   const [day, setDay] = useState(value ? Number(value.slice(8, 10)) : null);
@@ -98,7 +96,6 @@ export default function BirthDatePicker({ value, onChange }) {
 }
 
 function Row({ label, children }) {
-  const styles = useThemedStyles(makeStyles);
 
   return (
     <View style={styles.row}>
@@ -116,7 +113,6 @@ function Row({ label, children }) {
 }
 
 function Chip({ label, active, narrow, onPress }) {
-  const styles = useThemedStyles(makeStyles);
 
   return (
     <PressableScale
@@ -130,7 +126,7 @@ function Chip({ label, active, narrow, onPress }) {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   summary: {
     flexDirection: 'row',
     alignItems: 'baseline',

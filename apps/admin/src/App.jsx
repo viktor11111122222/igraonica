@@ -12,7 +12,10 @@ import Children from './pages/Children';
 import Visits from './pages/Visits';
 import Packages from './pages/Packages';
 import Reservations from './pages/Reservations';
+import Events from './pages/Events';
 import Menu from './pages/Menu';
+import Promotions from './pages/Promotions';
+import PromoBanners from './pages/PromoBanners';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 
@@ -42,6 +45,9 @@ export default function App() {
         <Route path="posete" element={<Visits />} />
         <Route path="paketi" element={<Packages />} />
         <Route path="rezervacije" element={<Reservations />} />
+        <Route path="dogadjaji" element={<Events />} />
+        <Route path="akcije" element={<Promotions />} />
+        <Route path="promocije" element={<PromoBanners />} />
         <Route path="jelovnik" element={<Menu />} />
         <Route path="raspored" element={<Schedule />} />
         <Route path="podesavanja" element={<Settings />} />

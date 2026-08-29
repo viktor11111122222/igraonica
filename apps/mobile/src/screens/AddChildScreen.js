@@ -12,9 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
 import BirthDatePicker from '../components/BirthDatePicker';
-import { radius, spacing, type, shadow } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type, shadow } from '../theme';
 
 // Najcesce alergije kod dece - da roditelj ne mora da kuca.
 const COMMON_ALLERGIES = [
@@ -30,8 +28,6 @@ const COMMON_ALLERGIES = [
 ];
 
 export default function AddChildScreen({ navigation }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -222,7 +218,7 @@ export default function AddChildScreen({ navigation }) {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.xl, paddingBottom: spacing.xxxl },
 

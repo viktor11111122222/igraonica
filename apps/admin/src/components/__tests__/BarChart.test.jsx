@@ -62,3 +62,26 @@ describe('BarChart', () => {
     expect(within(svg).getAllByText('0')).toHaveLength(1);
   });
 });
+
+// Grafikon se crta u pikselima, pa mora da se drzi sirine kartice. Dok se
+// oslanjao samo na `ResizeObserver`, ostajao je na podrazumevanih 640px i gurao
+// celu stranicu u stranu - na telefonu se pola nadzorne table skrolovalo bocno.
+describe('BarChart - sirina', () => {
+  test('meri sirinu omotaca odmah, bez cekanja na posmatraca', () => {
+    // jsdom nema raspored, pa `clientWidth` vraca 0; komponenta mora da radi i
+    // tada, umesto da nacrta 640px sirok SVG.
+    render(<BarChart data={dani} valueKey="count" />);
+    const svg = screen.getByRole('img', { name: 'Grafikon po danima' });
+
+    expect(Number(svg.getAttribute('width'))).toBeLessThanOrEqual(320);
+  });
+
+  // Druga brana: cak i kad je izmerena sirina zastarela, SVG ne sme da izadje
+  // iz kartice.
+  test('SVG ne moze da bude siri od kartice', () => {
+    render(<BarChart data={dani} valueKey="count" />);
+    const svg = screen.getByRole('img', { name: 'Grafikon po danima' });
+
+    expect(svg.style.maxWidth).toBe('100%');
+  });
+});

@@ -90,7 +90,11 @@ export default function LoginScreen({ navigation }) {
 
       <KeyboardAvoidingView
         style={styles.fill}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        // Android sam skuplja prozor kad se tastatura podigne
+        // (`adjustResize` u manifestu), pa mu ovde ne treba jos jedno
+        // podesavanje visine - sa 'height' je posle zatvaranja tastature
+        // ostajala prazna traka na dnu ekrana.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Kad se tastatura podigne na niskom ekranu, dugme mora da ostane
             dohvatljivo - zato forma moze da se skroluje. */}

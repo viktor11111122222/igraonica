@@ -10,6 +10,10 @@ import * as storage from './storage';
 // vec razgovaraju sa racunarom bas preko nje, pa je po definiciji tacna i kad
 // racunar promeni mrezu. EXPO_PUBLIC_API_URL i dalje ima prednost, za slucaj
 // da server ne stoji na istom racunaru kao Metro.
+// Izuzetak je pravi Android telefon na USB-u: Metro tamo stize preko
+// `adb reverse` na localhost:8081, pa se i za server mora jednom pokrenuti
+// `adb reverse tcp:3001 tcp:3001` - inace `localhost` opet znaci sam telefon.
+// (Emulator nema taj problem: kod njega je racunar 10.0.2.2.)
 const PORT = 3001;
 
 function adresaServera() {
@@ -23,6 +27,15 @@ function adresaServera() {
 }
 
 const API_URL = adresaServera();
+
+// Slike koje osoblje okaci (promocije, objave) backend vraca kao putanju
+// oblika "/uploads/ime.jpg". Telefonu treba puna adresa, a ona je ista kao
+// adresa API-ja bez zavrsnog "/api".
+export function mediaUrl(path) {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return API_URL.replace(/\/api\/?$/, '') + path;
+}
 
 // Bez roka cekanja fetch ka nedostupnom hostu visi minutima. Ekrani se
 // osvezavaju na 15s, pa bi se zahtevi gomilali a spiner se nikad ne bi sklonio.

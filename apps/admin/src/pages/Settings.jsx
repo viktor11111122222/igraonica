@@ -245,38 +245,24 @@ export default function Settings() {
           </div>
           <div className="card-body" style={{ paddingTop: 0, paddingBottom: 0 }}>
             <SettingRow
-              label="Zaokruzivanje"
-              hint={`Boravak se zaokruzuje navise na ovaj korak. Za ${
-                val('rounding_minutes') || 15
-              } min: boravak od 40 min naplacuje se kao ${
-                Math.ceil(40 / (Number(val('rounding_minutes')) || 15)) *
-                (Number(val('rounding_minutes')) || 15)
-              } min.`}
-              status={status.rounding_minutes}
+              label="Prag preko punog sata"
+              hint={`Boravak se naplacuje u punim satima. Do ${
+                val('hour_grace_minutes') || 15
+              } min preko punog sata ne naplacuje se nista, a preko toga se racuna ceo sat: 1h ${
+                val('hour_grace_minutes') || 15
+              }min je 1 sat, 1h ${
+                Number(val('hour_grace_minutes') || 15) + 1
+              }min su 2 sata. Svaki boravak je najmanje 1 sat.`}
+              status={status.hour_grace_minutes}
             >
               <Stepper
-                value={val('rounding_minutes')}
-                onChange={(v) => save('rounding_minutes', v)}
+                value={val('hour_grace_minutes')}
+                onChange={(v) => save('hour_grace_minutes', v)}
                 step={5}
-                min={1}
-                max={60}
-                unit="min"
-                presets={[5, 10, 15, 30]}
-              />
-            </SettingRow>
-            <SettingRow
-              label="Najmanja naplata"
-              hint="I kratak boravak se naplacuje kao ovoliko minuta."
-              status={status.minimum_charge_minutes}
-            >
-              <Stepper
-                value={val('minimum_charge_minutes')}
-                onChange={(v) => save('minimum_charge_minutes', v)}
-                step={15}
                 min={0}
-                max={180}
+                max={59}
                 unit="min"
-                presets={[15, 30, 45, 60]}
+                presets={[0, 10, 15, 30]}
               />
             </SettingRow>
           </div>

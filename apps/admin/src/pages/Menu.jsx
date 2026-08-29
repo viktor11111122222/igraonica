@@ -163,11 +163,11 @@ export default function Menu() {
       <div className="page">
         <Alert>{error || saveError}</Alert>
 
-        <div className="toolbar">
+        <div className="toolbar week-nav">
           <button className="btn secondary" onClick={() => shiftWeek(-7)}>
             ← Prethodna
           </button>
-          <div style={{ fontWeight: 700, minWidth: 210, textAlign: 'center' }}>
+          <div className="week-range">
             {data?.weekStart && data?.weekEnd
               ? `${fromKey(data.weekStart).toLocaleDateString('sr-RS')} — ${fromKey(
                   data.weekEnd

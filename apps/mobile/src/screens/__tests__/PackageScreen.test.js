@@ -25,9 +25,9 @@ const paket = (over = {}) => ({
 
 const dete = { id: 'c1', firstName: 'Lena', lastName: 'Petrovic', qrCode: 'IGR-B4F46AB6' };
 
-function odgovori({ packages = [paket()], children = [dete] } = {}) {
+function odgovori({ packages = [paket()], children = [dete], debtHours = 0 } = {}) {
   apiRequest.mockImplementation((putanja) => {
-    if (putanja === '/packages/my') return Promise.resolve({ userPackages: packages });
+    if (putanja === '/packages/my') return Promise.resolve({ userPackages: packages, debtHours });
     if (putanja === '/children') return Promise.resolve({ children });
     return Promise.resolve({});
   });
@@ -92,5 +92,32 @@ describe('PackageScreen', () => {
 
     expect(await screen.findByText('Nemate aktivan paket')).toBeTruthy();
     expect(screen.getByText('Moja deca')).toBeTruthy();
+  });
+});
+
+// Dete moze da udje i bez paketa - odigrani sati se skupljaju kao minus koji
+// roditelj plati u igraonici.
+describe('PackageScreen - minus sati', () => {
+  test('bez minusa nema kartice', async () => {
+    await prikazi();
+
+    await screen.findByText('Zdravo,');
+    expect(screen.queryByText(/Sati odigrani bez paketa/)).toBeNull();
+  });
+
+  test('minus se prikazuje kao negativan broj sati', async () => {
+    odgovori({ debtHours: 3 });
+    await prikazi();
+
+    expect(await screen.findByText('-3 h')).toBeTruthy();
+    expect(screen.getByText(/Sati odigrani bez paketa/)).toBeTruthy();
+  });
+
+  test('minus stoji i kad roditelj nema nijedan paket', async () => {
+    odgovori({ packages: [], debtHours: 2.5 });
+    await prikazi();
+
+    expect(await screen.findByText('-2,5 h')).toBeTruthy();
+    expect(screen.getByText(/skupljaju kao minus/)).toBeTruthy();
   });
 });

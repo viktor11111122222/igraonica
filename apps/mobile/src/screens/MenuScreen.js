@@ -17,13 +17,9 @@ import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
 import { useClosedDays } from '../context/ClosedDaysContext';
 import { MEALS } from '../data/meals';
-import { radius, spacing, type, shadow } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type, shadow } from '../theme';
 
 export default function MenuScreen() {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const [days, setDays] = useState({});
   const { today, selected: selectedDay, setSelected: setSelectedDay } =
     useDaySelection();
@@ -141,7 +137,7 @@ export default function MenuScreen() {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: {

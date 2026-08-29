@@ -1,69 +1,7 @@
 // Design tokens za Kids club.
 // Jedan izvor istine za boje, razmake i animacije.
 
-// Uloge boja se menjaju sa varijantom: u plavoj je glavna prasnjavo plava a
-// sporedna amber, u zutoj je obrnuto. Neutralne i semanticke su zajednicke,
-// pa stoje samo jednom. Ekrani boje uzimaju iz konteksta (useTheme), ne
-// odavde, da bi promena varijante odmah presla preko celog rasporeda.
-const shared = {
-  // Neutralne
-  bg: '#f7f9fb',
-  surface: '#ffffff',
-  border: '#e6ecf2',
-
-  text: '#1f2a37',
-  textMuted: '#6b7a8d',
-  textFaint: '#9aa8b8',
-
-  // Semanticke
-  danger: '#d9534f',
-  dangerSoft: '#fdeaea',
-  success: '#4a9c6d',
-  successSoft: '#e8f5ee',
-
-  // Prijava ide po prilozenom predlosku i namerno ne prati varijantu - taj
-  // ekran ima svoju amber podlogu i belo pismo bez obzira na temu.
-  authBg: '#f1b754',
-  authField: '#f5f5f7',
-  authAction: '#7396c2',
-  textOnAuth: '#ffffff',
-};
-
-const blue = {
-  // Glavna - prasnjavo plava
-  primary: '#7c9fc9',
-  primaryDark: '#5d82b0',
-  primaryDarker: '#3f6289',
-  primarySoft: '#eaf1f8',
-  primaryTint: '#f4f8fb',
-
-  // Sporedna - topla amber
-  // Pazi: #f8b653 na beloj ima kontrast ~1.9:1 i pada WCAG za tekst.
-  // Koristi se kao povrsina/ispuna. Za amber tekst koristi accentText.
-  accent: '#f8b653',
-  accentDark: '#e09a2f',
-  accentText: '#9a6410',
-  accentSoft: '#fef4e3',
-
-  textOnPrimary: '#ffffff',
-  textOnAccent: '#3d2a08',
-
-  // Providni slojevi preko glavne boje: podnaslov u baneru i okruglo dugme
-  // u njemu. Idu uz textOnPrimary, pa se menjaju zajedno sa njim.
-  onPrimaryMuted: 'rgba(255,255,255,0.85)',
-  onPrimaryVeil: 'rgba(255,255,255,0.22)',
-
-  // Datumi u traci stoje na providnom oblaku, dakle na glavnoj boji razblazenoj
-  // belom. Na plavoj je to i dalje dovoljno tamno za belo pismo.
-  dayText: '#ffffff',
-  dayTextMuted: 'rgba(255,255,255,0.9)',
-
-  // Prozirnost bele sare u baneru. Izmerena je sa prilozenih slika: ista
-  // sara stoji na 0.34 nad plavom, a na 0.70 nad zutom.
-  bannerDoodle: 0.34,
-};
-
-const amber = {
+export const colors = {
   // Glavna - amber sa ekrana za prijavu
   primary: '#f1b754',
   primaryDark: '#e09a2f',
@@ -83,33 +21,47 @@ const amber = {
   textOnPrimary: '#ffffff',
   textOnAccent: '#ffffff',
 
+  // Providni slojevi preko glavne boje: podnaslov u baneru i okrugla dugmad
+  // u njemu.
   onPrimaryMuted: '#ffffff',
-  // Koprena ide na tamnu, ne na belu kao u plavoj: bela na amber podlozi je
-  // svetlija od nje, pa bi belo dugme na beloj koprenici nestalo.
+  // Koprena ide na tamnu, ne na belu: bela na amber podlozi je svetlija od
+  // nje, pa bi belo dugme na beloj koprenici nestalo.
   onPrimaryVeil: 'rgba(61,42,8,0.2)',
 
-  // Amber razblazen belim oblakom daje vrlo svetlu podlogu (#f4c47b): belo
-  // pismo na njoj ima kontrast ~1.6:1 i prosto se ne vidi. Zato datumi ovde
-  // idu tamno - i to na oblaku, ne na goloj zutoj.
+  // Datumi u traci stoje na providnom oblaku, dakle na glavnoj boji
+  // razblazenoj belim. To daje vrlo svetlu podlogu (#f4c47b) na kojoj belo
+  // pismo ima kontrast ~1.6:1 i prosto se ne vidi - zato idu tamno, i to na
+  // oblaku, ne na goloj zutoj.
   dayText: '#5a3d0a',
   dayTextMuted: 'rgba(90,61,10,0.85)',
 
-  // Slabija nego na prilozenoj slici (0.70). Tamo preko sare nije stajao
-  // tekst, a ovde stoji: belo pismo na beloj sari se gubi.
+  // Prozirnost bele sare u baneru. Sa prilozene slike izmereno je 0.70, ali
+  // tamo preko sare nije stajao tekst - a ovde stoji, pa se belo pismo na
+  // punoj sari gubi.
   bannerDoodle: 0.5,
+
+  // Neutralne
+  bg: '#f7f9fb',
+  surface: '#ffffff',
+  border: '#e6ecf2',
+
+  text: '#1f2a37',
+  textMuted: '#6b7a8d',
+  textFaint: '#9aa8b8',
+
+  // Semanticke
+  danger: '#d9534f',
+  dangerSoft: '#fdeaea',
+  success: '#4a9c6d',
+  successSoft: '#e8f5ee',
+
+  // Prijava ide po prilozenom predlosku i ima svoje tonove: amber podloga,
+  // belo pismo i plavo dugme.
+  authBg: '#f1b754',
+  authField: '#f5f5f7',
+  authAction: '#7396c2',
+  textOnAuth: '#ffffff',
 };
-
-export const themes = {
-  blue: { ...shared, ...blue },
-  amber: { ...shared, ...amber },
-};
-
-export const VARIANTS = ['amber', 'blue'];
-export const DEFAULT_VARIANT = 'amber';
-
-// Zatecena imena i dalje rade. Sve sto nije prebaceno na useTheme uvozi
-// `colors` i dobija podrazumevanu varijantu, bez pracenja prekidaca.
-export const colors = themes[DEFAULT_VARIANT];
 
 export const radius = {
   sm: 8,
@@ -137,13 +89,20 @@ export const font = {
   bold: 'Montserrat_700Bold',
 };
 
+// `includeFontPadding: false` je Android-only i iOS ga ne vidi. Android inace
+// dodaje razmak iznad i ispod svakog reda po metrici fonta, pa je isti tekst
+// tamo visi nego na iOS-u - brojevi u krugovima i natpisi u plocicama bi sedeli
+// nize, a polja za unos bila par piksela visa. Ovako oba sistema mere tekst na
+// isti nacin.
+const androidRazmak = { includeFontPadding: false };
+
 export const type = {
-  display: { fontSize: 44, fontFamily: font.bold },
-  title: { fontSize: 24, fontFamily: font.bold },
-  heading: { fontSize: 18, fontFamily: font.semibold },
-  body: { fontSize: 15, fontFamily: font.medium },
-  label: { fontSize: 13, fontFamily: font.semibold },
-  caption: { fontSize: 12, fontFamily: font.medium },
+  display: { fontSize: 44, fontFamily: font.bold, ...androidRazmak },
+  title: { fontSize: 24, fontFamily: font.bold, ...androidRazmak },
+  heading: { fontSize: 18, fontFamily: font.semibold, ...androidRazmak },
+  body: { fontSize: 15, fontFamily: font.medium, ...androidRazmak },
+  label: { fontSize: 13, fontFamily: font.semibold, ...androidRazmak },
+  caption: { fontSize: 12, fontFamily: font.medium, ...androidRazmak },
 };
 
 // Trajanja - nista preko 300ms za UI.
@@ -173,4 +132,4 @@ export const shadow = {
 // odvoji sadrzaj ekrana. Konstanta sa fiksnim brojem bi se razisla sa stvarnom
 // visinom cim se oblik promeni.
 
-export default { colors, themes, radius, spacing, type, font, motion, shadow };
+export default { colors, radius, spacing, type, font, motion, shadow };

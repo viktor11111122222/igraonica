@@ -304,3 +304,94 @@ describe('CheckIn - rucni unos ostaje', () => {
     await waitFor(() => expect(polje).toHaveValue(''));
   });
 });
+
+// Dete bez paketa ulazi, ali boravak ide roditelju u minus. Radnik to mora da
+// vidi na traci ishoda - inace se minus otkrije tek kad neko pogleda nalog.
+describe('CheckIn - minus sati', () => {
+  async function prijaviRucno(user) {
+    await user.type(screen.getByPlaceholderText('IGR-XXXXXXXX'), KOD);
+    await user.click(screen.getByRole('button', { name: 'Prijavi' }));
+  }
+
+  test('prijava bez paketa javlja da boravak ide u minus', async () => {
+    post.mockResolvedValue({
+      message: 'Ana Petrovic je prijavljen/a.',
+      remainingHours: 0,
+      withoutPackage: true,
+      debtHours: 0,
+    });
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
+
+    await prijaviRucno(user);
+
+    expect(await screen.findByText(/nema aktivan paket/i)).toBeInTheDocument();
+    // Bez paketa "Preostalo: 0 h" bi bilo obmanjujuce.
+    expect(screen.queryByText(/Preostalo/)).toBeNull();
+  });
+
+  test('prijava sa paketom ne pominje minus', async () => {
+    post.mockResolvedValue({
+      message: 'Ana Petrovic je prijavljen/a.',
+      remainingHours: 12,
+      withoutPackage: false,
+      debtHours: 0,
+    });
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
+
+    await prijaviRucno(user);
+
+    await screen.findByText('Ana Petrovic je prijavljen/a.');
+    expect(screen.queryByText(/minus/i)).toBeNull();
+  });
+
+  test('odjava pokazuje koliko je dodato i koliko roditelj duguje', async () => {
+    get.mockResolvedValue({ visits: [poseta] });
+    post.mockResolvedValue({
+      message: 'Ana Petrovic je odjavljen/a.',
+      duration: { raw: 130, charged: 120, hoursDeducted: 2 },
+      remainingHours: 0,
+      debtAdded: 2,
+      debtHours: 5,
+    });
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
+
+    const polje = screen.getByPlaceholderText('IGR-XXXXXXXX');
+    await user.type(polje, KOD);
+    // "Odjavi" postoji i u spisku prisutnih, pa se cilja dugme u formi.
+    await user.click(within(polje.closest('form')).getByRole('button', { name: 'Odjavi' }));
+
+    expect(await screen.findByText(/Minus ukupno/)).toBeInTheDocument();
+    expect(screen.getByText(/Ova poseta: \+2,0 h/)).toBeInTheDocument();
+  });
+
+  // Stari minus se vidi i kad je ovaj boravak pokriven paketom - roditelj je
+  // bas tada na pultu.
+  test('odjava sa pokricem i dalje pokazuje stari minus', async () => {
+    get.mockResolvedValue({ visits: [poseta] });
+    post.mockResolvedValue({
+      message: 'Ana Petrovic je odjavljen/a.',
+      duration: { raw: 70, charged: 60, hoursDeducted: 1 },
+      remainingHours: 7,
+      debtAdded: 0,
+      debtHours: 3,
+    });
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/visits/active'));
+
+    const polje = screen.getByPlaceholderText('IGR-XXXXXXXX');
+    await user.type(polje, KOD);
+    // "Odjavi" postoji i u spisku prisutnih, pa se cilja dugme u formi.
+    await user.click(within(polje.closest('form')).getByRole('button', { name: 'Odjavi' }));
+
+    expect(await screen.findByText(/Minus ukupno: 3,0 h/)).toBeInTheDocument();
+    expect(screen.queryByText(/Ova poseta/)).toBeNull();
+    expect(screen.getByText(/Preostalo: 7,0 h/)).toBeInTheDocument();
+  });
+});

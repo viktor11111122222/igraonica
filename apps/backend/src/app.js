@@ -15,8 +15,11 @@ const menuRoutes = require('./routes/menu');
 const scheduleRoutes = require('./routes/schedule');
 const closedDaysRoutes = require('./routes/closedDays');
 const reservationsRoutes = require('./routes/reservations');
+const eventsRoutes = require('./routes/events');
 const dashboardRoutes = require('./routes/dashboard');
 const notificationsRoutes = require('./routes/notifications');
+const promotionsRoutes = require('./routes/promotions');
+const promoBannersRoutes = require('./routes/promoBanners');
 
 const app = express();
 
@@ -49,8 +52,11 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/closed-days', closedDaysRoutes);
 app.use('/api/reservations', reservationsRoutes);
+app.use('/api/events', eventsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/promotions', promotionsRoutes);
+app.use('/api/promo-banners', promoBannersRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use((req, res) => {

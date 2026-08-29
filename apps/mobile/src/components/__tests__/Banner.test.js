@@ -1,15 +1,18 @@
 import { render, screen, within } from '@testing-library/react-native';
 import { StyleSheet, Text } from 'react-native';
 import Banner from '../Banner';
-import { ThemeProvider } from '../../context/ThemeContext';
-import { themes } from '../../theme';
+import { colors, spacing } from '../../theme';
 
-const prikazi = (props = {}, varijanta) =>
-  render(
-    <ThemeProvider initialVariant={varijanta}>
-      <Banner title="Jelovnik" subtitle="Sta se jede ove nedelje" {...props} />
-    </ThemeProvider>
-  );
+// Gornja sigurna zona dolazi iz uredjaja; mera se zadaje u jest.setup.js, a
+// pojedini testovi je menjaju da bi proverili drugi uredjaj.
+const zonaGore = (top) => {
+  global.__sigurnaZona = { top, right: 0, bottom: 34, left: 0 };
+};
+
+const prikazi = (props = {}, top = 59) => {
+  zonaGore(top);
+  return render(<Banner title="Jelovnik" subtitle="Sta se jede ove nedelje" {...props} />);
+};
 
 const stil = (testID) => StyleSheet.flatten(screen.getByTestId(testID).props.style);
 
@@ -34,11 +37,9 @@ describe('Banner', () => {
   // Pocetna od banera uzima samo podlogu sa sarom - svoje zaglavlje crta sama.
   test('bez teksta crta samo podlogu sa sarom', async () => {
     await render(
-      <ThemeProvider>
-        <Banner>
-          <Text>sopstveno zaglavlje</Text>
-        </Banner>
-      </ThemeProvider>
+      <Banner>
+        <Text>sopstveno zaglavlje</Text>
+      </Banner>
     );
 
     expect(screen.getByText('sopstveno zaglavlje')).toBeTruthy();
@@ -46,53 +47,35 @@ describe('Banner', () => {
     expect(screen.queryByText('Jelovnik')).toBeNull();
   });
 
-  test('krece od zute varijante', async () => {
+  test('podloga je u glavnoj boji', async () => {
     await prikazi();
-    expect(stil('banner-bg').backgroundColor).toBe(themes.amber.primary);
+    expect(stil('banner-bg').backgroundColor).toBe(colors.primary);
   });
 
-  test('u plavoj varijanti uzima njenu glavnu boju', async () => {
-    await prikazi({}, 'blue');
-    expect(stil('banner-bg').backgroundColor).toBe(themes.blue.primary);
-  });
-
-  test('naslov uzima boju iz varijante', async () => {
+  test('naslov se cita na toj podlozi', async () => {
     await prikazi();
     expect(StyleSheet.flatten(screen.getByText('Jelovnik').props.style).color).toBe(
-      themes.amber.textOnPrimary
+      colors.textOnPrimary
     );
-  });
-
-  // Sara je jedan fajl za obe varijante - razlikuje ih samo prozirnost,
-  // izmerena sa prilozenih banera.
-  test('u zutoj je sara izrazenija', async () => {
-    await prikazi();
-    expect(stil('banner-doodles').opacity).toBe(themes.amber.bannerDoodle);
-  });
-
-  test('u plavoj je sara blaza', async () => {
-    await prikazi({}, 'blue');
-    expect(stil('banner-doodles').opacity).toBe(themes.blue.bannerDoodle);
   });
 
   test("sa doodles='none' nema sare, ostaje samo boja", async () => {
     await prikazi({ doodles: 'none' });
 
     expect(screen.queryByTestId('banner-doodles')).toBeNull();
-    expect(stil('banner-bg').backgroundColor).toBe(themes.amber.primary);
+    expect(stil('banner-bg').backgroundColor).toBe(colors.primary);
     expect(screen.getByText('Jelovnik')).toBeTruthy();
   });
 
   const saTrakom = (doodles) =>
     render(
-      <ThemeProvider>
-        <Banner doodles={doodles} title="Jelovnik">
-          <Text>traka sa datumima</Text>
-        </Banner>
-      </ThemeProvider>
+      <Banner doodles={doodles} title="Jelovnik">
+        <Text>traka sa datumima</Text>
+      </Banner>
     );
 
-  // Jelovnik: sara stoji iza naslova, a traka sa datumima ispod ostaje ravna.
+  // Jelovnik i Raspored: sara stoji iza naslova, a traka sa datumima ispod
+  // ostaje ravna boja.
   test("sa doodles='head' sara stoji samo iza naslova", async () => {
     await saTrakom('head');
 
@@ -108,10 +91,33 @@ describe('Banner', () => {
     expect(screen.getAllByTestId('banner-doodles')).toHaveLength(1);
   });
 
+  test('sara je izrazena onoliko koliko tema kaze', async () => {
+    await prikazi();
+    expect(stil('banner-doodles').opacity).toBe(colors.bannerDoodle);
+  });
+
   test('sara stoji u prirodnoj razmeri fajla, ne razvucena po visini', async () => {
     await prikazi();
 
     const s = stil('banner-doodles');
     expect(s.height / s.width).toBeCloseTo(780 / 1170, 3);
+  });
+});
+
+// Sistemska traka nije svuda iste visine: ~59 na iPhone-u sa ostrvom, 20 na
+// starom SE, 24-49 na Androidu. Sa fiksnih 64 je Android dobijao dvostruko
+// vise vazduha iznad naslova nego iOS.
+describe('Banner - gornja sigurna zona', () => {
+  const vazduhIznadNaslova = () =>
+    StyleSheet.flatten(screen.getByText('Jelovnik').parent.parent.props.style).paddingTop;
+
+  test('vazduh prati sigurnu zonu uredjaja', async () => {
+    await prikazi({}, 59);
+    expect(vazduhIznadNaslova()).toBe(59 + spacing.sm);
+  });
+
+  test('na uredjaju sa nizom trakom vazduha je manje', async () => {
+    await prikazi({}, 24);
+    expect(vazduhIznadNaslova()).toBe(24 + spacing.sm);
   });
 });

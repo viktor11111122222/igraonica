@@ -162,6 +162,44 @@ router.patch(
   }
 );
 
+// POST /api/users/:id/settle-debt - roditelj je platio minus sate
+//
+// Naplata se desava na pultu, van aplikacije; panel samo evidentira da je
+// dug izmiren. Minus se ponistava ceo, jer se i placa ceo.
+router.post('/:id/settle-debt', async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!user) {
+      return res.status(404).json({ message: 'Korisnik nije pronadjen.' });
+    }
+
+    const dug = Number(user.debtHours);
+    if (dug <= 0) {
+      return res.status(400).json({ message: 'Roditelj nema minus sate.' });
+    }
+
+    // Uslov na iznos: ako je u medjuvremenu druga odjava dodala sate, ovaj
+    // zahtev nista ne menja i radnik vidi tacan, novi iznos.
+    const ponisteno = await prisma.user.updateMany({
+      where: { id: req.params.id, debtHours: user.debtHours },
+      data: { debtHours: 0 },
+    });
+
+    if (ponisteno.count === 0) {
+      const sada = await prisma.user.findUnique({ where: { id: req.params.id } });
+      return res.status(409).json({
+        message: 'Minus sati su se promenili u medjuvremenu, proverite iznos.',
+        debtHours: sada ? Number(sada.debtHours) : 0,
+      });
+    }
+
+    res.json({ message: `Naplaceno ${dug} h minusa.`, settledHours: dug, debtHours: 0 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Greska na serveru.' });
+  }
+});
+
 // DELETE /api/users/:id - soft delete
 router.delete('/:id', async (req, res) => {
   try {

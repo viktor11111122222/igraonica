@@ -11,9 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PressableScale from '../components/PressableScale';
 import Lightbox from '../components/Lightbox';
 import { photos } from '../data/gallery';
-import { radius, spacing, type } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type } from '../theme';
 
 // Slike su za sada spakovane uz aplikaciju (src/data/gallery.js).
 // Kada backend dobije GET /api/gallery, menja se samo izvor niza.
@@ -22,8 +20,6 @@ import { useThemedStyles } from '../hooks/useThemedStyles';
 // dodirnuo odredjenu sliku u traci, pa se ona odmah prikazuje preko celog
 // ekrana - bez tog koraka bi morao ponovo da je trazi u gridu.
 export default function GalleryScreen({ route }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const { width } = useWindowDimensions();
   const [openIndex, setOpenIndex] = useState(route?.params?.index ?? null);
 
@@ -76,7 +72,7 @@ export default function GalleryScreen({ route }) {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: {
     padding: spacing.xl,

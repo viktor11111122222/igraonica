@@ -7,9 +7,7 @@ import Banner from '../components/Banner';
 import { apiRequest } from '../utils/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { formatTime } from '../utils/date';
-import { radius, spacing, type, motion, shadow } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { colors, radius, spacing, type, motion, shadow } from '../theme';
 
 // Rucni citac (onaj sa kase) trazi belu marginu oko koda - "quiet zone" - od
 // bar cetiri modula. Bez nje mnogi imageri ne nadju ivicu i kod prosto ne
@@ -29,8 +27,6 @@ const QR_QUIET = 40;
 const QR_ECL = 'Q';
 
 export default function QrScreen({ navigation, route }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -200,8 +196,6 @@ export default function QrScreen({ navigation, route }) {
 }
 
 function PickerRow({ child, index, onPress }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const enter = useAnimatedValue(0);
 
   useFocusEffect(
@@ -274,7 +268,7 @@ function PressableScale({ children, style, onPress }) {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,

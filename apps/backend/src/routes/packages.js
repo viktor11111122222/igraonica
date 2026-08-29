@@ -152,24 +152,45 @@ router.post(
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + pkg.validityDays);
 
+      // Nov paket prvo pokriva minus sate - odigrano pa placeno kroz paket.
+      // `totalHours` pri tom ostaje pun iznos, da "iskorisceno = ukupno -
+      // preostalo" i dalje govori istinu.
+      const dug = Number(user.debtHours);
+      const pokrivenDug = Math.min(Math.max(0, dug), Number(pkg.totalHours));
+
       // `totalHours` se snima ovde i ostaje nepromenjen do kraja - kasnija
       // izmena paketa ne sme unazad da promeni racunicu ovog roditelja.
-      const userPackage = await prisma.userPackage.create({
-        data: {
-          userId,
-          packageId,
-          totalHours: pkg.totalHours,
-          remainingHours: pkg.totalHours,
-          expiresAt,
-          notes,
-        },
-        include: { package: true },
+      const userPackage = await prisma.$transaction(async (tx) => {
+        const napravljen = await tx.userPackage.create({
+          data: {
+            userId,
+            packageId,
+            totalHours: pkg.totalHours,
+            remainingHours: Number(pkg.totalHours) - pokrivenDug,
+            expiresAt,
+            notes,
+          },
+          include: { package: true },
+        });
+
+        if (pokrivenDug > 0) {
+          // Racunica u bazi, ne "procitaj pa upisi": odjava koja se desi u
+          // istom trenutku dodaje u minus, i to ne sme da se izgubi.
+          await tx.$executeRaw`
+            UPDATE users
+               SET debt_hours = GREATEST(0, debt_hours - ${pokrivenDug}::numeric),
+                   updated_at = NOW()
+             WHERE id = ${userId}
+          `;
+        }
+
+        return napravljen;
       });
 
       // Roditelj bi inace saznao za paket tek kad sam otvori aplikaciju.
-      await obavestenja.paketDodeljen({ userPackage, paket: pkg, parentId: userId });
+      await obavestenja.paketDodeljen({ userPackage, paket: pkg, parentId: userId, pokrivenDug });
 
-      res.status(201).json({ userPackage });
+      res.status(201).json({ userPackage, settledDebtHours: pokrivenDug });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Greska na serveru.' });
@@ -180,13 +201,18 @@ router.post(
 // GET /api/packages/my - roditelj vidi svoje pakete
 router.get('/my', protect, async (req, res) => {
   try {
-    const userPackages = await prisma.userPackage.findMany({
-      where: { userId: req.user.id },
-      include: { package: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [userPackages, korisnik] = await Promise.all([
+      prisma.userPackage.findMany({
+        where: { userId: req.user.id },
+        include: { package: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.findUnique({ where: { id: req.user.id }, select: { debtHours: true } }),
+    ]);
 
-    res.json({ userPackages });
+    // Minus sati stoje uz pakete: aplikacija ih prikazuje na istom mestu gde i
+    // preostale sate, pa nema potrebe za drugim zahtevom.
+    res.json({ userPackages, debtHours: Number(korisnik?.debtHours || 0) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Greska na serveru.' });

@@ -1,4 +1,4 @@
-import { apiRequest, onSessionExpired } from '../api';
+import { apiRequest, mediaUrl, onSessionExpired } from '../api';
 import * as storage from '../storage';
 
 jest.mock('../storage', () => ({
@@ -151,5 +151,26 @@ describe('apiRequest - istekla sesija', () => {
     await expect(apiRequest('/children')).rejects.toThrow();
 
     expect(javi).not.toHaveBeenCalled();
+  });
+});
+
+// Slike koje osoblje okaci backend vraca kao putanju ("/uploads/ime.jpg"), a
+// telefonu treba puna adresa - inace baner ostane prazan.
+describe('mediaUrl', () => {
+  test('relativnu putanju spaja sa adresom servera', () => {
+    const url = mediaUrl('/uploads/leto.jpg');
+
+    expect(url).toMatch(/^https?:\/\/.+\/uploads\/leto\.jpg$/);
+    // Bez zavrsnog "/api" - slike ne stoje iza API putanje.
+    expect(url).not.toContain('/api/uploads');
+  });
+
+  test('punu adresu ostavlja kakva jeste', () => {
+    expect(mediaUrl('https://cdn.primer.rs/slika.jpg')).toBe('https://cdn.primer.rs/slika.jpg');
+  });
+
+  test('bez putanje vraca null', () => {
+    expect(mediaUrl(null)).toBeNull();
+    expect(mediaUrl('')).toBeNull();
   });
 });

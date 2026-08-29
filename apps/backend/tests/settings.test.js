@@ -43,8 +43,7 @@ describe('POST /api/settings', () => {
 
   test('admin kreira vise podesavanja', async () => {
     const settings = [
-      { key: 'rounding_minutes', value: '15', description: 'Zaokruzivanje minuta' },
-      { key: 'minimum_charge_minutes', value: '30', description: 'Minimalna naplata' },
+      { key: 'hour_grace_minutes', value: '15', description: 'Prag minuta preko punog sata' },
       { key: 'app_name', value: 'Kids Club', description: 'Naziv aplikacije' },
       { key: 'contact_phone', value: '0641234567', description: 'Kontakt telefon' },
       { key: 'address', value: 'Bulevar 123, Beograd', description: 'Adresa' },
@@ -299,16 +298,13 @@ describe('PATCH /api/settings/announcement_tabs', () => {
 // trajanja i bez naplate, a paket bi ostao obrisan na nulu.
 describe('Provera brojcanih podesavanja', () => {
   const losi = [
-    ['rounding_minutes', 'abc', 'tekst umesto broja'],
-    ['rounding_minutes', '0', 'nula bi delila sa nulom'],
-    ['rounding_minutes', '-5', 'negativan korak'],
-    ['rounding_minutes', '61', 'iznad gornje granice'],
-    ['rounding_minutes', '15abc', 'broj sa repom'],
-    ['rounding_minutes', '1.9', 'decimalan broj'],
-    ['rounding_minutes', '', 'prazno'],
-    ['minimum_charge_minutes', 'abc', 'tekst umesto broja'],
-    ['minimum_charge_minutes', '-100', 'negativna naplata'],
-    ['minimum_charge_minutes', '181', 'iznad gornje granice'],
+    ['hour_grace_minutes', 'abc', 'tekst umesto broja'],
+    ['hour_grace_minutes', '-5', 'negativan prag'],
+    ['hour_grace_minutes', '60', 'prag od 60 bi svaki boravak sveo na jedan sat'],
+    ['hour_grace_minutes', '75', 'iznad gornje granice'],
+    ['hour_grace_minutes', '15abc', 'broj sa repom'],
+    ['hour_grace_minutes', '1.9', 'decimalan broj'],
+    ['hour_grace_minutes', '', 'prazno'],
   ];
 
   for (const [key, value, zasto] of losi) {
@@ -324,10 +320,9 @@ describe('Provera brojcanih podesavanja', () => {
   }
 
   const dobri = [
-    ['rounding_minutes', '1'],
-    ['rounding_minutes', '60'],
-    ['minimum_charge_minutes', '0'],
-    ['minimum_charge_minutes', '180'],
+    ['hour_grace_minutes', '0'],
+    ['hour_grace_minutes', '15'],
+    ['hour_grace_minutes', '59'],
   ];
 
   for (const [key, value] of dobri) {
@@ -348,13 +343,12 @@ describe('Provera brojcanih podesavanja', () => {
   test('neupotrebljiva vrednost pada na podrazumevanu, ne na NaN', () => {
     const { numericSetting } = require('../src/config/settings');
 
-    expect(numericSetting('rounding_minutes', 'pokvareno')).toBe(15);
-    expect(numericSetting('rounding_minutes', '0')).toBe(15);
-    expect(numericSetting('rounding_minutes', null)).toBe(15);
-    expect(numericSetting('minimum_charge_minutes', 'abc')).toBe(30);
+    expect(numericSetting('hour_grace_minutes', 'pokvareno')).toBe(15);
+    expect(numericSetting('hour_grace_minutes', '60')).toBe(15);
+    expect(numericSetting('hour_grace_minutes', null)).toBe(15);
 
     // Ispravna vrednost se postuje.
-    expect(numericSetting('rounding_minutes', '10')).toBe(10);
-    expect(numericSetting('minimum_charge_minutes', '0')).toBe(0);
+    expect(numericSetting('hour_grace_minutes', '10')).toBe(10);
+    expect(numericSetting('hour_grace_minutes', '0')).toBe(0);
   });
 });

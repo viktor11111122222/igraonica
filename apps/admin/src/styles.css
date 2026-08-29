@@ -164,6 +164,23 @@ body {
   font-weight: 500;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  /* Chrome na Androidu osvezava stranicu na povlacenje na dole. Radnik koji
+     skroluje spisak prisutnih bi tako izgubio otvoren skener i uneti kod. */
+  overscroll-behavior-y: contain;
+  /* Android bi inace sam uvecavao pojedine pasuse ("font boosting"), pa bi se
+     panel na telefonu razisao sa onim sto se vidi na racunaru. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Panel ima svoje stanje pritiska; plavi bljesak preko njega je samo smetnja. */
+button,
+a,
+label,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
 }
 
 h1,
@@ -209,7 +226,9 @@ textarea {
   flex-direction: column;
   position: sticky;
   top: 0;
-  height: 100vh;
+  /* dvh, ne vh: traka pretrazivaca na telefonu se skuplja i siri, a `vh` uvek
+     racuna najvecu visinu, pa bi dno bocne trake ostalo ispod ivice ekrana. */
+  height: 100dvh;
 }
 
 .brand {
@@ -375,6 +394,11 @@ textarea {
   display: grid;
   gap: 16px;
 }
+/* Bez ovoga clan mreze ne moze da se skupi ispod sirine svog sadrzaja, pa je
+   grafikon od 640px razvlacio kolonu i celu stranicu gurao u stranu. */
+.grid > * {
+  min-width: 0;
+}
 .grid.cols-2 {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
@@ -397,6 +421,13 @@ textarea {
 }
 
 /* ============ Stat plocica ============ */
+/* Akcija koja pripada samoj brojci (npr. naplata minus sati) - preko cele
+   sirine plocice, da bude meta za palac a ne sitno dugme u uglu. */
+.stat-action {
+  margin-top: 10px;
+  width: 100%;
+  justify-content: center;
+}
 .stat {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -719,7 +750,7 @@ td.actions {
 
 /* ============ Login ============ */
 .login-wrap {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   background: linear-gradient(160deg, var(--primary-tint), var(--primary-soft));
@@ -749,6 +780,13 @@ td.actions {
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
+/* Nedelja: strelice sa strane, raspon datuma u sredini. */
+.week-range {
+  font-weight: 700;
+  min-width: 210px;
+  text-align: center;
+}
+
 .toolbar input,
 .toolbar select {
   padding: 8px 11px;
@@ -1299,6 +1337,12 @@ textarea.setting-input {
   color: var(--text-muted);
   margin-top: 3px;
 }
+/* Minus sati nisu obicna napomena - radnik po njima naplacuje, pa moraju da se
+   razlikuju od sivog reda sa preostalim satima. */
+.scan-result-meta.warn {
+  color: var(--danger-solid);
+  font-weight: 600;
+}
 /* Zaglavlje je lepljivo, pa `scrollIntoView` bez ovoga dovede vrh trake tacno
    ispod njega - vidi se samo donja ivica. */
 .scan-result,
@@ -1388,6 +1432,15 @@ textarea.setting-input {
     padding: 10px 14px;
     padding-top: max(10px, env(safe-area-inset-top));
     gap: 10px;
+    /* Stranica sa vise akcija (npr. roditelj: Nazad, Dodeli paket) ih je gurala
+       van ekrana i stiskala naslov na nulu - nije se videlo ni ciji je nalog
+       otvoren. Sad akcije koje ne stanu padaju u svoj red ispod naslova. */
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .topbar-title {
+    flex: 1 1 auto;
+    min-width: 96px;
   }
   .topbar h1 {
     font-size: 17px;
@@ -1425,8 +1478,19 @@ textarea.setting-input {
   .btn {
     min-height: 44px;
   }
+  /* I mala dugmad su ovde prava radnja - "Odjavi" na prijavama, "Izmeni" i
+     "Obrisi" u karticama - pa ne smeju da budu ispod mere za palac. */
   .btn.sm {
-    min-height: 36px;
+    min-height: 40px;
+  }
+  /* Zvono nosi znacku sa brojem i promasivalo se; ostalo je isto sto i meni. */
+  .zvono {
+    width: 42px;
+    height: 42px;
+  }
+  .stepper button {
+    width: 42px;
+    height: 42px;
   }
   /* Ispod 16px iOS zumira stranicu cim se polje fokusira i vise se ne vrati. */
   input,
@@ -1434,12 +1498,13 @@ textarea.setting-input {
   textarea {
     font-size: 16px;
   }
-  /* Prst trazi bar 40px. Cipovi, prekidaci i padajuci meniji su bili ispod
-     toga i promasivali su se. */
+  /* Prst trazi bar 44px. Cipovi, prekidaci i padajuci meniji su bili ispod
+     toga i promasivali su se. Kvadratici i radio dugmad imaju svoju meru
+     (natpis uz njih je deo mete), pa ih ovo ne dira. */
   select,
-  .toolbar input,
-  .toolbar select {
-    min-height: 42px;
+  textarea,
+  input:not([type='checkbox']):not([type='radio']) {
+    min-height: 44px;
   }
   .chip {
     min-height: 40px;
@@ -1456,20 +1521,29 @@ textarea.setting-input {
   .switch {
     width: 58px;
     height: 36px;
+    position: relative;
+  }
+  /* Prekidac ostaje ovoliki koliko izgleda dobro, ali meta za prst se siri
+     nevidljivo do 44px - veci prekidac bi izgledao kao greska, promasen
+     prekidac je gora greska. */
+  .switch::after {
+    content: '';
+    position: absolute;
+    inset: -4px -2px;
   }
   .switch-knob {
     width: 28px;
     height: 28px;
   }
   .switch.on .switch-knob {
-    transform: translateX(22px);
+    transform: translateX(24px);
   }
   /* Veza u kartici (ime roditelja, naslov objave) - vise mesta za prst, bez
      menjanja izgleda reda. */
   .table-wrap tbody td a {
     display: inline-flex;
     align-items: center;
-    min-height: 36px;
+    min-height: 40px;
   }
 
   /* Pet plocica jedna ispod druge je bilo previse skrolovanja do grafikona.
@@ -1502,6 +1576,19 @@ textarea.setting-input {
   }
   .field-row {
     grid-template-columns: 1fr;
+  }
+
+  /* Nedelja u jelovniku: "Sledeca" nije stajala pored datuma, pa je visila sama
+     u drugom redu. Sad datum ide preko cele sirine, a strelice pod njim dele
+     red na pola. */
+  .week-nav .week-range {
+    order: -1;
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+  .week-nav .btn {
+    flex: 1 1 0;
+    justify-content: center;
   }
 
   /* Panel obavestenja se sidri uz desnu ivicu ekrana, ne uz zvono - inace bi

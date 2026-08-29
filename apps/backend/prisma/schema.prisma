@@ -35,6 +35,10 @@ enum ReservationType {
   BIRTHDAY
   PRIVATE_EVENT
   GROUP_BOOKING
+  MONTHLY_EVENT
+  // Sve sto nije u spisku. Naziv tada upisuje osoblje u `customType`, pa nema
+  // potrebe za migracijom svaki put kad se pojavi nova vrsta rezervacije.
+  OTHER
 }
 
 // Vrste obavestenja. Ime nosi sta se desilo, ne kome se salje - isti dogadjaj
@@ -49,30 +53,60 @@ enum NotificationType {
   HOURS_ADJUSTED
 }
 
+// Kako se akcija izrazava. TEXT je za one koje nisu broj ("drugo dete
+// besplatno") - tada vrednost ostaje prazna, a sve pise u nazivu i opisu.
+enum DiscountType {
+  PERCENT
+  AMOUNT
+  TEXT
+}
+
 enum ReservationStatus {
   PENDING
   CONFIRMED
   CANCELLED
 }
 
+// Dogadjaji imaju svoje enume iako danas nose iste vrednosti kao rezervacije.
+// Evidencija je interna, pa tipovi mogu da se dodaju samo ovde, bez diranja
+// onoga sto roditelji vide.
+enum EventType {
+  BIRTHDAY
+  PRIVATE_EVENT
+  GROUP_BOOKING
+  // Sve sto nije u spisku. Naziv tada upisuje osoblje u `customType`, pa nema
+  // potrebe za migracijom svaki put kad se pojavi nova vrsta dogadjaja.
+  OTHER
+}
+
+enum EventStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  firstName    String   @map("first_name")
-  lastName     String   @map("last_name")
-  phone        String?
-  role         Role     @default(PARENT)
-  avatarUrl    String?  @map("avatar_url")
-  isActive     Boolean  @default(true) @map("is_active")
-  pushToken    String?  @map("push_token")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  phone     String?
+  role      Role     @default(PARENT)
+  avatarUrl String?  @map("avatar_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  pushToken String?  @map("push_token")
+  // Sati odigrani bez pokrica u paketu - "minus sati". Raste pri odjavi kad
+  // paket ne pokriva boravak, a pada kad roditelj plati ili dobije nov paket.
+  debtHours Decimal  @default(0) @map("debt_hours") @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   children         Child[]
   userPackages     UserPackage[]
   blogPosts        BlogPost[]
   reservations     Reservation[]
+  events           Event[]
   checkedInVisits  Visit[]          @relation("CheckedInBy")
   checkedOutVisits Visit[]          @relation("CheckedOutBy")
   hourAdjustments  HourAdjustment[]
@@ -151,6 +185,9 @@ model Visit {
   checkedOutAt    DateTime?   @map("checked_out_at")
   durationMinutes Int?        @map("duration_minutes")
   hoursDeducted   Decimal?    @map("hours_deducted") @db.Decimal(10, 2)
+  // Deo naplacenog koji nije imao pokrice u paketu. Sam dug se vodi na
+  // roditelju; ovde stoji da bi se videlo iz koje posete je nastao.
+  debtHours       Decimal?    @map("debt_hours") @db.Decimal(10, 2)
   checkedInById   String      @map("checked_in_by")
   checkedOutById  String?     @map("checked_out_by")
   status          VisitStatus @default(CHECKED_IN)
@@ -221,6 +258,8 @@ model Reservation {
   id           String            @id @default(uuid())
   userId       String?           @map("user_id")
   type         ReservationType
+  // Popunjeno samo kad je tip OTHER; kod ostalih tipova ostaje prazno.
+  customType   String?           @map("custom_type")
   title        String
   date         DateTime          @db.Date
   startTime    String            @map("start_time")
@@ -238,6 +277,83 @@ model Reservation {
   user User? @relation(fields: [userId], references: [id])
 
   @@map("reservations")
+}
+
+// Interna evidencija dogadjaja u igraonici. Ista polja kao rezervacija, ali
+// odvojena tabela jer je ovo samo za osoblje: ruta nema javni deo, pa mobilna
+// aplikacija nema odakle da ih procita.
+model Event {
+  id           String      @id @default(uuid())
+  userId       String?     @map("user_id")
+  type         EventType
+  // Popunjeno samo kad je tip OTHER; kod ostalih tipova ostaje prazno.
+  customType   String?     @map("custom_type")
+  title        String
+  date         DateTime    @db.Date
+  startTime    String      @map("start_time")
+  endTime      String      @map("end_time")
+  guestCount   Int?        @map("guest_count")
+  childName    String?     @map("child_name")
+  childAge     Int?        @map("child_age")
+  contactPhone String?     @map("contact_phone")
+  notes        String?
+  status       EventStatus @default(PENDING)
+  isFullDay    Boolean     @default(false) @map("is_full_day")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("events")
+}
+
+// Promocija sa slikom. U aplikaciji se prvi put pokaze kao iskacuci prozor, a
+// posle toga stoji na pocetnoj iznad galerije. Vise promocija moze da bude
+// aktivno istovremeno.
+//
+// Odvojena je od `Promotion` (akcije/popusti): tamo je racunica popusta, ovde
+// slika i tekst koje roditelj vidi kao baner.
+model PromoBanner {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  imageUrl    String? @map("image_url")
+
+  // Iskljuceno znaci da promocija zivi samo na pocetnoj, bez iskacuceg prozora.
+  showPopup Boolean @default(true) @map("show_popup")
+
+  // Nema roka vazenja: promocija stoji dok je osoblje ne iskljuci ili obrise,
+  // a ukljucuje se ponovo kad god zatreba.
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("promo_banners")
+}
+
+// Akcija koja vazi u odredjenom periodu. Datumi su @db.Date jer akcija traje
+// cele dane - vreme bi ovde samo pravilo probleme oko ponoci i vremenskih zona.
+model Promotion {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+
+  discountType  DiscountType @default(PERCENT) @map("discount_type")
+  // Prazno kod TEXT akcija. Decimal, ne Float, iz istog razloga kao i sati u
+  // paketima: novac i procenti ne smeju da skupljaju gresku zaokruzivanja.
+  discountValue Decimal?     @map("discount_value") @db.Decimal(10, 2)
+
+  dateFrom DateTime @map("date_from") @db.Date
+  dateTo   DateTime @map("date_to") @db.Date
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([dateFrom, dateTo])
+  @@map("promotions")
 }
 
 model Setting {

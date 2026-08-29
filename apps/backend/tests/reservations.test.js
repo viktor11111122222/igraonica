@@ -416,3 +416,104 @@ describe('Vreme zavrsetka mora biti posle pocetka', () => {
       .set('Authorization', `Bearer ${adminToken}`);
   });
 });
+
+// Osoblje bira tip iz spiska ili upisuje svoj, bez izmene koda i migracije.
+describe('Tipovi rezervacije: mesecni dogadjaji i sopstveni tip', () => {
+  const osnovno = { title: 'Provera tipova', date: '2026-11-12', startTime: '10:00', endTime: '12:00' };
+  let sopstvenaId;
+
+  test('admin kreira mesecni dogadjaj', async () => {
+    const res = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, type: 'MONTHLY_EVENT' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.reservation.type).toBe('MONTHLY_EVENT');
+    expect(res.body.reservation.customType).toBeNull();
+  });
+
+  test('admin upisuje svoj tip', async () => {
+    const res = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, type: 'OTHER', customType: '  Skolska ekskurzija  ' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.reservation.type).toBe('OTHER');
+    expect(res.body.reservation.customType).toBe('Skolska ekskurzija');
+    sopstvenaId = res.body.reservation.id;
+  });
+
+  test('tip "Drugo" bez upisanog naziva se odbija', async () => {
+    const res = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, type: 'OTHER' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('naziv od samih razmaka se odbija', async () => {
+    const res = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, type: 'OTHER', customType: '   ' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('tip iz spiska ne cuva upisani naziv', async () => {
+    const res = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ ...osnovno, type: 'MONTHLY_EVENT', customType: 'Skolska ekskurzija' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.reservation.customType).toBeNull();
+  });
+
+  test('admin filtrira po mesecnim dogadjajima', async () => {
+    const res = await request(app)
+      .get('/api/reservations/all?type=MONTHLY_EVENT')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.reservations.length).toBeGreaterThanOrEqual(1);
+    res.body.reservations.forEach((r) => expect(r.type).toBe('MONTHLY_EVENT'));
+  });
+
+  test('prelazak na tip iz spiska brise upisani naziv', async () => {
+    const res = await request(app)
+      .patch(`/api/reservations/${sopstvenaId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ type: 'MONTHLY_EVENT' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.reservation.customType).toBeNull();
+  });
+
+  test('prelazak na "Drugo" bez naziva se odbija', async () => {
+    const res = await request(app)
+      .patch(`/api/reservations/${sopstvenaId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ type: 'OTHER' });
+
+    expect(res.status).toBe(400);
+  });
+
+  // Roditelji u aplikaciji vide javnu listu; tamo tip OTHER mora da ima ime.
+  test('javna lista nosi upisani naziv tipa', async () => {
+    await request(app)
+      .patch(`/api/reservations/${sopstvenaId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ type: 'OTHER', customType: 'Skolska ekskurzija' });
+
+    const res = await request(app).get('/api/reservations');
+
+    expect(res.status).toBe(200);
+    const nasa = res.body.reservations.find((r) => r.id === sopstvenaId);
+    expect(nasa.type).toBe('OTHER');
+    expect(nasa.customType).toBe('Skolska ekskurzija');
+  });
+});

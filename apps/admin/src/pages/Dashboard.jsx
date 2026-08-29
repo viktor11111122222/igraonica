@@ -53,7 +53,9 @@ export default function Dashboard() {
             />
             <Stat label="Posete danas" value={s?.todayVisits ?? 0} tone="primary" />
             <Stat label="Utroseno sati danas" value={formatHours(s?.hoursUsedToday)} />
-            <Stat label="Roditelji" value={s?.totalUsers ?? 0} hint="Aktivna naloga" />
+            <Stat label="Roditelji" value={s?.totalUsers ?? 0} hint="Aktivna naloga
+            
+            " />
             <Stat label="Deca" value={s?.totalChildren ?? 0} hint="Registrovana" />
           </div>
         )}

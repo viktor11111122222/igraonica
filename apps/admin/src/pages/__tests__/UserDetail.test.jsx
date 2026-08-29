@@ -234,3 +234,79 @@ describe('UserDetail - dodela paketa', () => {
     expect(screen.getByRole('dialog', { name: 'Dodela paketa' })).toBeInTheDocument();
   });
 });
+
+// Minus sati nastaju kad dete udje bez paketa. Panel ih pokazuje i nudi
+// "Naplaceno" - naplata se desava na pultu, panel je samo evidencija.
+describe('UserDetail - minus sati', () => {
+  const uMinusu = { ...roditelj, debtHours: '3.00' };
+
+  test('bez minusa nema ni brojke ni dugmeta', async () => {
+    prikazi();
+
+    await screen.findByRole('heading', { name: 'Ana Petrovic' });
+    expect(screen.queryByText('Minus sati')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Naplati minus/ })).toBeNull();
+  });
+
+  test('minus se prikazuje kao negativan broj sati', async () => {
+    odgovori(uMinusu);
+    prikazi();
+
+    await screen.findByRole('heading', { name: 'Ana Petrovic' });
+    expect(screen.getByText('Minus sati')).toBeInTheDocument();
+    expect(screen.getByText('-3,0 h')).toBeInTheDocument();
+  });
+
+  // Dugme stoji uz sam iznos, ne u zaglavlju stranice: na telefonu zaglavlje
+  // vec nosi "Nazad" i "Dodeli paket", pa je treca akcija isterivala naslov sa
+  // ekrana i gurala stranicu bocno.
+  test('naplata stoji u plocici sa minusom, ne u zaglavlju', async () => {
+    odgovori(uMinusu);
+    prikazi();
+    await screen.findByRole('heading', { name: 'Ana Petrovic' });
+
+    const dugme = screen.getByRole('button', { name: /Naplati minus/ });
+    expect(dugme.closest('.stat')).not.toBeNull();
+  });
+
+  test('naplata trazi potvrdu pa salje zahtev', async () => {
+    odgovori(uMinusu);
+    const user = userEvent.setup();
+    prikazi();
+    await screen.findByRole('heading', { name: 'Ana Petrovic' });
+
+    await user.click(screen.getByRole('button', { name: /Naplati minus/ }));
+
+    const dijalog = screen.getByRole('dialog');
+    expect(within(dijalog).getByText(/tek kad roditelj plati/)).toBeInTheDocument();
+    await user.click(within(dijalog).getByRole('button', { name: 'Naplaceno' }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/u1/settle-debt'));
+  });
+
+  test('odustajanje ne salje nista', async () => {
+    odgovori(uMinusu);
+    const user = userEvent.setup();
+    prikazi();
+    await screen.findByRole('heading', { name: 'Ana Petrovic' });
+
+    await user.click(screen.getByRole('button', { name: /Naplati minus/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Odustani' }));
+
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  test('greska pri naplati se vidi u dijalogu', async () => {
+    odgovori(uMinusu);
+    post.mockRejectedValue(new Error('Minus sati su se promenili u medjuvremenu, proverite iznos.'));
+    const user = userEvent.setup();
+    prikazi();
+    await screen.findByRole('heading', { name: 'Ana Petrovic' });
+
+    await user.click(screen.getByRole('button', { name: /Naplati minus/ }));
+    const dijalog = screen.getByRole('dialog');
+    await user.click(within(dijalog).getByRole('button', { name: 'Naplaceno' }));
+
+    expect(await within(dijalog).findByText(/promenili u medjuvremenu/)).toBeInTheDocument();
+  });
+});

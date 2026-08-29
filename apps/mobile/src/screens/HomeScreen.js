@@ -16,6 +16,9 @@ import { useSettings } from '../context/SettingsContext';
 import { useClosedDays } from '../context/ClosedDaysContext';
 import { apiRequest } from '../utils/api';
 import Banner from '../components/Banner';
+import PromoList from '../components/PromoList';
+import PromoBanners from '../components/PromoBanners';
+import PromoPopup from '../components/PromoPopup';
 import PressableScale from '../components/PressableScale';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
@@ -24,9 +27,8 @@ import { mailUrl, mapsUrl, open, parseCoords, telUrl } from '../utils/contact';
 import { summarize } from '../utils/packages';
 import { photos } from '../data/gallery';
 import { MEALS } from '../data/meals';
-import { radius, spacing, type, shadow } from '../theme';
-import { useTheme } from '../context/ThemeContext';
-import { useThemedStyles } from '../hooks/useThemedStyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, font, radius, spacing, type, shadow } from '../theme';
 
 const num = (value) =>
   (Math.round((Number(value) || 0) * 10) / 10).toString().replace('.', ',');
@@ -34,29 +36,43 @@ const num = (value) =>
 // Pocetni ekran je pregled dana: koliko sati ima, sta se danas jede, sta se
 // danas radi i nekoliko slika. Detalji su na svojim tabovima.
 export default function HomeScreen({ navigation }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(makeStyles);
   const { user } = useAuth();
+  // Zaglavlje krece ispod sistemske trake; njena visina se razlikuje po
+  // uredjaju (iPhone ~59, Android 24-49), pa se ne sme upisati kao broj.
+  const insets = useSafeAreaInsets();
   const { settings } = useSettings();
   const { isClosed } = useClosedDays();
   // Pocetnom ekranu treba samo znacka, ne i ceo spisak.
   const { unreadCount } = useNotifications({ samoBroj: true });
 
   const [packages, setPackages] = useState([]);
+  // Sati odigrani bez pokrica u paketu. Stizu uz pakete, pa nema drugog zahteva.
+  const [debtHours, setDebtHours] = useState(0);
   const [menu, setMenu] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [promotions, setPromotions] = useState([]);
+  // Promocije sa slikom: prvi put idu preko celog ekrana, posle stoje iznad
+  // galerije.
+  const [promoBanners, setPromoBanners] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     const today = todayKey();
-    const [pkgs, todayMenu, schedule] = await Promise.all([
+    const [pkgs, todayMenu, schedule, akcije, baneri] = await Promise.all([
       apiRequest('/packages/my').catch(() => null),
       apiRequest(`/menu?date=${today}`).catch(() => null),
       apiRequest('/schedule').catch(() => null),
+      apiRequest('/promotions').catch(() => null),
+      apiRequest('/promo-banners').catch(() => null),
     ]);
-    if (pkgs) setPackages(pkgs.userPackages || []);
+    if (pkgs) {
+      setPackages(pkgs.userPackages || []);
+      setDebtHours(Number(pkgs.debtHours) || 0);
+    }
     if (todayMenu) setMenu(todayMenu.items || []);
     if (schedule) setActivities(schedule.week?.[dayIndex(new Date())] || []);
+    if (akcije) setPromotions(akcije.promotions || []);
+    if (baneri) setPromoBanners(baneri.promoBanners || []);
   }, []);
 
   useAutoRefresh(loadData);
@@ -121,13 +137,14 @@ export default function HomeScreen({ navigation }) {
   }
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Banner rounded style={styles.header}>
+      <Banner rounded style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.headerRed}>
           <View style={styles.headerTekst}>
             <Text style={styles.greeting}>Zdravo,</Text>
@@ -170,12 +187,26 @@ export default function HomeScreen({ navigation }) {
           {sum.hasAny && (
             <Text style={styles.hoursSub}>od ukupno {num(sum.total)} h</Text>
           )}
-          {!sum.hasAny && (
+          {!sum.hasAny && !debtHours && (
             <Text style={styles.hoursSub}>Kontaktirajte igraonicu za paket</Text>
+          )}
+          {/* Minus je jedina brojka koja se placa, pa stoji uz sate a ne
+              zakopan na drugom ekranu. */}
+          {debtHours > 0 && (
+            <Text style={styles.hoursDebt}>Minus {num(debtHours)} h za naplatu</Text>
           )}
         </View>
         <Ionicons name="chevron-forward" size={22} color={colors.textFaint} />
       </PressableScale>
+
+      {/* Akcije traju ogranicen broj dana, pa stoje visoko - ispod sati, a
+          iznad onoga sto se ionako ponavlja svaki dan. */}
+      {promotions.length > 0 && (
+        <>
+          <Section title={promotions.length > 1 ? 'Akcije' : 'Akcija'} />
+          <PromoList promotions={promotions} />
+        </>
+      )}
 
       {/* Stoji iznad rucnog obavestenja: ako se danas ne radi, to je najvaznija
           informacija na ekranu. */}
@@ -241,6 +272,15 @@ export default function HomeScreen({ navigation }) {
           ))
         )}
       </View>
+        </>
+      )}
+
+      {/* Promocije stoje tacno iznad galerije: to je mesto koje roditelj vidi
+          kad skroluje do kraja pocetne, a prvi put su ionako vec iskocile. */}
+      {promoBanners.length > 0 && (
+        <>
+          <Section title={promoBanners.length > 1 ? 'Promocije' : 'Promocija'} />
+          <PromoBanners promocije={promoBanners} />
         </>
       )}
 
@@ -332,11 +372,15 @@ export default function HomeScreen({ navigation }) {
         </>
       )}
     </ScrollView>
+
+      {/* Promocija se prvi put pokazuje preko celog ekrana; komponenta sama
+          pamti sta je uredjaj vec video, pa se posle toga ne vraca. */}
+      <PromoPopup promocije={promoBanners} />
+    </>
   );
 }
 
 function Section({ title, action, onPress }) {
-  const styles = useThemedStyles(makeStyles);
 
   return (
     <View style={styles.sectionHeader}>
@@ -350,13 +394,14 @@ function Section({ title, action, onPress }) {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: spacing.xxxl * 2 },
 
   // Boju, saru i zaobljeno dno crta Banner; ovde ostaje samo vazduh oko teksta.
   header: {
-    paddingTop: 64,
+    // paddingTop dolazi iz sigurne zone (vidi Banner) - sistemska traka nije
+    // svuda iste visine.
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
@@ -407,6 +452,9 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   hoursValue: { ...type.display, fontSize: 34, color: colors.primaryDarker, marginTop: 2 },
   hoursSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+  // Tezina ide preko fontFamily: `fontWeight` uz Montserrat radi samo na
+  // iOS-u, a na Androidu bi red ostao tanak (vidi theme.js).
+  hoursDebt: { ...type.caption, color: colors.danger, fontFamily: font.semibold, marginTop: 2 },
 
   sectionHeader: {
     flexDirection: 'row',

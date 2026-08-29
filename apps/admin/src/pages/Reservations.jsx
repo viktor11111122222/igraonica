@@ -12,6 +12,7 @@ import {
 
 const EMPTY = {
   type: 'BIRTHDAY',
+  customType: '',
   title: '',
   date: todayKey(),
   startTime: '17:00',
@@ -25,7 +26,13 @@ const EMPTY = {
 };
 
 const statusOf = (key) => RESERVATION_STATUSES.find((s) => s.key === key) || {};
-const typeLabel = (key) => RESERVATION_TYPES.find((t) => t.key === key)?.label || key;
+
+// Kod tipa "Drugo" u tabeli stoji ono sto je osoblje upisalo - "Drugo" samo po
+// sebi ne kaze nista.
+const typeLabel = (r) =>
+  r.type === 'OTHER'
+    ? r.customType || 'Drugo'
+    : RESERVATION_TYPES.find((t) => t.key === r.type)?.label || r.type;
 
 export default function Reservations() {
   const [page, setPage] = useState(1);
@@ -50,6 +57,7 @@ export default function Reservations() {
     setFormError('');
     const payload = {
       type: form.type,
+      customType: form.type === 'OTHER' ? form.customType : undefined,
       title: form.title,
       date: form.date,
       startTime: form.startTime,
@@ -99,7 +107,7 @@ export default function Reservations() {
 
   return (
     <>
-      <PageHeader title="Rezervacije" subtitle="Rodjendani, proslave i grupne posete">
+      <PageHeader title="Rezervacije" subtitle="Rodjendani, proslave, mesecni i sopstveni dogadjaji">
         <button className="btn" onClick={() => setForm({ ...EMPTY })}>
           Nova rezervacija
         </button>
@@ -179,7 +187,7 @@ export default function Reservations() {
                             )}
                             {r.notes && <div className="row-sub">{r.notes}</div>}
                           </td>
-                          <td className="muted" data-label="Tip">{typeLabel(r.type)}</td>
+                          <td className="muted" data-label="Tip">{typeLabel(r)}</td>
                           <td className="muted" data-label="Datum">{formatDate(r.date)}</td>
                           <td className="muted" data-label="Vreme">
                             {r.isFullDay ? 'Ceo dan' : `${r.startTime} – ${r.endTime}`}
@@ -215,6 +223,7 @@ export default function Reservations() {
                                 setForm({
                                   id: r.id,
                                   type: r.type,
+                                  customType: r.customType || '',
                                   title: r.title,
                                   date: r.date.slice(0, 10),
                                   startTime: r.startTime,
@@ -278,6 +287,17 @@ export default function Reservations() {
                 <input value={form.title} onChange={set('title')} required />
               </Field>
             </div>
+
+            {form.type === 'OTHER' && (
+              <Field label="Naziv tipa">
+                <input
+                  value={form.customType}
+                  onChange={set('customType')}
+                  placeholder="npr. Skolska ekskurzija"
+                  required
+                />
+              </Field>
+            )}
 
             <div className="field-row">
               <Field label="Datum">

@@ -121,9 +121,28 @@ export const RESERVATION_TYPES = [
   { key: 'BIRTHDAY', label: 'Rodjendan' },
   { key: 'PRIVATE_EVENT', label: 'Privatna proslava' },
   { key: 'GROUP_BOOKING', label: 'Grupna poseta' },
+  { key: 'MONTHLY_EVENT', label: 'Mesecni dogadjaji' },
+  // Kad nista iz spiska ne odgovara, osoblje upisuje svoj naziv u `customType`.
+  { key: 'OTHER', label: 'Drugo' },
 ];
 
 export const RESERVATION_STATUSES = [
+  { key: 'PENDING', label: 'Na cekanju', tone: 'amber' },
+  { key: 'CONFIRMED', label: 'Potvrdjeno', tone: 'green' },
+  { key: 'CANCELLED', label: 'Otkazano', tone: 'red' },
+];
+
+// Dogadjaji su odvojena, interna evidencija, pa imaju svoju listu tipova -
+// dodavanje tipa ovde ne dira ono sto roditelji vide u rezervacijama.
+export const EVENT_TYPES = [
+  { key: 'BIRTHDAY', label: 'Rodjendan' },
+  { key: 'PRIVATE_EVENT', label: 'Privatna proslava' },
+  { key: 'GROUP_BOOKING', label: 'Grupna poseta' },
+  // Kad nista iz spiska ne odgovara, osoblje upisuje svoj naziv u `customType`.
+  { key: 'OTHER', label: 'Drugo' },
+];
+
+export const EVENT_STATUSES = [
   { key: 'PENDING', label: 'Na cekanju', tone: 'amber' },
   { key: 'CONFIRMED', label: 'Potvrdjeno', tone: 'green' },
   { key: 'CANCELLED', label: 'Otkazano', tone: 'red' },
