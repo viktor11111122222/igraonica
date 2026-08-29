@@ -105,12 +105,27 @@ describe('PackageScreen - minus sati', () => {
     expect(screen.queryByText(/Sati odigrani bez paketa/)).toBeNull();
   });
 
+  // Sati jos ima, pa minus stoji kao zasebna kartica ispod stanja.
   test('minus se prikazuje kao negativan broj sati', async () => {
     odgovori({ debtHours: 3 });
     await prikazi();
 
     expect(await screen.findByText('-3 h')).toBeTruthy();
     expect(screen.getByText(/Sati odigrani bez paketa/)).toBeTruthy();
+  });
+
+  // "preostalo 0,0 h" pa ispod "-4,0 h" bi bila ista stvar dvaput; kad sati
+  // nema, minus preuzima mesto stanja.
+  test('kad su sati potroseni, minus stoji na mestu preostalog', async () => {
+    odgovori({ packages: [paket({ remainingHours: 0 })], debtHours: 4 });
+    await prikazi();
+
+    expect(await screen.findByText('-4 h')).toBeTruthy();
+    expect(screen.getByText('za naplatu')).toBeTruthy();
+    // "preostalo" ostaje samo u prstenu (udeo paketa), ne i kao stanje sati.
+    expect(screen.getAllByText('preostalo')).toHaveLength(1);
+    // Iznos se ne ponavlja ni u kartici ispod.
+    expect(screen.getAllByText('-4 h')).toHaveLength(1);
   });
 
   test('minus stoji i kad roditelj nema nijedan paket', async () => {

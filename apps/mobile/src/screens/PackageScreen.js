@@ -51,6 +51,8 @@ export default function PackageScreen({ navigation }) {
 
   // Zbir preko svih paketa koji vaze, ne samo preko jednog.
   const sum = summarize(packages);
+  // U minusu je onaj kome sati vise nema, a dug postoji.
+  const uMinusu = debtHours > 0 && sum.remaining <= 0;
 
   const contact = [
     { icon: 'time-outline', value: settings.working_hours },
@@ -133,10 +135,17 @@ export default function PackageScreen({ navigation }) {
             </View>
             <View style={styles.sumDivider} />
             <View style={styles.sumCell}>
-              <Text style={[styles.sumValue, { color: colors.success }]}>
-                {hours(sum.remaining)}
+              {/* Kad sati nema a dug postoji, minus JE stanje - "preostalo
+                  0,0 h" pa ispod "-4,0 h" bi bila ista stvar dvaput. */}
+              <Text
+                style={[
+                  styles.sumValue,
+                  { color: uMinusu ? colors.danger : colors.success },
+                ]}
+              >
+                {uMinusu ? `-${hours(debtHours)}` : hours(sum.remaining)}
               </Text>
-              <Text style={styles.sumLabel}>preostalo</Text>
+              <Text style={styles.sumLabel}>{uMinusu ? 'za naplatu' : 'preostalo'}</Text>
             </View>
           </View>
 
@@ -180,7 +189,11 @@ export default function PackageScreen({ navigation }) {
         <View style={styles.debtCard}>
           <Ionicons name="alert-circle-outline" size={22} color={colors.danger} />
           <View style={styles.debtTextWrap}>
-            <Text style={styles.debtValue}>-{hours(debtHours)}</Text>
+            {/* Iznos se ne ponavlja kad ga gore vec nosi stanje paketa; bez
+                paketa kartica je jedino mesto gde ga roditelj vidi. */}
+            {uMinusu && sum.hasAny ? null : (
+              <Text style={styles.debtValue}>-{hours(debtHours)}</Text>
+            )}
             <Text style={styles.debtText}>
               Sati odigrani bez paketa. Placaju se u igraonici, a novi paket ih
               pokriva pre nego sto krene da se trosi.

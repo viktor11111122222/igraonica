@@ -84,6 +84,9 @@ export default function HomeScreen({ navigation }) {
   }
 
   const sum = summarize(packages);
+  // U minusu je onaj kome sati vise nema, a dug postoji. Ako sati jos ima,
+  // stanje nije minus - dug se tada samo pripisuje ispod.
+  const uMinusu = debtHours > 0 && sum.remaining <= 0;
   const showGallery = settings.mobile_tab_gallery === 'true';
 
   const danas = todayKey();
@@ -181,19 +184,31 @@ export default function HomeScreen({ navigation }) {
       >
         <View style={styles.hoursLeft}>
           <Text style={styles.hoursLabel}>
-            {sum.hasAny ? 'Preostalo sati' : 'Nemate aktivan paket'}
+            {sum.hasAny || uMinusu ? 'Preostalo sati' : 'Nemate aktivan paket'}
           </Text>
-          {sum.hasAny && <Text style={styles.hoursValue}>{num(sum.remaining)}</Text>}
-          {sum.hasAny && (
-            <Text style={styles.hoursSub}>od ukupno {num(sum.total)} h</Text>
-          )}
-          {!sum.hasAny && !debtHours && (
+
+          {/* Kad je stanje u minusu, minus JE brojka stanja. "Preostalo 0" i
+              "minus 4 h" jedno pored drugog su govorili istu stvar dvaput, i to
+              kao da su dva razlicita podatka. */}
+          {uMinusu ? (
+            <>
+              <Text style={[styles.hoursValue, styles.hoursValueMinus]}>
+                -{num(debtHours)}
+              </Text>
+              <Text style={styles.hoursDebt}>za naplatu</Text>
+            </>
+          ) : sum.hasAny ? (
+            <>
+              <Text style={styles.hoursValue}>{num(sum.remaining)}</Text>
+              <Text style={styles.hoursSub}>od ukupno {num(sum.total)} h</Text>
+              {/* Sati jos ima, ali je ostao i stari dug - tada stoje oba, jer
+                  govore o dve razlicite stvari. */}
+              {debtHours > 0 && (
+                <Text style={styles.hoursDebt}>Minus {num(debtHours)} h za naplatu</Text>
+              )}
+            </>
+          ) : (
             <Text style={styles.hoursSub}>Kontaktirajte igraonicu za paket</Text>
-          )}
-          {/* Minus je jedina brojka koja se placa, pa stoji uz sate a ne
-              zakopan na drugom ekranu. */}
-          {debtHours > 0 && (
-            <Text style={styles.hoursDebt}>Minus {num(debtHours)} h za naplatu</Text>
           )}
         </View>
         <Ionicons name="chevron-forward" size={22} color={colors.textFaint} />
@@ -451,6 +466,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   hoursValue: { ...type.display, fontSize: 34, color: colors.primaryDarker, marginTop: 2 },
+  hoursValueMinus: { color: colors.danger },
   hoursSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
   // Tezina ide preko fontFamily: `fontWeight` uz Montserrat radi samo na
   // iOS-u, a na Androidu bi red ostao tanak (vidi theme.js).

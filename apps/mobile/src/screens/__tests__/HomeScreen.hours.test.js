@@ -70,11 +70,15 @@ describe('HomeScreen - kartica sati', () => {
     expect(screen.queryByText(/Minus/)).toBeNull();
   });
 
-  test('minus stoji uz sate', async () => {
+  // Sati jos ima, ali je ostao i stari dug: to su dva razlicita podatka, pa
+  // stoje jedan uz drugi.
+  test('uz preostale sate minus stoji kao dopuna', async () => {
     odgovori({ debtHours: 2 });
     await prikazi();
 
     expect(await screen.findByText('Minus 2 h za naplatu')).toBeTruthy();
+    expect(screen.getByText('6')).toBeTruthy();
+    expect(screen.getByText('od ukupno 10 h')).toBeTruthy();
   });
 
   // Tezina mora da ide preko fontFamily: `fontWeight` uz Montserrat radi samo
@@ -89,12 +93,36 @@ describe('HomeScreen - kartica sati', () => {
     expect(stil.fontFamily).toBe('Montserrat_600SemiBold');
   });
 
-  test('bez paketa, a sa minusom, poziv na kupovinu ustupa mesto minusu', async () => {
+  // "Preostalo 0" i "minus 4 h" jedno ispod drugog su govorili istu stvar
+  // dvaput, i to kao da su dva podatka. Kad sati nema, minus JE stanje.
+  test('kad sati nema, minus je sama brojka stanja', async () => {
+    odgovori({ packages: [{ ...paket, remainingHours: 0 }], debtHours: 4 });
+    await prikazi();
+
+    expect(await screen.findByText('-4')).toBeTruthy();
+    expect(screen.getByText('za naplatu')).toBeTruthy();
+    expect(screen.getByText('Preostalo sati')).toBeTruthy();
+    // Nema ni nule ni "Minus 4 h za naplatu" - to bi bilo dvaput isto.
+    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.queryByText('Minus 4 h za naplatu')).toBeNull();
+    expect(screen.queryByText('od ukupno 10 h')).toBeNull();
+  });
+
+  test('minus je crven, da se ne cita kao obicno stanje', async () => {
+    odgovori({ packages: [{ ...paket, remainingHours: 0 }], debtHours: 4 });
+    await prikazi();
+
+    const brojka = await screen.findByText('-4');
+    expect(StyleSheet.flatten(brojka.props.style).color).toBe('#d9534f');
+  });
+
+  test('bez paketa, a sa minusom, stoji minus umesto poziva na kupovinu', async () => {
     odgovori({ packages: [], debtHours: 1.5 });
     await prikazi();
 
-    expect(await screen.findByText('Nemate aktivan paket')).toBeTruthy();
-    expect(screen.getByText('Minus 1,5 h za naplatu')).toBeTruthy();
+    expect(await screen.findByText('-1,5')).toBeTruthy();
+    expect(screen.getByText('za naplatu')).toBeTruthy();
     expect(screen.queryByText('Kontaktirajte igraonicu za paket')).toBeNull();
+    expect(screen.queryByText('Nemate aktivan paket')).toBeNull();
   });
 });
