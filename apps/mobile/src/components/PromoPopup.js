@@ -66,10 +66,9 @@ export default function PromoPopup({ promocije }) {
     >
       <View style={styles.zastor}>
         <View style={[styles.prozor, { marginTop: insets.top, marginBottom: insets.bottom }]}>
-          <ScrollView
-            contentContainerStyle={styles.sadrzaj}
-            showsVerticalScrollIndicator={false}
-          >
+          {/* Uz vise promocija sadrzaj ne stane u prozor. Traka i linija iznad
+              dugmeta govore da ima jos - bez toga tekst deluje odseceno. */}
+          <ScrollView contentContainerStyle={styles.sadrzaj}>
             {zaPrikaz.map((p) => (
               <View key={p.id} style={styles.promocija}>
                 {p.imageUrl ? (
@@ -87,14 +86,16 @@ export default function PromoPopup({ promocije }) {
             ))}
           </ScrollView>
 
-          <PressableScale
-            style={styles.dugme}
-            onPress={zatvori}
-            accessibilityRole="button"
-            accessibilityLabel="Zatvori"
-          >
-            <Text style={styles.dugmeTekst}>U redu</Text>
-          </PressableScale>
+          <View style={styles.podnozje}>
+            <PressableScale
+              style={styles.dugme}
+              onPress={zatvori}
+              accessibilityRole="button"
+              accessibilityLabel="Zatvori"
+            >
+              <Text style={styles.dugmeTekst}>U redu</Text>
+            </PressableScale>
+          </View>
         </View>
       </View>
     </Modal>
@@ -125,9 +126,9 @@ const styles = StyleSheet.create({
   },
   naslov: { ...type.title, fontSize: 20, color: colors.text },
   opis: { ...type.body, color: colors.textMuted, lineHeight: 21 },
+  podnozje: { borderTopWidth: 1, borderTopColor: colors.border },
   dugme: {
     margin: spacing.xl,
-    marginTop: 0,
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     paddingVertical: spacing.md,

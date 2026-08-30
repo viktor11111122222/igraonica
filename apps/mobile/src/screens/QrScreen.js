@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, ActivityIndicator, ScrollView, useAnimatedValue } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Brightness from 'expo-brightness';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import Banner from '../components/Banner';
@@ -26,6 +25,19 @@ import { colors, radius, spacing, type, motion, shadow } from '../theme';
 const QR_SIZE = 280;
 const QR_QUIET = 40;
 const QR_ECL = 'Q';
+
+// Isto kao kod obavestenja u utils/push.js: modul se trazi tek ako nativnog
+// dela ima, jer bi Metro u razvoju neuspelo ucitavanje prikazao kao fatalnu
+// gresku pre nego sto `catch` ovde dodje na red.
+function osvetljenost() {
+  try {
+    const { requireOptionalNativeModule } = require('expo-modules-core');
+    if (!requireOptionalNativeModule('ExpoBrightness')) return null;
+    return require('expo-brightness');
+  } catch {
+    return null;
+  }
+}
 
 export default function QrScreen({ navigation, route }) {
   const [children, setChildren] = useState([]);
@@ -77,9 +89,16 @@ export default function QrScreen({ navigation, route }) {
 
   // Kod se cita sa ekrana. Na prigusenom ekranu ga citac tesko hvata, pa se
   // ekran pojacava dok je ovaj tab otvoren i vraca na sistemsku vrednost cim
-  // se ode dalje. Ako uredjaj to ne dozvoli, ekran samo ostaje kakav jeste.
+  // se ode dalje.
+  //
+  // Modul se uzima lenjo: u starijem buildu ga nema, a obican `import` bi tada
+  // oborio celu aplikaciju pri pokretanju. Bez njega ekran samo ostaje kakav
+  // jeste.
   useFocusEffect(
     useCallback(() => {
+      const Brightness = osvetljenost();
+      if (!Brightness) return undefined;
+
       Brightness.setBrightnessAsync(1).catch(() => {});
       return () => {
         Brightness.restoreSystemBrightnessAsync().catch(() => {});

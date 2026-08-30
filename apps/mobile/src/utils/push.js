@@ -1,7 +1,26 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import { apiRequest } from './api';
+
+// Nativni deo postoji samo u buildu koji ga ukljucuje. Stariji build - telefon
+// koji jos nije azuriran, ili simulator sa prethodnom verzijom - na obican
+// `import` puca pri pokretanju ("Cannot find native module
+// 'ExpoPushTokenManager'").
+//
+// Ne pomaze da se ucitavanje samo obavije u try/catch: Metro u razvoju sam
+// hvata pad modula i prijavljuje ga kao fatalnu gresku (crveni ekran) pre nego
+// sto `catch` ovde dodje na red. Zato se prvo pita da li nativnog dela ima -
+// `requireOptionalNativeModule` vraca null umesto da baci - pa se paket dira
+// tek ako ga ima.
+function notifikacije() {
+  try {
+    const { requireOptionalNativeModule } = require('expo-modules-core');
+    if (!requireOptionalNativeModule('ExpoPushTokenManager')) return null;
+    return require('expo-notifications');
+  } catch {
+    return null;
+  }
+}
 
 // Prijava uredjaja za obavestenja na zakljucanom ekranu.
 //
@@ -10,7 +29,7 @@ import { apiRequest } from './api';
 // Zato ovde nema nijednog bacenog izuzetka.
 
 // Android trazi kanal, inace poruke stizu bez zvuka i bez prioriteta.
-async function pripremiKanal() {
+async function pripremiKanal(Notifications) {
   if (Platform.OS !== 'android') return;
 
   await Notifications.setNotificationChannelAsync('default', {
@@ -32,9 +51,11 @@ function idProjekta() {
 // promeni - PATCH na svaki ulazak u aplikaciju bi bio uzaludan zahtev.
 export async function registrujUredjaj(poslednji = null) {
   try {
+    const Notifications = notifikacije();
+    if (!Notifications) return null;
     if (!Constants.isDevice && Platform.OS !== 'android') return null;
 
-    await pripremiKanal();
+    await pripremiKanal(Notifications);
 
     const { status } = await Notifications.getPermissionsAsync();
     let dozvola = status;
