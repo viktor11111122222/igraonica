@@ -105,3 +105,35 @@ describe('ClosedNotice - celodnevni rodjendan', () => {
     expect(screen.getByText('Ovog dana ne radimo')).toBeTruthy();
   });
 });
+
+// Rodjendan, praznik i privatna proslava idu istom karticom - menja se samo
+// razlog. Roditelj za "danas se ne dolazi" uvek vidi isti izgled.
+describe('ClosedNotice - jedan izgled za sve neradne dane', () => {
+  test('praznik ide istom karticom kao rodjendan', async () => {
+    mockZatvoreni = { [DAN]: { date: DAN, reason: 'Praznik', note: null, kind: 'CLOSED' } };
+
+    await render(<ClosedNotice date={DAN} />);
+
+    expect(screen.getByTestId('neradni-dan')).toBeTruthy();
+    expect(screen.getByText('Praznik')).toBeTruthy();
+    expect(screen.getByText('Ovog dana ne radimo')).toBeTruthy();
+  });
+
+  test('danasnji neradni dan govori "Danas"', async () => {
+    mockZatvoreni = { [DAN]: { date: DAN, reason: 'Praznik', note: null, kind: 'CLOSED' } };
+
+    await render(<ClosedNotice date={DAN} today />);
+
+    expect(screen.getByText('Danas ne radimo')).toBeTruthy();
+  });
+
+  test('rodjendan i praznik dele istu karticu, razlikuje ih samo sadrzaj', async () => {
+    mockZatvoreni = { [DAN]: { date: DAN, reason: 'Rodjendan', note: null, kind: 'BIRTHDAY' } };
+    const { toJSON } = await render(<ClosedNotice date={DAN} />);
+    const rodjendan = JSON.stringify(toJSON());
+
+    expect(rodjendan).toContain('Ceo dan');
+    // Sustina: nema crvenog obavestenja ni za jedan neradni dan.
+    expect(rodjendan).not.toContain('#d9534f');
+  });
+});

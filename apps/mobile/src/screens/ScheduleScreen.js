@@ -15,7 +15,7 @@ import { useDaySelection } from '../hooks/useDay';
 import Banner from '../components/Banner';
 import DayStrip from '../components/DayStrip';
 import Announcement from '../components/Announcement';
-import RodjendanCeoDan from '../components/RodjendanCeoDan';
+import NeradniDan from '../components/NeradniDan';
 import ClosedNotice from '../components/ClosedNotice';
 import { useClosedDays } from '../context/ClosedDaysContext';
 import { colors, radius, spacing, type, shadow } from '../theme';
@@ -146,7 +146,7 @@ export default function ScheduleScreen() {
               // vise i ne salje aktivnosti uz njega. Zato dobija celu karticu
               // umesto reda u spisku. Ista je i kad dan stigne kao neradni.
               if (rodjendan && a.isFullDay) {
-                return <RodjendanCeoDan key={a.id} />;
+                return <NeradniDan key={a.id} kind="BIRTHDAY" />;
               }
 
               return (
