@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const push = require('./push');
 
 // Obavestenja o dogadjajima u igraonici.
 //
@@ -44,6 +45,15 @@ async function upisi(zapisi) {
   } catch (err) {
     // Namerno se ne prosledjuje dalje - vidi komentar na vrhu.
     console.error('Obavestenja nisu upisana:', err.message);
+    return;
+  }
+
+  // Zvonce u aplikaciji je vec pokriveno gornjim upisom; ovo je samo jos jedan
+  // put do korisnika i sme da zakaze bez posledica.
+  try {
+    await push.posalji(zaUpis);
+  } catch (err) {
+    console.error('Push obavestenja nisu poslata:', err.message);
   }
 }
 
@@ -88,7 +98,17 @@ async function detePrijavljeno({ child, visit, byUserId }) {
 }
 
 // Dete je izaslo. Roditelja zanima koliko je naplaceno i koliko je ostalo.
-async function deteOdjavljeno({ child, visit, chargedMinutes, remainingHours, debtHours, byUserId }) {
+async function deteOdjavljeno({
+  child,
+  visit,
+  chargedMinutes,
+  remainingHours,
+  debtHours,
+  byUserId,
+  // Nocno auto-zatvaranje zatvori sve posete odjednom. Roditelj mora da sazna
+  // sta mu je naplaceno, ali osoblju bi to bilo dvadeset istih poruka ujutru.
+  samoRoditelju = false,
+}) {
   const ime = imeDeteta(child);
   const sat = uSat(visit.checkedOutAt);
   const rec = oblik(child.gender, 'odjavljen', 'odjavljena', 'odjavljen/a');
@@ -104,14 +124,28 @@ async function deteOdjavljeno({ child, visit, chargedMinutes, remainingHours, de
     ? `u minusu ${Number(debtHours).toFixed(1).replace('.', ',')} h`
     : `u paketu ostaje ${Number(remainingHours).toFixed(1).replace('.', ',')} h`;
 
+  const data = {
+    childId: child.id,
+    visitId: visit.id,
+    chargedMinutes,
+    remainingHours,
+    debtHours: debtHours ?? null,
+  };
+  const roditelju = {
+    title: 'Dete je izaslo iz igraonice',
+    body: `${child.firstName} je ${rec} u ${sat}. Naplaceno ${naplata}, ${stanje}.`,
+  };
+
+  if (samoRoditelju) {
+    await upisi([{ userId: child.parentId, type: 'CHILD_CHECKED_OUT', ...roditelju, data }]);
+    return;
+  }
+
   await obeStrane({
     parentId: child.parentId,
     type: 'CHILD_CHECKED_OUT',
-    data: { childId: child.id, visitId: visit.id, chargedMinutes, remainingHours, debtHours: debtHours ?? null },
-    roditelju: {
-      title: 'Dete je izaslo iz igraonice',
-      body: `${child.firstName} je ${rec} u ${sat}. Naplaceno ${naplata}, ${stanje}.`,
-    },
+    data,
+    roditelju,
     osoblju: {
       title: 'Odjava',
       body: `${ime} je ${rec} u ${sat}. Naplaceno ${naplata}.`,
@@ -184,6 +218,22 @@ async function paketDodeljen({ userPackage, paket, parentId, pokrivenDug = 0 }) 
   ]);
 }
 
+// Osoblje je naplatilo minus sate. Dug nestaje sa naloga, pa roditelj mora da
+// vidi zasto - inace mu brojka samo padne na nulu bez traga.
+async function minusNaplacen({ parentId, hours }) {
+  const iznos = `${Number(hours).toFixed(1).replace('.', ',')} h`;
+
+  await upisi([
+    {
+      userId: parentId,
+      type: 'DEBT_SETTLED',
+      title: 'Minus sati su naplaceni',
+      body: `Naplaceno ${iznos}. Stanje je sada na nuli.`,
+      data: { hours: Number(hours) },
+    },
+  ]);
+}
+
 // Osoblje je rucno ispravilo sate.
 async function satiIspravljeni({ userPackage, hours, reason, parentId }) {
   const znak = hours > 0 ? '+' : '';
@@ -221,4 +271,5 @@ module.exports = {
   deteUklonjeno: bezObzira(deteUklonjeno),
   paketDodeljen: bezObzira(paketDodeljen),
   satiIspravljeni: bezObzira(satiIspravljeni),
+  minusNaplacen: bezObzira(minusNaplacen),
 };

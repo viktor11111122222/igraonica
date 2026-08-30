@@ -7,15 +7,15 @@ const ADMIN_ROLES = ['ADMIN', 'SUPERADMIN'];
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Bez tokena nema sta da se ceka, pa se ni ne ulazi u stanje ucitavanja -
+  // ranije je prvi render uvek bio spiner koji odmah nestane.
+  const [loading, setLoading] = useState(() => !!getToken());
 
   // Token zivi u localStorage, ali izvor istine o korisniku je backend -
   // rola je mogla da se promeni od poslednje prijave.
   useEffect(() => {
-    if (!getToken()) {
-      setLoading(false);
-      return;
-    }
+    if (!getToken()) return;
+
     get('/auth/me')
       .then(({ user }) => {
         if (ADMIN_ROLES.includes(user.role)) setUser(user);

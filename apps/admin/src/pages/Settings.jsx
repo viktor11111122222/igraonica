@@ -110,9 +110,14 @@ export default function Settings() {
 
   // `key` je originalna vrednost sa servera: polje se resetuje samo kada
   // podatak stvarno stigne izvana, a ne posle svakog naseg cuvanja.
+  //
+  // `save` iznutra dira ref sa tajmerima, pa provera misli da se ref cita u
+  // renderu. Ne cita se: ovde se pravi samo funkcija, a poziva se tek kada
+  // korisnik sacuva polje.
   const textProps = (key, extra) => ({
     value: val(key),
     status: status[key],
+    // eslint-disable-next-line react-hooks/refs
     onSave: (v) => save(key, v),
     ...extra,
   });

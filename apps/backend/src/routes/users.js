@@ -2,19 +2,42 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
+const { stranicenje } = require('../utils/stranicenje');
 const { protect, authorize } = require('../middleware/auth');
+const obavestenja = require('../services/notifications');
+const { normalizujEmail, poEmailu } = require('../utils/email');
 
 const router = express.Router();
 
 router.use(protect);
 router.use(authorize('ADMIN', 'SUPERADMIN'));
 
+// Ko sme sta nad tudjim nalogom.
+//
+// Obican admin je mogao da spusti superadmina na PARENT ili da ga iskljuci -
+// dovoljno da igraonica ostane bez vlasnika naloga. I sam sebe je mogao da
+// iskljuci, pa da se zakljuca napolju.
+function nesmeDaMenja(kojiAdmin, cilj, izmene) {
+  const diraSuperadmina = cilj.role === 'SUPERADMIN';
+  if (diraSuperadmina && kojiAdmin.role !== 'SUPERADMIN') {
+    return 'Nalog superadmina moze da menja samo superadmin.';
+  }
+
+  const sebe = cilj.id === kojiAdmin.id;
+  if (sebe && izmene.isActive === false) {
+    return 'Ne mozete iskljuciti sopstveni nalog.';
+  }
+  if (sebe && izmene.role !== undefined && izmene.role !== kojiAdmin.role) {
+    return 'Ne mozete sami sebi promeniti ulogu.';
+  }
+
+  return null;
+}
+
 // GET /api/users
 router.get('/', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = stranicenje(req.query, 20);
     const search = req.query.search || '';
     const role = req.query.role;
 
@@ -80,7 +103,7 @@ router.get('/:id', async (req, res) => {
 router.post(
   '/',
   [
-    body('email').isEmail().withMessage('Unesite validan email.'),
+    body('email').trim().isEmail().withMessage('Unesite validan email.'),
     body('password').isLength({ min: 6 }).withMessage('Lozinka mora imati najmanje 6 karaktera.'),
     body('firstName').notEmpty().withMessage('Ime je obavezno.'),
     body('lastName').notEmpty().withMessage('Prezime je obavezno.'),
@@ -93,9 +116,10 @@ router.post(
     }
 
     try {
-      const { email, password, firstName, lastName, phone, role } = req.body;
+      const { password, firstName, lastName, phone, role } = req.body;
+      const email = normalizujEmail(req.body.email);
 
-      const existingUser = await prisma.user.findUnique({ where: { email } });
+      const existingUser = await prisma.user.findFirst({ where: poEmailu(email) });
       if (existingUser) {
         return res.status(400).json({ message: 'Korisnik sa ovim emailom vec postoji.' });
       }
@@ -137,6 +161,16 @@ router.patch(
     }
 
     try {
+      const cilj = await prisma.user.findUnique({ where: { id: req.params.id } });
+      if (!cilj) {
+        return res.status(404).json({ message: 'Korisnik nije pronadjen.' });
+      }
+
+      const zabrana = nesmeDaMenja(req.user, cilj, req.body);
+      if (zabrana) {
+        return res.status(403).json({ message: zabrana });
+      }
+
       const allowedFields = ['firstName', 'lastName', 'phone', 'role', 'isActive'];
       const data = {};
       for (const field of allowedFields) {
@@ -193,6 +227,9 @@ router.post('/:id/settle-debt', async (req, res) => {
       });
     }
 
+    // Roditelju minus nestaje sa naloga; bez ovoga bi brojka samo pala na nulu.
+    await obavestenja.minusNaplacen({ parentId: req.params.id, hours: dug });
+
     res.json({ message: `Naplaceno ${dug} h minusa.`, settledHours: dug, debtHours: 0 });
   } catch (err) {
     console.error(err);
@@ -203,6 +240,16 @@ router.post('/:id/settle-debt', async (req, res) => {
 // DELETE /api/users/:id - soft delete
 router.delete('/:id', async (req, res) => {
   try {
+    const cilj = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!cilj) {
+      return res.status(404).json({ message: 'Korisnik nije pronadjen.' });
+    }
+
+    const zabrana = nesmeDaMenja(req.user, cilj, { isActive: false });
+    if (zabrana) {
+      return res.status(403).json({ message: zabrana });
+    }
+
     await prisma.user.update({
       where: { id: req.params.id },
       data: { isActive: false },

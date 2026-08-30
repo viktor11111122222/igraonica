@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import * as storage from '../utils/storage';
+import { registrujUredjaj } from '../utils/push';
 import { apiRequest, onSessionExpired } from '../utils/api';
 
 const AuthContext = createContext(null);
@@ -17,6 +18,8 @@ export function AuthProvider({ children }) {
       }
       const data = await apiRequest('/auth/me');
       setUser(data.user);
+      // Token uredjaja se salje samo ako se promenio (npr. posle reinstalacije).
+      registrujUredjaj(data.user.pushToken);
     } catch {
       await storage.deleteItem('token');
     } finally {
@@ -25,6 +28,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    // Ucitavanje naloga pri pokretanju je posao effect-a: podatak dolazi iz
+    // Keychain-a i sa servera, dakle spolja. Pravilo cilja izvedeno stanje, a
+    // ovde se stanje menja tek kad odgovor stigne.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUser();
   }, [loadUser]);
 
@@ -39,6 +46,7 @@ export function AuthProvider({ children }) {
     });
     await storage.setItem('token', data.token);
     setUser(data.user);
+    registrujUredjaj(data.user.pushToken);
     return data;
   }
 

@@ -99,7 +99,7 @@ export default function Visits() {
                             {v.checkedOutAt ? formatDateTime(v.checkedOutAt) : '—'}
                           </td>
                           <td data-label="Trajanje">{formatDuration(v.durationMinutes)}</td>
-                          <td data-label="Naplaceno">{v.hoursDeducted ? formatHours(v.hoursDeducted) : '—'}</td>
+                          <td data-label="Naplaceno">{v.hoursCharged ? formatHours(v.hoursCharged) : '—'}</td>
                           <td className="muted" data-label="Paket">{v.userPackage?.package?.name || '—'}</td>
                           <td data-label="Status">
                             <Badge tone={s.tone}>{s.label || v.status}</Badge>

@@ -1,7 +1,7 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
-const { CATALOG } = require('../src/config/settings');
+const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { CATALOG, DEFAULTS, PUBLIC_KEYS } = require('../src/config/settings');
 
 let adminToken;
 let parentToken;
@@ -350,5 +350,56 @@ describe('Provera brojcanih podesavanja', () => {
     // Ispravna vrednost se postuje.
     expect(numericSetting('hour_grace_minutes', '10')).toBe(10);
     expect(numericSetting('hour_grace_minutes', '0')).toBe(0);
+  });
+});
+
+// Ovo je prvi poziv koji mobilna napravi i iz njega izvlaci naziv kluba,
+// kontakt, radno vreme i koji tabovi postoje. Do sada nije imao nijedan test.
+describe('GET /api/settings/public', () => {
+  test('radi bez prijave', async () => {
+    const res = await request(app).get('/api/settings/public');
+
+    expect(res.status).toBe(200);
+    expect(res.body.settings).toBeDefined();
+  });
+
+  test('vraca podrazumevane vrednosti i za kljuceve kojih nema u bazi', async () => {
+    await prisma.setting.deleteMany({ where: { key: 'club_name' } });
+
+    const res = await request(app).get('/api/settings/public');
+
+    expect(res.body.settings.club_name).toBe(DEFAULTS.club_name);
+    expect(res.body.settings.working_hours).toBe(DEFAULTS.working_hours);
+  });
+
+  test('upisana vrednost pretice podrazumevanu', async () => {
+    await request(app)
+      .patch('/api/settings/club_name')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ value: 'Igraonica Cika Mika' });
+
+    const res = await request(app).get('/api/settings/public');
+    expect(res.body.settings.club_name).toBe('Igraonica Cika Mika');
+  });
+
+  // Sve sto nije oznaceno kao javno ostaje kod osoblja - u ovom odgovoru cita
+  // ga i neprijavljen uredjaj.
+  test('ne izlazi nijedno podesavanje koje nije javno', async () => {
+    await request(app)
+      .patch('/api/settings/hour_grace_minutes')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ value: '20' });
+
+    const res = await request(app).get('/api/settings/public');
+
+    expect(res.body.settings.hour_grace_minutes).toBeUndefined();
+    for (const kljuc of Object.keys(res.body.settings)) {
+      expect(PUBLIC_KEYS).toContain(kljuc);
+    }
+  });
+
+  test('vraca tacno kljuceve iz kataloga, ni manje ni vise', async () => {
+    const res = await request(app).get('/api/settings/public');
+    expect(Object.keys(res.body.settings).sort()).toEqual([...PUBLIC_KEYS].sort());
   });
 });

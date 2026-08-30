@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
 
 let adminToken;
 let parentToken;
@@ -289,5 +289,112 @@ describe('404 handler', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.message).toContain('Ruta nije pronadjena');
+  });
+});
+
+// Obican admin je mogao da spusti superadmina na PARENT ili da ga iskljuci -
+// dovoljno da igraonica ostane bez vlasnika naloga.
+describe('Zastita naloga', () => {
+  let superadminId;
+  let adminId;
+
+  beforeAll(async () => {
+    const sa = await createTestUser({
+      email: `superadmin.${Date.now()}@primer.rs`,
+      password: 'tajna123',
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: 'SUPERADMIN',
+    });
+    superadminId = sa.id;
+
+    const ja = await prisma.user.findFirst({ where: { email: TEST_ADMIN.email } });
+    adminId = ja.id;
+  });
+
+  test('admin ne moze da promeni ulogu superadminu', async () => {
+    const res = await request(app)
+      .patch(`/api/users/${superadminId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'PARENT' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toContain('superadmin');
+  });
+
+  test('admin ne moze da iskljuci superadmina', async () => {
+    const res = await request(app)
+      .delete(`/api/users/${superadminId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(403);
+
+    const posle = await prisma.user.findUnique({ where: { id: superadminId } });
+    expect(posle.isActive).toBe(true);
+  });
+
+  // Inace se admin zakljuca napolju i nema ko da ga vrati.
+  test('admin ne moze sam sebe da iskljuci', async () => {
+    const res = await request(app)
+      .patch(`/api/users/${adminId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isActive: false });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toContain('sopstveni');
+  });
+
+  test('admin ne moze sam sebi da promeni ulogu', async () => {
+    const res = await request(app)
+      .patch(`/api/users/${adminId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'PARENT' });
+
+    expect(res.status).toBe(403);
+  });
+
+  test('obicnog roditelja admin i dalje menja', async () => {
+    const roditelj = await createTestUser({
+      email: `obican.${Date.now()}@primer.rs`,
+      password: 'tajna123',
+      firstName: 'Obican',
+      lastName: 'Roditelj',
+    });
+
+    const res = await request(app)
+      .patch(`/api/users/${roditelj.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isActive: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.isActive).toBe(false);
+  });
+});
+
+// Bez gornje granice `?limit=100000` povuce celu tabelu odjednom.
+describe('Stranicenje ima gornju granicu', () => {
+  test('preveliki limit se svodi na 100', async () => {
+    const res = await request(app)
+      .get('/api/users?limit=100000')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.pagination.limit).toBe(100);
+  });
+
+  test('besmislen limit pada na podrazumevani', async () => {
+    const res = await request(app)
+      .get('/api/users?limit=-5')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.body.pagination.limit).toBe(1);
+  });
+
+  test('strana ne moze biti nula ili negativna', async () => {
+    const res = await request(app)
+      .get('/api/users?page=0')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.body.pagination.page).toBe(1);
   });
 });

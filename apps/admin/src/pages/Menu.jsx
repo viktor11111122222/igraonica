@@ -8,6 +8,26 @@ import { addDays, DAY_NAMES, fromKey, MEALS, todayKey, toKey } from '../lib/form
 const cellKey = (date, meal) => `${date}|${meal}`;
 const emptyCell = () => ({ id: null, name: '', description: '', allergens: '' });
 
+// Nedelja sa servera -> polja forme. Svaka celija pamti id postojece stavke,
+// da bi se znalo sta treba obrisati kada se polje isprazni.
+function izDelova(week) {
+  const next = {};
+  for (const [date, items] of Object.entries(week)) {
+    for (const meal of MEALS) {
+      const item = items.find((i) => i.mealType === meal.key);
+      next[cellKey(date, meal.key)] = item
+        ? {
+            id: item.id,
+            name: item.name,
+            description: item.description || '',
+            allergens: item.allergens || '',
+          }
+        : emptyCell();
+    }
+  }
+  return next;
+}
+
 export default function Menu() {
   const [anchor, setAnchor] = useState(todayKey());
   const { data, loading, error } = useFetch(`/menu/week?date=${anchor}`);
@@ -22,28 +42,22 @@ export default function Menu() {
 
   // Draft se puni iz ucitane nedelje. Svaka celija pamti i id postojece
   // stavke - po njemu se zna sta treba obrisati kada se polje isprazni.
-  useEffect(() => {
-    if (!data?.week) return;
-    const next = {};
-    for (const [date, items] of Object.entries(data.week)) {
-      for (const meal of MEALS) {
-        const item = items.find((i) => i.mealType === meal.key);
-        next[cellKey(date, meal.key)] = item
-          ? {
-              id: item.id,
-              name: item.name,
-              description: item.description || '',
-              allergens: item.allergens || '',
-            }
-          : emptyCell();
-      }
-    }
-    setDraft(next);
-  }, [data]);
+  //
+  // Prepisuje se u renderu kad stigne nova nedelja, ne u effect-u: inace bi
+  // postojao prolaz u kom su na ekranu polja prethodne nedelje.
+  const [zaPodatke, setZaPodatke] = useState(data);
+  if (data !== zaPodatke) {
+    setZaPodatke(data);
+    if (data?.week) setDraft(izDelova(data.week));
+  }
 
   // Status se cisti samo pri promeni nedelje. Da se cisti na svako
   // osvezavanje podataka, potvrda "Sacuvano" bi nestala pre nego sto se vidi.
-  useEffect(() => setStatus({}), [anchor]);
+  const [zaNedelju, setZaNedelju] = useState(anchor);
+  if (anchor !== zaNedelju) {
+    setZaNedelju(anchor);
+    setStatus({});
+  }
 
   // Danasnji dan je onaj koji se najcesce unosi, pa se skace na njega.
   useEffect(() => {

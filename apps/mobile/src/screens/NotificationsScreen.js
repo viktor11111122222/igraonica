@@ -11,6 +11,7 @@ const IKONA = {
   CHILD_CHECKED_OUT: { name: 'log-out-outline', boja: colors.primaryDarker },
   PACKAGE_ASSIGNED: { name: 'cube-outline', boja: colors.accentText },
   HOURS_ADJUSTED: { name: 'swap-vertical-outline', boja: colors.accentText },
+  DEBT_SETTLED: { name: 'checkmark-done-outline', boja: colors.success },
 };
 
 // Koliko je proslo, grubo. Tacan sat stoji uz red.

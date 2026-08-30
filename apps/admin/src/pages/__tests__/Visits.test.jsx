@@ -13,7 +13,7 @@ const poseta = {
   checkedInAt: '2026-08-20T09:00:00.000Z',
   checkedOutAt: '2026-08-20T11:30:00.000Z',
   durationMinutes: 150,
-  hoursDeducted: 2.5,
+  hoursCharged: 2.5,
   child: { firstName: 'Ana', lastName: 'Petrovic' },
   userPackage: { package: { name: 'Paket 10h' } },
 };
@@ -38,7 +38,7 @@ describe('Visits', () => {
 
   test('poseta koja jos traje nema odjavu ni naplatu', async () => {
     get.mockResolvedValue({
-      visits: [{ ...poseta, status: 'CHECKED_IN', checkedOutAt: null, durationMinutes: null, hoursDeducted: null }],
+      visits: [{ ...poseta, status: 'CHECKED_IN', checkedOutAt: null, durationMinutes: null, hoursCharged: null }],
       pagination: { page: 1, pages: 1, total: 1 },
     });
     render(<Visits />);

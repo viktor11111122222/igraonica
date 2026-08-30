@@ -308,7 +308,7 @@ describe('POST /api/visits/check-out', () => {
     // 70 min = pun sat + 10 min preko, a 10 nije preko praga od 15 → 1 sat
     expect(res.body.duration.raw).toBe(70);
     expect(res.body.duration.charged).toBe(60);
-    expect(res.body.duration.hoursDeducted).toBe(1);
+    expect(res.body.duration.hoursCharged).toBe(1);
     expect(res.body.debtAdded).toBe(0);
 
     // Preostali sati: 10 - 1 = 9
@@ -344,7 +344,7 @@ describe('POST /api/visits/check-out', () => {
     // Svaki boravak je najmanje jedan sat
     expect(res.body.duration.raw).toBe(10);
     expect(res.body.duration.charged).toBe(60);
-    expect(res.body.duration.hoursDeducted).toBe(1);
+    expect(res.body.duration.hoursCharged).toBe(1);
 
     // 9 - 1 = 8
     expect(res.body.remainingHours).toBe(8);
@@ -372,7 +372,7 @@ describe('POST /api/visits/check-out', () => {
     // 46 min je preko praga → ceo sat
     expect(res.body.duration.raw).toBe(46);
     expect(res.body.duration.charged).toBe(60);
-    expect(res.body.duration.hoursDeducted).toBe(1);
+    expect(res.body.duration.hoursCharged).toBe(1);
 
     // 8 - 1 = 7
     expect(res.body.remainingHours).toBe(7);
@@ -407,7 +407,7 @@ describe('POST /api/visits/check-out', () => {
     expect(res.body.remainingHours).toBe(0);
 
     // Paket je imao 0.25 h, boravak je 2 sata - razlika ide roditelju u minus.
-    expect(res.body.duration.hoursDeducted).toBe(2);
+    expect(res.body.duration.hoursCharged).toBe(2);
     expect(res.body.debtAdded).toBe(1.75);
     expect(res.body.debtHours).toBe(1.75);
 
@@ -648,7 +648,7 @@ describe('POST /api/visits/auto-close', () => {
     autoClosed.forEach((v) => {
       expect(v.checkedOutAt).toBeDefined();
       expect(v.durationMinutes).toBeDefined();
-      expect(v.hoursDeducted).toBeDefined();
+      expect(v.hoursCharged).toBeDefined();
     });
   });
 

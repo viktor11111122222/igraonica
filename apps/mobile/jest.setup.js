@@ -39,3 +39,25 @@ jest.mock('react-native-safe-area-context', () => {
     useSafeAreaInsets: () => global.__sigurnaZona,
   };
 });
+
+// Osvetljenost ekrana je nativna; u testu je dovoljno da se vidi da je QR ekran
+// trazio pojacanje i da ga je vratio na sistemsko.
+jest.mock('expo-brightness', () => ({
+  setBrightnessAsync: jest.fn(() => Promise.resolve()),
+  restoreSystemBrightnessAsync: jest.fn(() => Promise.resolve()),
+}));
+
+// Obavestenja na zakljucanom ekranu su nativna; u testu se proverava samo da li
+// je aplikacija trazila dozvolu i poslala token.
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  getExpoPushTokenAsync: jest.fn(() => Promise.resolve({ data: 'ExponentPushToken[test]' })),
+  setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
+  AndroidImportance: { DEFAULT: 3 },
+}));
+
+jest.mock('expo-constants', () => ({
+  isDevice: true,
+  expoConfig: { extra: { eas: { projectId: 'projekat-test' } } },
+}));

@@ -276,3 +276,102 @@ describe('POST /api/auth/change-password', () => {
     expect(res.body.errors).toBeDefined();
   });
 });
+
+// "Ana@Primer.rs" i "ana@primer.rs" su isti nalog. Ranije su se pravila dva, a
+// prijava sa drugacije otkucanim slovima nije prolazila.
+describe('Email ne mari za velika slova', () => {
+  const EMAIL = 'Velika.Slova@Primer.RS';
+
+  test('registracija cuva email malim slovima', async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      email: `  ${EMAIL}  `,
+      password: 'tajna123',
+      firstName: 'Velika',
+      lastName: 'Slova',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.email).toBe('velika.slova@primer.rs');
+  });
+
+  test('prijava prolazi bez obzira kako je email otkucan', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'VELIKA.SLOVA@primer.rs', password: 'tajna123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+  });
+
+  test('isti email drugim slovima ne pravi drugi nalog', async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'velika.slova@PRIMER.rs',
+      password: 'tajna123',
+      firstName: 'Duplikat',
+      lastName: 'Nalog',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toContain('vec postoji');
+  });
+});
+
+// Promena lozinke mora da izbaci uredjaj koji je ostao prijavljen - inace stari
+// token vazi jos 30 dana.
+describe('Promena lozinke obara stare sesije', () => {
+  let stariToken;
+  let noviToken;
+
+  beforeAll(async () => {
+    const email = `sesija.${Date.now()}@primer.rs`;
+    await createTestUser({ email, password: 'stara123', firstName: 'Sesija', lastName: 'Test' });
+
+    const prijava = await request(app)
+      .post('/api/auth/login')
+      .send({ email, password: 'stara123' });
+    stariToken = prijava.body.token;
+
+    const promena = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${stariToken}`)
+      .send({ currentPassword: 'stara123', newPassword: 'nova1234' });
+    noviToken = promena.body.token;
+  });
+
+  test('stari token vise ne prolazi', async () => {
+    const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${stariToken}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toContain('Lozinka je promenjena');
+  });
+
+  // Uredjaj sa kog je lozinka promenjena ostaje prijavljen.
+  test('token dobijen pri promeni radi', async () => {
+    const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${noviToken}`);
+    expect(res.status).toBe(200);
+  });
+});
+
+// Deaktiviran nalog nije obrisan nalog; ista poruka za oba je izgledala kao da
+// je nalog nestao.
+describe('Deaktiviran nalog dobija svoju poruku', () => {
+  test('token deaktiviranog naloga javlja da je nalog iskljucen', async () => {
+    const email = `deaktiviran.${Date.now()}@primer.rs`;
+    const korisnik = await createTestUser({
+      email,
+      password: 'tajna123',
+      firstName: 'Deaktiviran',
+      lastName: 'Nalog',
+    });
+    const prijava = await request(app).post('/api/auth/login').send({ email, password: 'tajna123' });
+
+    await prisma.user.update({ where: { id: korisnik.id }, data: { isActive: false } });
+
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${prijava.body.token}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toContain('deaktiviran');
+  });
+});

@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
+const { stranicenje } = require('../utils/stranicenje');
 const { protect, authorize } = require('../middleware/auth');
 const { krajPoslePocetka } = require('../utils/time');
 
@@ -20,9 +21,7 @@ router.get(
   authorize('ADMIN', 'SUPERADMIN'),
   async (req, res) => {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20;
-      const skip = (page - 1) * limit;
+      const { page, limit, skip } = stranicenje(req.query, 20);
       const { status, type, dateFrom, dateTo } = req.query;
 
       const where = {};

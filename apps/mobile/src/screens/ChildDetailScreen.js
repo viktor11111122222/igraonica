@@ -146,7 +146,7 @@ export default function ChildDetailScreen({ route, navigation }) {
               </Text>
               {visit.durationMinutes && (
                 <Text style={styles.visitDuration}>
-                  Trajanje: {visit.durationMinutes} min ({Number(visit.hoursDeducted).toFixed(2)}h)
+                  Trajanje: {visit.durationMinutes} min ({Number(visit.hoursCharged).toFixed(2)}h)
                 </Text>
               )}
             </View>

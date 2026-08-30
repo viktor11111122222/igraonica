@@ -352,7 +352,7 @@ describe('CheckIn - minus sati', () => {
     get.mockResolvedValue({ visits: [poseta] });
     post.mockResolvedValue({
       message: 'Ana Petrovic je odjavljen/a.',
-      duration: { raw: 130, charged: 120, hoursDeducted: 2 },
+      duration: { raw: 130, charged: 120, hoursCharged: 2 },
       remainingHours: 0,
       debtAdded: 2,
       debtHours: 5,
@@ -378,7 +378,7 @@ describe('CheckIn - minus sati', () => {
     get.mockResolvedValue({ visits: [poseta] });
     post.mockResolvedValue({
       message: 'Ana Petrovic je odjavljen/a.',
-      duration: { raw: 140, charged: 180, hoursDeducted: 3 },
+      duration: { raw: 140, charged: 180, hoursCharged: 3 },
       remainingHours: 0,
       withoutPackage: true,
       debtAdded: 3,
@@ -404,7 +404,7 @@ describe('CheckIn - minus sati', () => {
     get.mockResolvedValue({ visits: [poseta] });
     post.mockResolvedValue({
       message: 'Ana Petrovic je odjavljen/a.',
-      duration: { raw: 70, charged: 60, hoursDeducted: 1 },
+      duration: { raw: 70, charged: 60, hoursCharged: 1 },
       remainingHours: 7,
       debtAdded: 0,
       debtHours: 3,

@@ -20,7 +20,7 @@ const poseta = {
   status: 'CHECKED_OUT',
   checkedInAt: '2026-08-21T09:00:00.000Z',
   checkedOutAt: '2026-08-21T11:00:00.000Z',
-  hoursDeducted: 2,
+  hoursCharged: 2,
   child: { firstName: 'Ana', lastName: 'Petrovic' },
 };
 

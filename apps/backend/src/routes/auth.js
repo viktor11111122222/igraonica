@@ -3,8 +3,10 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const generateToken = require('../utils/generateToken');
+const { normalizujEmail, poEmailu } = require('../utils/email');
 const obavestenja = require('../services/notifications');
 const { protect } = require('../middleware/auth');
+const { prijavaLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -12,7 +14,7 @@ const router = express.Router();
 router.post(
   '/register',
   [
-    body('email').isEmail().withMessage('Unesite validan email.'),
+    body('email').trim().isEmail().withMessage('Unesite validan email.'),
     body('password').isLength({ min: 6 }).withMessage('Lozinka mora imati najmanje 6 karaktera.'),
     body('firstName').notEmpty().withMessage('Ime je obavezno.'),
     body('lastName').notEmpty().withMessage('Prezime je obavezno.'),
@@ -24,9 +26,10 @@ router.post(
     }
 
     try {
-      const { email, password, firstName, lastName, phone } = req.body;
+      const { password, firstName, lastName, phone } = req.body;
+      const email = normalizujEmail(req.body.email);
 
-      const existingUser = await prisma.user.findUnique({ where: { email } });
+      const existingUser = await prisma.user.findFirst({ where: poEmailu(email) });
       if (existingUser) {
         return res.status(400).json({ message: 'Korisnik sa ovim emailom vec postoji.' });
       }
@@ -43,7 +46,7 @@ router.post(
         },
       });
 
-      const token = generateToken(user.id);
+      const token = generateToken(user.id, user.passwordChangedAt);
       const { password: _, ...userWithoutPassword } = user;
 
       // Osoblje inace ne bi videlo nov nalog dok samo ne otvori spisak.
@@ -60,8 +63,9 @@ router.post(
 // POST /api/auth/login
 router.post(
   '/login',
+  prijavaLimiter,
   [
-    body('email').isEmail().withMessage('Unesite validan email.'),
+    body('email').trim().isEmail().withMessage('Unesite validan email.'),
     body('password').notEmpty().withMessage('Lozinka je obavezna.'),
   ],
   async (req, res) => {
@@ -71,9 +75,9 @@ router.post(
     }
 
     try {
-      const { email, password } = req.body;
+      const { password } = req.body;
 
-      const user = await prisma.user.findUnique({ where: { email } });
+      const user = await prisma.user.findFirst({ where: poEmailu(req.body.email) });
       if (!user) {
         return res.status(401).json({ message: 'Pogresan email ili lozinka.' });
       }
@@ -87,7 +91,7 @@ router.post(
         return res.status(401).json({ message: 'Pogresan email ili lozinka.' });
       }
 
-      const token = generateToken(user.id);
+      const token = generateToken(user.id, user.passwordChangedAt);
       const { password: _, ...userWithoutPassword } = user;
 
       res.json({ token, user: userWithoutPassword });
@@ -166,12 +170,14 @@ router.post(
 
       const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-      await prisma.user.update({
+      const izmenjen = await prisma.user.update({
         where: { id: req.user.id },
-        data: { password: hashedPassword },
+        data: { password: hashedPassword, passwordChangedAt: new Date() },
       });
 
-      const token = generateToken(user.id);
+      // Nov token nosi nov zig: uredjaj sa kog je lozinka promenjena ostaje
+      // prijavljen, svi ostali ispadaju.
+      const token = generateToken(izmenjen.id, izmenjen.passwordChangedAt);
       res.json({ token, message: 'Lozinka je uspesno promenjena.' });
     } catch (err) {
       console.error(err);

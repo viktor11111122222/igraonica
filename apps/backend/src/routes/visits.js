@@ -1,5 +1,6 @@
 const express = require('express');
 const prisma = require('../config/db');
+const { stranicenje } = require('../utils/stranicenje');
 const { protect, authorize } = require('../middleware/auth');
 const { numericSetting } = require('../config/settings');
 const { naplativiSati } = require('../utils/naplata');
@@ -164,8 +165,8 @@ router.post(
       const rawMinutes = Math.max(1, Math.round((now - checkedInAt) / 60000));
 
       // 4. Naplata: puni sati, sa pragom minuta preko punog sata
-      const hoursDeducted = naplativiSati(rawMinutes, await pragMinuta());
-      const roundedMinutes = hoursDeducted * 60;
+      const hoursCharged = naplativiSati(rawMinutes, await pragMinuta());
+      const roundedMinutes = hoursCharged * 60;
 
       // 5. Zatvori posetu i oduzmi sate - sve u transakciji.
       //
@@ -186,7 +187,7 @@ router.post(
           data: {
             checkedOutAt: now,
             durationMinutes: roundedMinutes,
-            hoursDeducted,
+            hoursCharged,
             checkedOutById: req.user.id,
             status: 'CHECKED_OUT',
           },
@@ -201,7 +202,7 @@ router.post(
         if (openVisit.userPackageId) {
           const [red] = await tx.$queryRaw`
             UPDATE user_packages up
-               SET remaining_hours = GREATEST(0, up.remaining_hours - ${hoursDeducted}::numeric),
+               SET remaining_hours = GREATEST(0, up.remaining_hours - ${hoursCharged}::numeric),
                    updated_at = NOW()
               FROM (
                 SELECT id, remaining_hours AS pre
@@ -217,7 +218,7 @@ router.post(
 
         // Ostatak ide roditelju u minus. Bez paketa je to ceo boravak, a sa
         // paketom koji nije dogurao do kraja - samo razlika.
-        const uMinus = Math.max(0, hoursDeducted - pokriveno);
+        const uMinus = Math.max(0, hoursCharged - pokriveno);
         let dugUkupno = 0;
 
         if (uMinus > 0) {
@@ -276,7 +277,7 @@ router.post(
         duration: {
           raw: rawMinutes,
           charged: roundedMinutes,
-          hoursDeducted,
+          hoursCharged,
         },
         remainingHours: rezultat.remainingHours,
         // Bez paketa "Preostalo: 0,0 h" bi zvucalo kao da je paket ispraznjen;
@@ -334,9 +335,7 @@ router.get(
   authorize('ADMIN', 'SUPERADMIN'),
   async (req, res) => {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20;
-      const skip = (page - 1) * limit;
+      const { page, limit, skip } = stranicenje(req.query, 20);
       const { childId, status, dateFrom, dateTo } = req.query;
 
       const where = {};
@@ -382,9 +381,7 @@ router.get(
 // GET /api/visits/my - roditelj vidi posete svoje dece
 router.get('/my', async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = stranicenje(req.query, 20);
 
     const children = await prisma.child.findMany({
       where: { parentId: req.user.id },
@@ -446,24 +443,25 @@ router.post(
       // pregazila prvu i sati bi se skinuli samo za jedno dete.
       const stanjePaketa = new Map();
       const dugPoRoditelju = new Map();
+      const zaObavestenje = [];
 
       for (const visit of openVisits) {
         const rawMinutes = Math.max(1, Math.round((now - new Date(visit.checkedInAt)) / 60000));
-        const hoursDeducted = naplativiSati(rawMinutes, prag);
-        const roundedMinutes = hoursDeducted * 60;
+        const hoursCharged = naplativiSati(rawMinutes, prag);
+        const roundedMinutes = hoursCharged * 60;
 
         let pokriveno = 0;
         if (visit.userPackage) {
           const pre = stanjePaketa.has(visit.userPackage.id)
             ? stanjePaketa.get(visit.userPackage.id)
             : Number(visit.userPackage.remainingHours);
-          pokriveno = Math.min(pre, hoursDeducted);
+          pokriveno = Math.min(pre, hoursCharged);
           stanjePaketa.set(visit.userPackage.id, pre - pokriveno);
         }
 
         // Sto paket nije pokrio ide roditelju u minus - i kad paketa nema, i
         // kad je ostao kraci od boravka.
-        const uMinus = Math.max(0, hoursDeducted - pokriveno);
+        const uMinus = Math.max(0, hoursCharged - pokriveno);
         if (uMinus > 0) {
           const dosad = dugPoRoditelju.get(visit.child.parentId) || 0;
           dugPoRoditelju.set(visit.child.parentId, dosad + uMinus);
@@ -475,13 +473,22 @@ router.post(
             data: {
               checkedOutAt: now,
               durationMinutes: roundedMinutes,
-              hoursDeducted,
+              hoursCharged,
               debtHours: uMinus > 0 ? uMinus : null,
               checkedOutById: req.user.id,
               status: 'AUTO_CLOSED',
             },
           })
         );
+
+        // Obavestenja se salju tek kad transakcija prodje, pa se ovde samo
+        // pamti sta ce u njima pisati.
+        zaObavestenje.push({
+          child: visit.child,
+          visit: { ...visit, checkedOutAt: now },
+          chargedMinutes: roundedMinutes,
+          userPackageId: visit.userPackage?.id ?? null,
+        });
       }
 
       for (const [userPackageId, preostalo] of stanjePaketa) {
@@ -503,6 +510,32 @@ router.post(
       }
 
       await prisma.$transaction(operations);
+
+      // Roditelj mora da sazna da je poseta zatvorena i sta je naplaceno -
+      // inace ujutru vidi minus bez ijednog traga odakle je dosao. Osoblju se
+      // ne salje: to bi bila cela noc istih poruka.
+      const dugovi = new Map();
+      if (dugPoRoditelju.size) {
+        const roditelji = await prisma.user.findMany({
+          where: { id: { in: [...dugPoRoditelju.keys()] } },
+          select: { id: true, debtHours: true },
+        });
+        roditelji.forEach((r) => dugovi.set(r.id, Number(r.debtHours)));
+      }
+
+      for (const stavka of zaObavestenje) {
+        await obavestenja.deteOdjavljeno({
+          child: stavka.child,
+          visit: stavka.visit,
+          chargedMinutes: stavka.chargedMinutes,
+          remainingHours: stavka.userPackageId
+            ? (stanjePaketa.get(stavka.userPackageId) ?? 0)
+            : 0,
+          debtHours: dugovi.get(stavka.child.parentId) ?? 0,
+          byUserId: req.user.id,
+          samoRoditelju: true,
+        });
+      }
 
       res.json({
         message: `${openVisits.length} poseta automatski zatvoreno.`,

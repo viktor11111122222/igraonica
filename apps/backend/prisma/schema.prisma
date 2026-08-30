@@ -51,6 +51,8 @@ enum NotificationType {
   CHILD_REMOVED
   PACKAGE_ASSIGNED
   HOURS_ADJUSTED
+  // Osoblje je naplatilo minus sate; roditelju to zatvara krug.
+  DEBT_SETTLED
 }
 
 // Kako se akcija izrazava. TEXT je za one koje nisu broj ("drugo dete
@@ -96,6 +98,9 @@ model User {
   avatarUrl String?  @map("avatar_url")
   isActive  Boolean  @default(true) @map("is_active")
   pushToken String?  @map("push_token")
+  // Trenutak poslednje promene lozinke. Tokeni izdati pre toga se odbijaju, pa
+  // promena lozinke stvarno izbacuje tudji uredjaj koji je ostao prijavljen.
+  passwordChangedAt DateTime? @map("password_changed_at")
   // Sati odigrani bez pokrica u paketu - "minus sati". Raste pri odjavi kad
   // paket ne pokriva boravak, a pada kad roditelj plati ili dobije nov paket.
   debtHours Decimal  @default(0) @map("debt_hours") @db.Decimal(10, 2)
@@ -184,7 +189,9 @@ model Visit {
   checkedInAt     DateTime    @map("checked_in_at")
   checkedOutAt    DateTime?   @map("checked_out_at")
   durationMinutes Int?        @map("duration_minutes")
-  hoursDeducted   Decimal?    @map("hours_deducted") @db.Decimal(10, 2)
+  // Naplaceni sati, ne "skinuti sa paketa": kad paket ne pokrije ceo boravak,
+  // ovde stoji pun iznos, a razlika je u `debtHours`.
+  hoursCharged    Decimal?    @map("hours_charged") @db.Decimal(10, 2)
   // Deo naplacenog koji nije imao pokrice u paketu. Sam dug se vodi na
   // roditelju; ovde stoji da bi se videlo iz koje posete je nastao.
   debtHours       Decimal?    @map("debt_hours") @db.Decimal(10, 2)

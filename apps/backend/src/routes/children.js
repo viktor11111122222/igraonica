@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
+const { stranicenje } = require('../utils/stranicenje');
 const { protect, authorize } = require('../middleware/auth');
 const obavestenja = require('../services/notifications');
 
@@ -47,9 +48,7 @@ router.get('/', async (req, res) => {
 // GET /api/children/all - admin vidi svu decu
 router.get('/all', authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = stranicenje(req.query, 20);
     const search = req.query.search || '';
 
     const where = { isActive: true };

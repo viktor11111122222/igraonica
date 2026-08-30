@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
@@ -20,6 +20,15 @@ const hours = (value) => `${num(value)} h`;
 
 export default function PackageScreen({ navigation }) {
   const { user, logout } = useAuth();
+
+  // Povratak posle odjave trazi lozinku, a roditelj je retko ima pri ruci -
+  // jedan promasen dodir ga je izbacivao iz aplikacije.
+  function potvrdiOdjavu() {
+    Alert.alert('Odjava', 'Da li zelite da se odjavite?', [
+      { text: 'Odustani', style: 'cancel' },
+      { text: 'Odjavi se', style: 'destructive', onPress: logout },
+    ]);
+  }
   const { settings } = useSettings();
   const [packages, setPackages] = useState([]);
   const [children, setChildren] = useState([]);
@@ -79,7 +88,7 @@ export default function PackageScreen({ navigation }) {
         right={
           <PressableScale
             style={styles.logoutBtn}
-            onPress={logout}
+            onPress={potvrdiOdjavu}
             accessibilityRole="button"
             accessibilityLabel="Odjava"
           >

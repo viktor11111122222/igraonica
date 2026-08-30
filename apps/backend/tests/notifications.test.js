@@ -316,3 +316,76 @@ describe('Pad obavestenja ne obara radnju', () => {
       .send({ qrCode: dete.body.child.qrCode });
   });
 });
+
+// Nocno auto-zatvaranje je jedini put na kom roditelj ne vidi radnika. Bez
+// obavestenja bi ujutru zatekao minus bez ijednog traga odakle je dosao.
+describe('Auto-zatvaranje javlja roditelju', () => {
+  let qrAuto;
+  let tokenRoditelja;
+
+  beforeAll(async () => {
+    const email = `autoclose.${Date.now()}@primer.rs`;
+    await createTestUser({ email, password: 'tajna123', firstName: 'Auto', lastName: 'Roditelj' });
+    const prijava = await request(app).post('/api/auth/login').send({ email, password: 'tajna123' });
+    tokenRoditelja = prijava.body.token;
+
+    const dete = await request(app)
+      .post('/api/children')
+      .set('Authorization', `Bearer ${tokenRoditelja}`)
+      .send({ firstName: 'Nocni', lastName: 'Gost', dateOfBirth: '2021-02-02', gender: 'MALE' });
+    qrAuto = dete.body.child.qrCode;
+  });
+
+  test('roditelj dobija odjavu sa naplatom i minusom', async () => {
+    await request(app)
+      .post('/api/visits/check-in')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ qrCode: qrAuto });
+
+    await request(app)
+      .post('/api/visits/auto-close')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    const kodRoditelja = await mojaObavestenja(tokenRoditelja);
+    const o = kodRoditelja.notifications.find((n) => n.type === 'CHILD_CHECKED_OUT');
+    expect(o).toBeTruthy();
+    expect(o.body).toContain('Naplaceno 1 h');
+    expect(o.body).toContain('u minusu');
+  });
+
+  // Nocu se zatvara i po dvadeset poseta; osoblju bi to bilo dvadeset istih
+  // poruka ujutru.
+  test('osoblje ne dobija poruku po svakoj zatvorenoj poseti', async () => {
+    const kodDrugeSmene = await mojaObavestenja(drugaSmenaToken);
+    const odjave = kodDrugeSmene.notifications.filter(
+      (n) => n.type === 'CHILD_CHECKED_OUT' && n.body.includes('Nocni Gost')
+    );
+    expect(odjave).toHaveLength(0);
+  });
+});
+
+// Minus nestaje sa naloga kad ga osoblje naplati - roditelj mora da vidi zasto.
+describe('Naplata minusa javlja roditelju', () => {
+  test('posle naplate stize poruka sa iznosom', async () => {
+    const email = `naplata.${Date.now()}@primer.rs`;
+    const roditelj = await createTestUser({
+      email,
+      password: 'tajna123',
+      firstName: 'Naplata',
+      lastName: 'Roditelj',
+    });
+    const prijava = await request(app).post('/api/auth/login').send({ email, password: 'tajna123' });
+
+    await prisma.user.update({ where: { id: roditelj.id }, data: { debtHours: 3 } });
+
+    await request(app)
+      .post(`/api/users/${roditelj.id}/settle-debt`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    const kodRoditelja = await mojaObavestenja(prijava.body.token);
+    const o = kodRoditelja.notifications.find((n) => n.type === 'DEBT_SETTLED');
+    expect(o).toBeTruthy();
+    expect(o.body).toContain('3,0 h');
+    expect(o.data.hours).toBe(3);
+  });
+});

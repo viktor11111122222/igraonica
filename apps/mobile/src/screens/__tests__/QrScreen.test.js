@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
+import * as Brightness from 'expo-brightness';
 import QRCodeLib from 'qrcode';
 import QrScreen from '../QrScreen';
 import { apiRequest } from '../../utils/api';
@@ -112,5 +113,53 @@ describe('QrScreen - stanje deteta', () => {
     expect(
       screen.getByText('Sledece skeniranje odjavljuje dete i obracunava vreme.')
     ).toBeTruthy();
+  });
+});
+
+// Pad mreze je ranije upisivao praznu listu, pa je roditelj sa troje dece
+// dobijao ekran "Nemate dodatu decu" i poziv da doda dete.
+describe('QrScreen - kad podaci ne stignu', () => {
+  test('greska se javlja kao greska, ne kao prazan spisak', async () => {
+    apiRequest.mockRejectedValue(new Error('Nema veze sa serverom.'));
+    await render(<QrScreen navigation={navigation} route={{ params: {} }} />);
+
+    expect(await screen.findByText('Podaci nisu stigli')).toBeTruthy();
+    expect(screen.getByText('Nema veze sa serverom.')).toBeTruthy();
+    expect(screen.queryByText('Nemate dodatu decu')).toBeNull();
+  });
+
+  test('nudi ponovni pokusaj', async () => {
+    apiRequest.mockRejectedValue(new Error('Nema veze sa serverom.'));
+    await render(<QrScreen navigation={navigation} route={{ params: {} }} />);
+    await screen.findByText('Podaci nisu stigli');
+
+    apiRequest.mockResolvedValue({ children: [dete] });
+    fireEvent.press(screen.getByText('Pokusaj ponovo'));
+
+    await waitFor(() => expect(screen.getByTestId('qr')).toBeTruthy());
+  });
+
+  // Roditelj koji stvarno nema decu i dalje dobija poziv da ga doda.
+  test('prazan spisak bez greske i dalje poziva da se doda dete', async () => {
+    apiRequest.mockResolvedValue({ children: [] });
+    await render(<QrScreen navigation={navigation} route={{ params: {} }} />);
+
+    expect(await screen.findByText('Nemate dodatu decu')).toBeTruthy();
+  });
+});
+
+// Kod se cita sa ekrana; na prigusenom ekranu ga citac tesko hvata.
+describe('QrScreen - osvetljenost ekrana', () => {
+  test('ekran se pojacava dok je kod otvoren', async () => {
+    await prikazi();
+    expect(Brightness.setBrightnessAsync).toHaveBeenCalledWith(1);
+  });
+
+  test('po izlasku se vraca sistemska osvetljenost', async () => {
+    const { unmount } = await render(<QrScreen navigation={navigation} route={{ params: {} }} />);
+    await waitFor(() => expect(screen.getByTestId('qr')).toBeTruthy());
+
+    unmount();
+    expect(Brightness.restoreSystemBrightnessAsync).toHaveBeenCalled();
   });
 });

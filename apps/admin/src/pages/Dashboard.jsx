@@ -141,7 +141,7 @@ export default function Dashboard() {
                         <td className="muted" data-label="Odjava">
                           {v.checkedOutAt ? formatDateTime(v.checkedOutAt) : '—'}
                         </td>
-                        <td data-label="Sati">{v.hoursDeducted ? formatHours(v.hoursDeducted) : '—'}</td>
+                        <td data-label="Sati">{v.hoursCharged ? formatHours(v.hoursCharged) : '—'}</td>
                         <td data-label="Status">
                           <Badge tone={status.tone}>{status.label || v.status}</Badge>
                         </td>

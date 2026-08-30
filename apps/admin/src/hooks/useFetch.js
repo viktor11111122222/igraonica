@@ -19,12 +19,18 @@ export function useFetch(path) {
     }
   }, [path]);
 
+  // Promena putanje (pretraga, strana, filter) vraca stanje na "ucitava se" i
+  // brise staru gresku. To se radi u renderu, ne u effect-u: inace bi postojao
+  // prolaz u kom se nova strana crta sa starom greskom ispod nje.
+  const [zaPutanju, setZaPutanju] = useState(path);
+  if (path !== zaPutanju) {
+    setZaPutanju(path);
+    setLoading(true);
+    setError('');
+  }
+
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    // Bez ovoga greska sa prethodne pretrage ostaje na ekranu i posle uspesnog
-    // ucitavanja novih podataka.
-    setError('');
     get(path)
       .then((d) => alive && setData(d))
       .catch((e) => alive && setError(e.message))

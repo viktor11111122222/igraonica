@@ -75,7 +75,15 @@ export default function DayCloud({ name, number, active, today, filled, closed, 
   const puffs = cloudFor(number);
 
   return (
-    <PressableScale style={styles.chip} onPress={onPress}>
+    <PressableScale
+      style={styles.chip}
+      onPress={onPress}
+      accessibilityRole="button"
+      // Citac ekrana je inace citao dva odvojena teksta ("Pon", "15") bez ijedne
+      // naznake da je to dugme i koji je dan izabran.
+      accessibilityState={{ selected: !!active }}
+      accessibilityLabel={`${number}. ${name}${today ? ', danas' : ''}${closed ? ', neradni dan' : ''}`}
+    >
       {/* Providnost ide na grupu, ne na pojedinacne krugove - inace bi se
           njihovi preklopi videli kao svetlije mrlje. */}
       <Svg style={StyleSheet.absoluteFill} viewBox={`0 0 ${CLOUD_W} ${CLOUD_H}`}>

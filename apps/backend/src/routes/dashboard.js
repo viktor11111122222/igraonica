@@ -1,5 +1,6 @@
 const express = require('express');
 const prisma = require('../config/db');
+const { stranicenje } = require('../utils/stranicenje');
 const { protect, authorize } = require('../middleware/auth');
 const { startOfDay, endOfDay, addDays, toKey } = require('../utils/day');
 
@@ -15,10 +16,11 @@ router.get('/stats', async (req, res) => {
     const todayStart = startOfDay();
     const todayEnd = endOfDay();
 
-    const [totalUsers, totalChildren, activeKids, pendingCheckouts, todayVisits, todayHours] = await Promise.all([
+    const [totalUsers, totalChildren, activeKids, todayVisits, todayHours] = await Promise.all([
       prisma.user.count({ where: { role: 'PARENT', isActive: true } }),
       prisma.child.count({ where: { isActive: true } }),
-      prisma.visit.count({ where: { status: 'CHECKED_IN' } }),
+      // Deca koja su trenutno unutra. Isti broj je nekad isao i kao
+      // `pendingCheckouts`, drugim upitom nad istim uslovom.
       prisma.visit.count({ where: { status: 'CHECKED_IN' } }),
       prisma.visit.count({
         where: { checkedInAt: { gte: todayStart, lte: todayEnd } },
@@ -26,19 +28,20 @@ router.get('/stats', async (req, res) => {
       prisma.visit.findMany({
         where: {
           checkedOutAt: { gte: todayStart, lte: todayEnd },
-          hoursDeducted: { not: null },
+          hoursCharged: { not: null },
         },
-        select: { hoursDeducted: true },
+        select: { hoursCharged: true },
       }),
     ]);
 
-    const hoursUsedToday = todayHours.reduce((sum, v) => sum + Number(v.hoursDeducted), 0);
+    const hoursUsedToday = todayHours.reduce((sum, v) => sum + Number(v.hoursCharged), 0);
 
     res.json({
       totalUsers,
       totalChildren,
       activeKids,
-      pendingCheckouts,
+      // Zadrzano zbog starijih klijenata koji jos citaju ovo ime.
+      pendingCheckouts: activeKids,
       todayVisits,
       hoursUsedToday: Math.round(hoursUsedToday * 100) / 100,
     });
@@ -51,7 +54,7 @@ router.get('/stats', async (req, res) => {
 // GET /api/dashboard/recent-activity - poslednje aktivnosti
 router.get('/recent-activity', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const { limit } = stranicenje(req.query, 10);
 
     const visits = await prisma.visit.findMany({
       include: {
@@ -115,9 +118,9 @@ router.get('/chart/hours', async (req, res) => {
     const visits = await prisma.visit.findMany({
       where: {
         checkedOutAt: { gte: startDate },
-        hoursDeducted: { not: null },
+        hoursCharged: { not: null },
       },
-      select: { checkedOutAt: true, hoursDeducted: true },
+      select: { checkedOutAt: true, hoursCharged: true },
     });
 
     const chart = {};
@@ -128,7 +131,7 @@ router.get('/chart/hours', async (req, res) => {
     visits.forEach((v) => {
       const key = toKey(v.checkedOutAt);
       if (chart[key] !== undefined) {
-        chart[key] += Number(v.hoursDeducted);
+        chart[key] += Number(v.hoursCharged);
       }
     });
 

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, ActivityIndicator, ScrollView, useAnimatedValue } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Brightness from 'expo-brightness';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import Banner from '../components/Banner';
@@ -30,14 +31,25 @@ export default function QrScreen({ navigation, route }) {
   const [children, setChildren] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Pad mreze je ranije upisivao praznu listu, pa je izgledalo kao da roditelj
+  // nema decu - sa pozivom da doda dete.
+  const [greska, setGreska] = useState('');
 
   // Sa "Moj paket" se dolazi sa konkretnim detetom - odmah ga izaberi i
   // ocisti parametar, da sledeci ulazak u tab ne bude zakljucan na njega.
+  //
+  // Izbor se prilagodjava u renderu, ne u effect-u: tako nema prolaza u kom se
+  // ekran vec crta sa starim detetom pa se odmah prekraja.
   const requestedId = route.params?.childId;
-  useEffect(() => {
-    if (!requestedId) return;
+  const [obradjenParam, setObradjenParam] = useState(requestedId);
+  if (requestedId && requestedId !== obradjenParam) {
+    setObradjenParam(requestedId);
     setSelectedId(requestedId);
-    navigation.setParams({ childId: undefined });
+  }
+
+  // Ciscenje parametra je posao navigacije, ne stanja ekrana.
+  useEffect(() => {
+    if (requestedId) navigation.setParams({ childId: undefined });
   }, [requestedId, navigation]);
 
   // Osvezava se dok roditelj drzi ekran otvoren: cim radnik skenira kod, stanje
@@ -51,8 +63,11 @@ export default function QrScreen({ navigation, route }) {
       // Ne gazimo izbor koji je stigao kroz parametar. Jedno dete - preskoci
       // izbor.
       setSelectedId((prev) => prev ?? (list.length === 1 ? list[0].id : null));
-    } catch {
-      setChildren([]);
+      setGreska('');
+    } catch (e) {
+      // Vec ucitana deca ostaju na ekranu; greska se javlja samo ako nema sta
+      // da se pokaze.
+      setGreska(e?.message || 'Nema veze sa serverom.');
     } finally {
       setLoading(false);
     }
@@ -60,10 +75,37 @@ export default function QrScreen({ navigation, route }) {
 
   useAutoRefresh(load);
 
+  // Kod se cita sa ekrana. Na prigusenom ekranu ga citac tesko hvata, pa se
+  // ekran pojacava dok je ovaj tab otvoren i vraca na sistemsku vrednost cim
+  // se ode dalje. Ako uredjaj to ne dozvoli, ekran samo ostaje kakav jeste.
+  useFocusEffect(
+    useCallback(() => {
+      Brightness.setBrightnessAsync(1).catch(() => {});
+      return () => {
+        Brightness.restoreSystemBrightnessAsync().catch(() => {});
+      };
+    }, [])
+  );
+
   if (loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (children.length === 0 && greska) {
+    return (
+      <View style={styles.centered}>
+        <View style={styles.emptyIcon}>
+          <Ionicons name="cloud-offline-outline" size={40} color={colors.danger} />
+        </View>
+        <Text style={styles.emptyTitle}>Podaci nisu stigli</Text>
+        <Text style={styles.emptyText}>{greska}</Text>
+        <PressableScale style={styles.cta} onPress={load}>
+          <Text style={styles.ctaText}>Pokusaj ponovo</Text>
+        </PressableScale>
       </View>
     );
   }

@@ -84,6 +84,17 @@ describe('GET /api/schedule/plan - ulaz', () => {
     expect(res.status).toBe(200);
     expect(res.body.items).toEqual([]);
   });
+
+  // Prijavljen roditelj dobija isti plan - token ga ne menja ni u sta drugo.
+  test('prijavljen roditelj dobija isti plan', async () => {
+    const bez = await plan();
+    const sa = await request(app)
+      .get(`/api/schedule/plan?date=${DAN}`)
+      .set('Authorization', `Bearer ${parentToken}`);
+
+    expect(sa.status).toBe(200);
+    expect(sa.body).toEqual(bez.body);
+  });
 });
 
 describe('GET /api/schedule/plan - sta ulazi u dan', () => {

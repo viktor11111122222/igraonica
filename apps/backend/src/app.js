@@ -3,6 +3,7 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 
+const { nalozimaLimiter } = require('./middleware/rateLimit');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const childrenRoutes = require('./routes/children');
@@ -24,7 +25,18 @@ const promoBannersRoutes = require('./routes/promoBanners');
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+
+// U razvoju sve prolazi: Metro, emulator i telefon na lokalnoj mrezi dolaze sa
+// raznih adresa. U radu se spisak zadaje kroz CORS_ORIGINS (zarezom razdvojeno),
+// pa panel iz pretrazivaca prolazi samo sa svoje adrese.
+//
+// Mobilna aplikacija ovim nije pogodjena - nativni zahtevi nemaju `Origin`.
+const dozvoljenaOdrediste = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(cors({ origin: dozvoljenaOdrediste.length ? dozvoljenaOdrediste : true }));
 app.use(express.json());
 
 // Jelovnik, raspored i obavestenja se menjaju iz admina i moraju odmah da se
@@ -40,7 +52,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', nalozimaLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/children', childrenRoutes);
 app.use('/api/packages', packagesRoutes);

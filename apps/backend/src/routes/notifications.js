@@ -1,5 +1,6 @@
 const express = require('express');
 const prisma = require('../config/db');
+const { stranicenje } = require('../utils/stranicenje');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -11,9 +12,7 @@ router.use(protect);
 // GET /api/notifications - moja obavestenja, najnovija prva
 router.get('/', async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-    const page = parseInt(req.query.page) || 1;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = stranicenje(req.query);
 
     // `unread=1` za slucaj kada klijent hoce samo neprocitana.
     const where = { userId: req.user.id };

@@ -174,3 +174,48 @@ describe('mediaUrl', () => {
     expect(mediaUrl('')).toBeNull();
   });
 });
+
+// Server koji ne odgovara i pad mreze su za roditelja ista stvar, ali poruka
+// mora da bude ljudska - bez ovoga ekran pise "AbortError" ili "JSON Parse
+// error".
+describe('apiRequest - kad server ne odgovori kako treba', () => {
+  test('istek roka javlja da se server ne javlja', async () => {
+    global.fetch = jest.fn().mockRejectedValue(
+      Object.assign(new Error('Aborted'), { name: 'AbortError' })
+    );
+
+    await expect(apiRequest('/schedule')).rejects.toThrow('Server se ne javlja');
+  });
+
+  test('pad mreze javlja da nema veze', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed'));
+
+    await expect(apiRequest('/schedule')).rejects.toThrow('Nema veze sa serverom');
+  });
+
+  // Proxy ume da vrati HTML stranicu greske; ranije je to izlazilo kao
+  // "JSON Parse error".
+  test('odgovor koji nije JSON ne prolazi kao greska u parsiranju', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => {
+        throw new SyntaxError('Unexpected token <');
+      },
+    });
+
+    await expect(apiRequest('/schedule')).rejects.toThrow('Greska na serveru.');
+  });
+
+  test('uspesan odgovor bez tela ne obara poziv', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected end of JSON input');
+      },
+    });
+
+    await expect(apiRequest('/schedule')).rejects.toThrow('Neocekivan odgovor servera.');
+  });
+});

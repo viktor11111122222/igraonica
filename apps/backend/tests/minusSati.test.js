@@ -129,7 +129,7 @@ describe('Odjava bez paketa upisuje minus', () => {
     const res = await odjavi(dete.qrCode);
 
     expect(res.status).toBe(200);
-    expect(res.body.duration.hoursDeducted).toBe(2);
+    expect(res.body.duration.hoursCharged).toBe(2);
     expect(res.body.debtAdded).toBe(2);
     expect(res.body.debtHours).toBe(2);
     // Radnik ne treba da vidi "Preostalo: 0,0 h" - paketa nema.
@@ -147,7 +147,7 @@ describe('Odjava bez paketa upisuje minus', () => {
 
     const poseta = await prisma.visit.findFirst({ where: { childId: dete.id } });
     expect(Number(poseta.debtHours)).toBe(1);
-    expect(Number(poseta.hoursDeducted)).toBe(1);
+    expect(Number(poseta.hoursCharged)).toBe(1);
     expect(poseta.userPackageId).toBeNull();
   });
 
@@ -213,7 +213,7 @@ describe('Paket koji ne pokriva ceo boravak', () => {
     await boravakOd(dete.id, 180);
     const res = await odjavi(dete.qrCode);
 
-    expect(res.body.duration.hoursDeducted).toBe(3);
+    expect(res.body.duration.hoursCharged).toBe(3);
     expect(res.body.remainingHours).toBe(0);
     expect(res.body.debtAdded).toBe(2);
     expect(await dugRoditelja(roditelj.id)).toBe(2);

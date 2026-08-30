@@ -43,6 +43,9 @@ export function ClosedDaysProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    // Podaci sa servera se povlace pri pokretanju i dalje na tajmer - to je
+    // posao effect-a, a ne izvedeno stanje na koje pravilo cilja.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
 
     let timer = setInterval(load, POLL_MS);

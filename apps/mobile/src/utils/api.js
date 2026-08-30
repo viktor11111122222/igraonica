@@ -91,7 +91,17 @@ export async function apiRequest(endpoint, options = {}) {
     clearTimeout(tajmer);
   }
 
-  const data = await response.json();
+  // Server ne mora da vrati JSON: proxy ume da ubaci HTML stranicu greske, a
+  // neke rute vracaju prazno telo. Bez ovoga bi korisnik dobio "JSON Parse
+  // error" umesto ljudske poruke.
+  let data = {};
+  try {
+    data = (await response.json()) ?? {};
+  } catch {
+    if (response.ok) {
+      throw new Error('Neocekivan odgovor servera.');
+    }
+  }
 
   if (!response.ok) {
     // Token vazi 30 dana. Kada istekne - ili kada admin deaktivira nalog - bez

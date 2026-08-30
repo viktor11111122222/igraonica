@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import PackageScreen from '../PackageScreen';
 import { apiRequest } from '../../utils/api';
 
@@ -6,8 +7,9 @@ jest.mock('../../utils/api', () => ({ apiRequest: jest.fn() }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback) => require('react').useEffect(callback, [callback]),
 }));
+const mockLogout = jest.fn();
 jest.mock('../../context/AuthContext', () => ({
-  useAuth: () => ({ user: { firstName: 'Ana', lastName: 'Petrovic' } }),
+  useAuth: () => ({ user: { firstName: 'Ana', lastName: 'Petrovic' }, logout: mockLogout }),
 }));
 
 const SUTRA = new Date(Date.now() + 30 * 864e5).toISOString();
@@ -134,5 +136,34 @@ describe('PackageScreen - minus sati', () => {
 
     expect(await screen.findByText('-2,5 h')).toBeTruthy();
     expect(screen.getByText(/skupljaju kao minus/)).toBeTruthy();
+  });
+});
+
+// Povratak posle odjave trazi lozinku, koju roditelj retko ima pri ruci - jedan
+// promasen dodir ga je izbacivao iz aplikacije.
+describe('PackageScreen - odjava', () => {
+  test('dodir na odjavu prvo pita za potvrdu', async () => {
+    const upit = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await prikazi();
+
+    fireEvent.press(screen.getByLabelText('Odjava'));
+
+    expect(upit).toHaveBeenCalled();
+    expect(mockLogout).not.toHaveBeenCalled();
+    upit.mockRestore();
+  });
+
+  test('potvrda odjavljuje', async () => {
+    let dugmad;
+    const upit = jest.spyOn(Alert, 'alert').mockImplementation((naslov, tekst, opcije) => {
+      dugmad = opcije;
+    });
+    await prikazi();
+
+    fireEvent.press(screen.getByLabelText('Odjava'));
+    dugmad.find((d) => d.text === 'Odjavi se').onPress();
+
+    expect(mockLogout).toHaveBeenCalled();
+    upit.mockRestore();
   });
 });

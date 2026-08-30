@@ -16,8 +16,21 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
 
-    if (!user || !user.isActive) {
+    if (!user) {
       return res.status(401).json({ message: 'Korisnik vise ne postoji.' });
+    }
+
+    // Deaktiviran nalog nije obrisan nalog - ista poruka za oba je izgledala
+    // kao da je nalog nestao.
+    if (!user.isActive) {
+      return res.status(401).json({ message: 'Vas nalog je deaktiviran.' });
+    }
+
+    // Promena lozinke izbacuje uredjaje koji su ostali prijavljeni: token nosi
+    // zig promene, pa se sve sto ne odgovara trenutnom stanju odbija.
+    const zigNaloga = user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : 0;
+    if ((decoded.pwd ?? 0) !== zigNaloga) {
+      return res.status(401).json({ message: 'Lozinka je promenjena. Prijavite se ponovo.' });
     }
 
     const { password, ...userWithoutPassword } = user;

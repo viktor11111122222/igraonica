@@ -17,6 +17,7 @@ const ZNAK = {
   CHILD_REMOVED: '✕',
   PACKAGE_ASSIGNED: '▦',
   HOURS_ADJUSTED: '±',
+  DEBT_SETTLED: '✓',
 };
 
 // Koliko je proslo, grubo. Tacno vreme stoji u naslovu reda.
