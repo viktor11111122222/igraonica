@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
 const { krajPoslePocetka, minutiOdPonoci } = require('../utils/time');
+const { nazivTipa } = require('../utils/rezervacije');
 
 const router = express.Router();
 
@@ -80,12 +81,14 @@ router.get('/events', async (req, res) => {
 //
 // Spaja tri izvora koja je aplikacija ranije morala sama da trazi (i nije):
 // nedeljne aktivnosti za taj dan u nedelji, jednokratne dogadjaje bas tog
-// datuma i rodjendane iz rezervacija.
+// datuma i rezervacije.
 //
-// Rodjendan ide na vrh spiska bez obzira na sat i jaci je od redovnog
-// programa: dok on traje, aktivnosti se ne odrzavaju, pa se ni ne prikazuju.
-// Celodnevni rodjendan tako gasi ceo dan, a rodjendan u terminu samo ono sto
-// upada u njegovo vreme - sto je pre i posle njega ostaje.
+// Rezervacija zauzima igraonicu i jaca je od redovnog programa - svejedno je li
+// rodjendan, privatna proslava ili nesto sto je osoblje samo nazvalo. Dok traje,
+// aktivnosti se ne odrzavaju, pa se ni ne prikazuju: celodnevna gasi ceo dan, a
+// ona u terminu samo ono sto upada u njeno vreme. Sto je pre i posle nje ostaje.
+//
+// Rezervacije idu na vrh spiska bez obzira na sat.
 router.get('/plan', async (req, res) => {
   try {
     const { date } = req.query;
@@ -101,7 +104,7 @@ router.get('/plan', async (req, res) => {
     // Backend racuna 0 = ponedeljak, a getUTCDay vraca 0 = nedelja.
     const dayOfWeek = (dan.getUTCDay() + 6) % 7;
 
-    const [nedeljne, jednokratne, rodjendani] = await Promise.all([
+    const [nedeljne, jednokratne, rezervacije] = await Promise.all([
       prisma.activity.findMany({
         where: { isActive: true, isRecurring: true, dayOfWeek },
         orderBy: { startTime: 'asc' },
@@ -111,17 +114,24 @@ router.get('/plan', async (req, res) => {
         orderBy: { startTime: 'asc' },
       }),
       prisma.reservation.findMany({
-        where: { type: 'BIRTHDAY', date: dan, status: { not: 'CANCELLED' } },
+        where: { date: dan, status: { not: 'CANCELLED' } },
         orderBy: { startTime: 'asc' },
         // Ime deteta se namerno ne salje - spisak vidi svaki roditelj.
-        select: { id: true, title: true, startTime: true, endTime: true, isFullDay: true },
+        select: {
+          id: true,
+          type: true,
+          customType: true,
+          startTime: true,
+          endTime: true,
+          isFullDay: true,
+        },
       }),
     ]);
 
-    // Termini se dodiruju bez preklapanja: aktivnost 09:00-10:00 i rodjendan
+    // Termini se dodiruju bez preklapanja: aktivnost 09:00-10:00 i rezervacija
     // od 10:00 mogu jedno za drugim.
-    const upadaURodjendan = (a) =>
-      rodjendani.some((r) => {
+    const upadaUZauzeto = (a) =>
+      rezervacije.some((r) => {
         if (r.isFullDay) return true;
 
         const pocetak = minutiOdPonoci(a.startTime);
@@ -145,20 +155,21 @@ router.get('/plan', async (req, res) => {
     });
 
     const items = [
-      ...rodjendani.map((r) => ({
+      ...rezervacije.map((r) => ({
         id: r.id,
-        kind: 'BIRTHDAY',
-        // Celodnevni rodjendan je jedino sto tog dana stoji u rasporedu, pa mu
-        // ime nije ni potrebno - a naslov koji osoblje upise cesto nosi ime
-        // deteta, koje u javnom spisku nema sta da trazi.
-        title: r.isFullDay ? 'Rodjendan' : r.title,
+        // Rodjendan se izdvaja samo zbog izgleda kartice u aplikaciji.
+        kind: r.type === 'BIRTHDAY' ? 'BIRTHDAY' : 'RESERVATION',
+        // Stoji naziv tipa, a ne naslov koji je osoblje upisalo: taj naslov je
+        // interna beleska i cesto nosi ime deteta, koje u spisku koji vidi
+        // svaki roditelj nema sta da trazi.
+        title: nazivTipa(r),
         description: null,
         startTime: r.startTime,
         endTime: r.endTime,
         isFullDay: r.isFullDay,
       })),
       ...[...nedeljne, ...jednokratne]
-        .filter((a) => !upadaURodjendan(a))
+        .filter((a) => !upadaUZauzeto(a))
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
         .map(aktivnost),
     ];

@@ -33,7 +33,7 @@ const nedeljnaAktivnost = (telo) =>
 const rodjendan = (telo) =>
   kaoAdmin('post', '/api/reservations').send({
     type: 'BIRTHDAY',
-    title: 'Rodjendan - Lena',
+    title: 'Rodjendan',
     date: DAN,
     startTime: '17:00',
     endTime: '20:00',
@@ -138,7 +138,7 @@ describe('GET /api/schedule/plan - sta ulazi u dan', () => {
 
     expect(res.body.items).toHaveLength(1);
     expect(res.body.items[0].kind).toBe('BIRTHDAY');
-    expect(res.body.items[0].title).toBe('Rodjendan - Lena');
+    expect(res.body.items[0].title).toBe('Rodjendan');
     expect(res.body.items[0].startTime).toBe('17:00');
     expect(res.body.items[0].endTime).toBe('20:00');
   });
@@ -189,7 +189,7 @@ describe('GET /api/schedule/plan - redosled', () => {
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan - Lena', 'Jutarnja']);
+    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan', 'Jutarnja']);
   });
 
   // Rodjendan gasi samo svoj termin - ostatak dana se odrzava normalno.
@@ -200,7 +200,7 @@ describe('GET /api/schedule/plan - redosled', () => {
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan - Lena', 'Pre', 'Posle']);
+    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan', 'Pre', 'Posle']);
   });
 
   test('aktivnosti medju sobom idu po vremenu, bez obzira jesu li nedeljne ili jednokratne', async () => {
@@ -218,17 +218,18 @@ describe('GET /api/schedule/plan - redosled', () => {
     expect(res.body.items.map((i) => i.title)).toEqual(['Jutro', 'Podne']);
   });
 
+  // U spisku svuda stoji naziv tipa, pa se rodjendani razlikuju po vremenu.
   test('vise rodjendana istog dana idu po vremenu, pa tek onda aktivnosti', async () => {
     await nedeljnaAktivnost({ title: 'Aktivnost', startTime: '09:00', endTime: '10:00' });
-    await rodjendan({ title: 'Popodnevni', startTime: '17:00', endTime: '20:00' });
-    await rodjendan({ title: 'Prepodnevni', startTime: '11:00', endTime: '14:00' });
+    await rodjendan({ startTime: '17:00', endTime: '20:00' });
+    await rodjendan({ startTime: '11:00', endTime: '14:00' });
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual([
-      'Prepodnevni',
-      'Popodnevni',
-      'Aktivnost',
+    expect(res.body.items.map((i) => [i.kind, i.startTime])).toEqual([
+      ['BIRTHDAY', '11:00'],
+      ['BIRTHDAY', '17:00'],
+      ['ACTIVITY', '09:00'],
     ]);
   });
 
@@ -268,20 +269,15 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
     expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan']);
   });
 
-  test('celodnevni rodjendan pise samo "Rodjendan", bez imena deteta', async () => {
-    await rodjendan({ title: 'Rodjendan - Lena', isFullDay: true });
+  // Naslov je interna beleska osoblja i cesto nosi ime deteta - u spisku koji
+  // vidi svaki roditelj stoji naziv tipa.
+  test('umesto naslova stoji naziv tipa, bez imena deteta', async () => {
+    await rodjendan({ title: 'Lenin 5. rodjendan', isFullDay: true });
 
     const res = await plan();
 
     expect(res.body.items[0].title).toBe('Rodjendan');
-  });
-
-  test('rodjendan u terminu zadrzava svoj naslov', async () => {
-    await rodjendan({ title: 'Rodjendan - Lena', startTime: '17:00', endTime: '20:00' });
-
-    const res = await plan();
-
-    expect(res.body.items[0].title).toBe('Rodjendan - Lena');
+    expect(JSON.stringify(res.body)).not.toContain('Lenin');
   });
 
   test('aktivnost u vreme rodjendana nestaje', async () => {
@@ -290,7 +286,7 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan - Lena']);
+    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan']);
   });
 
   test('aktivnost koja samo zahvata pocetak rodjendana nestaje', async () => {
@@ -299,7 +295,7 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan - Lena']);
+    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan']);
   });
 
   test('aktivnost duza od rodjendana, koja ga obuhvata, nestaje', async () => {
@@ -308,7 +304,7 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan - Lena']);
+    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan']);
   });
 
   // Termin koji se zavrsava tacno kad rodjendan pocinje se ne preklapa s njim.
@@ -318,7 +314,7 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan - Lena', 'Pre']);
+    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan', 'Pre']);
   });
 
   test('aktivnost tacno posle rodjendana ostaje', async () => {
@@ -327,7 +323,7 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan - Lena', 'Posle']);
+    expect(res.body.items.map((i) => i.title)).toEqual(['Rodjendan', 'Posle']);
   });
 
   // Dva rodjendana, svaki gasi svoj termin - a ono izmedju njih se odrzava.
@@ -335,12 +331,15 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
     await nedeljnaAktivnost({ title: 'Prepodne', startTime: '10:30', endTime: '11:30' });
     await nedeljnaAktivnost({ title: 'Izmedju', startTime: '14:30', endTime: '15:30' });
     await nedeljnaAktivnost({ title: 'Uvece', startTime: '18:00', endTime: '19:00' });
-    await rodjendan({ title: 'Prvi', startTime: '10:00', endTime: '13:00' });
-    await rodjendan({ title: 'Drugi', startTime: '17:00', endTime: '20:00' });
+    await rodjendan({ startTime: '10:00', endTime: '13:00' });
+    await rodjendan({ startTime: '17:00', endTime: '20:00' });
 
     const res = await plan();
 
-    expect(res.body.items.map((i) => i.title)).toEqual(['Prvi', 'Drugi', 'Izmedju']);
+    // Ostaju oba rodjendana i samo ona aktivnost koja je izmedju njih.
+    const aktivnosti = res.body.items.filter((i) => i.kind === 'ACTIVITY');
+    expect(aktivnosti.map((i) => i.title)).toEqual(['Izmedju']);
+    expect(res.body.items.filter((i) => i.kind === 'BIRTHDAY')).toHaveLength(2);
   });
 
   // Otkazan rodjendan ne oslobadja samo sebe - ne sme ni da gasi program.
@@ -354,5 +353,76 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
     const res = await plan();
 
     expect(res.body.items.map((i) => i.title)).toEqual(['Jutarnja']);
+  });
+});
+
+// Igraonicu zauzima svaka rezervacija, ne samo rodjendan: privatna proslava,
+// grupna poseta ili nesto sto je osoblje samo nazvalo drze isto pravo na
+// termin, pa gase redovan program isto kao i rodjendan.
+describe('GET /api/schedule/plan - rezervacije koje nisu rodjendan', () => {
+  const rezervacija = (telo) =>
+    kaoAdmin('post', '/api/reservations').send({
+      type: 'PRIVATE_EVENT',
+      title: 'Interna beleska',
+      date: DAN,
+      startTime: '17:00',
+      endTime: '20:00',
+      ...telo,
+    });
+
+  test('privatna proslava ulazi u plan pod nazivom tipa', async () => {
+    await rezervacija();
+
+    const res = await plan();
+
+    expect(res.body.items[0].kind).toBe('RESERVATION');
+    expect(res.body.items[0].title).toBe('Privatna proslava');
+  });
+
+  test('grupna poseta gasi aktivnost u svom terminu', async () => {
+    await nedeljnaAktivnost({ title: 'Mali kuvari', startTime: '10:30', endTime: '11:30' });
+    await rezervacija({ type: 'GROUP_BOOKING', startTime: '10:00', endTime: '12:00' });
+
+    const res = await plan();
+
+    expect(res.body.items.map((i) => i.title)).toEqual(['Grupna poseta']);
+  });
+
+  test('aktivnost van termina rezervacije ostaje', async () => {
+    await nedeljnaAktivnost({ title: 'Jutarnja', startTime: '09:00', endTime: '10:00' });
+    await rezervacija();
+
+    const res = await plan();
+
+    expect(res.body.items.map((i) => i.title)).toEqual(['Privatna proslava', 'Jutarnja']);
+  });
+
+  // Kod tipa "Drugo" osoblje upisuje svoj naziv - stoji on, a ne "Drugo".
+  test('upisani naziv tipa se prikazuje', async () => {
+    await rezervacija({ type: 'OTHER', customType: 'Skolska ekskurzija' });
+
+    const res = await plan();
+
+    expect(res.body.items[0].title).toBe('Skolska ekskurzija');
+  });
+
+  test('mesecni dogadjaj nosi svoj naziv', async () => {
+    await rezervacija({ type: 'MONTHLY_EVENT' });
+
+    const res = await plan();
+
+    expect(res.body.items[0].title).toBe('Mesecni dogadjaji');
+  });
+
+  test('otkazana rezervacija ne gasi nista', async () => {
+    await nedeljnaAktivnost({ title: 'Mali kuvari', startTime: '18:00', endTime: '19:00' });
+    const napravljena = await rezervacija();
+    await kaoAdmin('patch', `/api/reservations/${napravljena.body.reservation.id}`).send({
+      status: 'CANCELLED',
+    });
+
+    const res = await plan();
+
+    expect(res.body.items.map((i) => i.title)).toEqual(['Mali kuvari']);
   });
 });

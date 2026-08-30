@@ -141,37 +141,43 @@ export default function ScheduleScreen() {
           ) : (
             activities.map((a) => {
               const rodjendan = a.kind === 'BIRTHDAY';
+              // Rezervacija drzi termin za sebe, pa se u spisku izdvaja od
+              // redovnih aktivnosti - rodjendan poklonom, ostale bravicom.
+              const zauzeto = rodjendan || a.kind === 'RESERVATION';
 
-              // Celodnevni rodjendan je jedino sto se tog dana desava - server
-              // vise i ne salje aktivnosti uz njega. Zato dobija celu karticu
+              // Celodnevna rezervacija je jedino sto se tog dana desava - server
+              // vise i ne salje aktivnosti uz nju. Zato dobija celu karticu
               // umesto reda u spisku. Ista je i kad dan stigne kao neradni.
-              if (rodjendan && a.isFullDay) {
-                return <NeradniDan key={a.id} kind="BIRTHDAY" />;
+              if (zauzeto && a.isFullDay) {
+                return <NeradniDan key={a.id} kind={a.kind} reason={a.title} />;
               }
 
               return (
-              <View key={a.id} style={[styles.card, rodjendan && styles.cardRodjendan]}>
+              <View key={a.id} style={[styles.card, zauzeto && styles.cardRodjendan]}>
                 <View
                   style={[
                     styles.stripe,
-                    { backgroundColor: rodjendan ? colors.accent : a.color || colors.primary },
+                    { backgroundColor: zauzeto ? colors.accent : a.color || colors.primary },
                   ]}
                 />
                 <View style={styles.cardBody}>
                   <View style={styles.timeRow}>
                     <Ionicons
-                      name={rodjendan ? 'gift-outline' : 'time-outline'}
+                      name={
+                        rodjendan ? 'gift-outline' : zauzeto ? 'lock-closed-outline' : 'time-outline'
+                      }
                       size={14}
-                      color={rodjendan ? colors.accentText : colors.textFaint}
+                      color={zauzeto ? colors.accentText : colors.textFaint}
                     />
-                    {/* Celodnevni rodjendan nema smislen termin, pa se umesto
-                        "00:00 - 23:59" pise sta to zapravo znaci. */}
-                    <Text style={[styles.time, rodjendan && styles.timeRodjendan]}>
+                    <Text style={[styles.time, zauzeto && styles.timeRodjendan]}>
                       {`${a.startTime} - ${a.endTime}`}
                     </Text>
-                    {rodjendan ? (
+                    {/* Naslov reda vec kaze sta je (Rodjendan, Privatna
+                        proslava...), pa oznaka kaze ono sto iz njega ne vidi:
+                        da je taj termin zauzet. */}
+                    {zauzeto ? (
                       <View style={styles.oznaka}>
-                        <Text style={styles.oznakaTekst}>Rodjendan</Text>
+                        <Text style={styles.oznakaTekst}>Zauzeto</Text>
                       </View>
                     ) : null}
                   </View>

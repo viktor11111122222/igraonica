@@ -281,10 +281,10 @@ export default function HomeScreen({ navigation }) {
         ) : (
           activities.slice(0, 3).map((a) => (
             <View key={a.id} style={styles.line}>
-              {/* Celodnevni rodjendan nema smislen sat pocetka - u rasporedu
+              {/* Celodnevna rezervacija nema smislen sat pocetka - u rasporedu
                   na svom tabu takodje pise "Ceo dan". */}
               <Text style={styles.lineLabel}>
-                {a.kind === 'BIRTHDAY' && a.isFullDay ? 'Ceo dan' : a.startTime}
+                {a.kind !== 'ACTIVITY' && a.isFullDay ? 'Ceo dan' : a.startTime}
               </Text>
               <Text style={styles.lineValue} numberOfLines={1}>
                 {a.title}

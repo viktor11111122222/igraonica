@@ -177,10 +177,10 @@ describe('GET /api/closed-days', () => {
   });
 });
 
-// Celodnevni rodjendan zauzima igraonicu ceo dan. Da roditelj ne bi za istu
+// Celodnevna rezervacija zauzima igraonicu ceo dan. Da roditelj ne bi za istu
 // stvar video dva razlicita obavestenja, takav dan je neradni sam po sebi i
 // nosi oznaku po kojoj ga aplikacija prikazuje uvek isto.
-describe('GET /api/closed-days - celodnevni rodjendan', () => {
+describe('GET /api/closed-days - celodnevna rezervacija', () => {
   const rodjendan = (telo) =>
     request(app)
       .post('/api/reservations')
@@ -352,5 +352,58 @@ describe('DELETE /api/closed-days/:id', () => {
       .set('Authorization', `Bearer ${parentToken}`);
 
     expect(res.status).toBe(403);
+  });
+});
+
+// Ceo dan je ceo dan - svejedno je li rezervisan za rodjendan ili za bilo sta
+// drugo.
+describe('GET /api/closed-days - celodnevna rezervacija koja nije rodjendan', () => {
+  const celodnevna = (telo) =>
+    request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        type: 'PRIVATE_EVENT',
+        title: 'Interna beleska',
+        date: PETNAESTI,
+        startTime: '10:00',
+        endTime: '18:00',
+        isFullDay: true,
+        ...telo,
+      });
+
+  test('privatna proslava zatvara dan', async () => {
+    await celodnevna();
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays).toHaveLength(1);
+    expect(res.body.closedDays[0].reason).toBe('Privatna proslava');
+    // Kartica rodjendana je rezervisana za rodjendane; ostalo ide obicnom.
+    expect(res.body.closedDays[0].kind).toBe('CLOSED');
+  });
+
+  test('kod tipa "Drugo" stoji naziv koji je osoblje upisalo', async () => {
+    await celodnevna({ type: 'OTHER', customType: 'Skolska ekskurzija' });
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays[0].reason).toBe('Skolska ekskurzija');
+  });
+
+  test('naslov osoblja ne izlazi u javni spisak', async () => {
+    await celodnevna({ title: 'Proslava - porodica Peric' });
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(JSON.stringify(res.body)).not.toContain('Peric');
+  });
+
+  test('rezervacija u terminu ne zatvara dan', async () => {
+    await celodnevna({ isFullDay: false });
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays).toHaveLength(0);
   });
 });

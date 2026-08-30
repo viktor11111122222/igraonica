@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
+const { nazivTipa } = require('../utils/rezervacije');
 
 const router = express.Router();
 
@@ -31,24 +32,26 @@ const izlaz = (row) => ({
   kind: 'CLOSED',
 });
 
-// Celodnevni rodjendan zauzima igraonicu ceo dan, pa je taj dan neradni i bez
-// rucnog oznacavanja u panelu - inace bi osoblje istu stvar upisivalo dvaput, a
-// roditelj bi je video na dva razlicita nacina.
+// Celodnevna rezervacija zauzima igraonicu ceo dan - svejedno je li rodjendan,
+// privatna proslava ili nesto sto je osoblje samo nazvalo. Taj dan je zato
+// neradni i bez rucnog oznacavanja u panelu: inace bi osoblje istu stvar
+// upisivalo dvaput, a roditelj bi je video na dva razlicita nacina.
 //
-// `kind` govori aplikaciji da je razlog rodjendan, da bi svuda prikazala isto.
-// Ako je dan i rucno oznacen, rodjendan je precutan razlog, a rucna napomena se
-// zadrzava - ona obicno kaze ono sto rodjendan sam po sebi ne kaze.
-function spojiRodjendane(rows, rodjendani) {
+// `kind` razdvaja rodjendan od ostalog samo zbog izgleda kartice u aplikaciji;
+// razlog je u oba slucaja naziv tipa. Ako je dan i rucno oznacen, rezervacija
+// je precutan razlog, a rucna napomena se zadrzava - ona obicno kaze ono sto
+// naziv tipa sam po sebi ne kaze.
+function spojiZauzeteDane(rows, rezervacije) {
   const poDatumu = new Map(rows.map((r) => [r.date, r]));
 
-  for (const r of rodjendani) {
+  for (const r of rezervacije) {
     const datum = toKey(r.date);
     poDatumu.set(datum, {
       id: r.id,
       date: datum,
-      reason: 'Rodjendan',
+      reason: nazivTipa(r),
       note: poDatumu.get(datum)?.note ?? null,
-      kind: 'BIRTHDAY',
+      kind: r.type === 'BIRTHDAY' ? 'BIRTHDAY' : 'CLOSED',
     });
   }
 
@@ -64,16 +67,16 @@ router.get('/', async (req, res) => {
     const where = { date: { gte: from ? toUtcDate(from) : firstOfThisMonth() } };
     if (to) where.date.lte = toUtcDate(to);
 
-    const [rows, rodjendani] = await Promise.all([
+    const [rows, rezervacije] = await Promise.all([
       prisma.closedDay.findMany({ where, orderBy: { date: 'asc' } }),
       prisma.reservation.findMany({
-        where: { type: 'BIRTHDAY', isFullDay: true, status: { not: 'CANCELLED' }, date: where.date },
+        where: { isFullDay: true, status: { not: 'CANCELLED' }, date: where.date },
         orderBy: { date: 'asc' },
-        select: { id: true, date: true },
+        select: { id: true, date: true, type: true, customType: true },
       }),
     ]);
 
-    res.json({ closedDays: spojiRodjendane(rows.map(izlaz), rodjendani) });
+    res.json({ closedDays: spojiZauzeteDane(rows.map(izlaz), rezervacije) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Greska na serveru.' });

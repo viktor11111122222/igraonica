@@ -229,13 +229,14 @@ describe('ScheduleScreen - rodjendani', () => {
     expect(screen.getByText('17:00 - 20:00')).toBeTruthy();
   });
 
+  // Naslov reda kaze sta je, a oznaka da je taj termin zauzet.
   test('nosi oznaku, da se razlikuje od redovne aktivnosti', async () => {
     zamrzniDan(2026, 7, 12);
     mockApi({ items: [rodjendan] });
 
     await render(<ScheduleScreen />);
 
-    expect(screen.getByText('Rodjendan')).toBeTruthy();
+    expect(screen.getByText('Zauzeto')).toBeTruthy();
   });
 
   // Sustina: rodjendan je dogadjaj dana i stoji iznad ostalog, a ostalo tog
@@ -300,5 +301,39 @@ describe('ScheduleScreen - rodjendani', () => {
     await render(<ScheduleScreen />);
 
     expect(screen.queryByText('Rodjendan - Lena')).toBeNull();
+  });
+});
+
+// Termin drzi svaka rezervacija, ne samo rodjendan.
+describe('ScheduleScreen - rezervacije koje nisu rodjendan', () => {
+  const rezervacija = {
+    id: 'p1',
+    kind: 'RESERVATION',
+    title: 'Privatna proslava',
+    startTime: '17:00',
+    endTime: '20:00',
+    isFullDay: false,
+  };
+
+  test('privatna proslava se vidi kao zauzet termin', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({ items: [rezervacija] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.getByText('Privatna proslava')).toBeTruthy();
+    expect(screen.getByText('17:00 - 20:00')).toBeTruthy();
+    expect(screen.getByText('Zauzeto')).toBeTruthy();
+  });
+
+  test('celodnevna rezervacija dobija veliku karticu sa svojim nazivom', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({ items: [{ ...rezervacija, title: 'Skolska ekskurzija', isFullDay: true }] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.getByTestId('neradni-dan')).toBeTruthy();
+    expect(screen.getByText('Skolska ekskurzija')).toBeTruthy();
+    expect(screen.getByText('Ovog dana ne radimo')).toBeTruthy();
   });
 });
