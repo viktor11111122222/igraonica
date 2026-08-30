@@ -33,6 +33,20 @@ describe('PromoBanners', () => {
     expect(screen.queryByLabelText('Letnji popust')).toBeNull();
   });
 
+  // Bez slike kartica ne sme da ostane prazna bela povrsina, nego ide u boji sa
+  // sarom - istom onom iz zaglavlja.
+  test('promocija bez slike dobija podlogu u boji', async () => {
+    await render(<PromoBanners promocije={[promocija({ imageUrl: null })]} />);
+
+    expect(screen.getByTestId('promo-sara')).toBeTruthy();
+  });
+
+  test('promocija sa slikom nema podlogu u boji', async () => {
+    await render(<PromoBanners promocije={[promocija()]} />);
+
+    expect(screen.queryByTestId('promo-sara')).toBeNull();
+  });
+
   // Jedna promocija je obican baner - tacke bi bile samo smetnja.
   test('jedna promocija nema tacke', async () => {
     await render(<PromoBanners promocije={[promocija()]} />);

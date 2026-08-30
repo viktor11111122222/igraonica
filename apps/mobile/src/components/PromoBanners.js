@@ -8,10 +8,39 @@ import { colors, radius, spacing, type, shadow } from '../theme';
 // dole.
 const PROVIRI = 28;
 
+// Podloga promocije bez slike: glavna boja sa istom decjom sarom kao zaglavlje.
+//
+// Sara se ovde ne kaci za vrh kao u baneru nego pokriva celu povrsinu - kartica
+// u karuselu se rastegne na visinu najvise, pa bi se crtezi inace prekinuli na
+// pola i ostavili gole donje uglove. Preko svega ide tanka koprena, jer bez nje
+// crtezi prolaze kroz tekst i belo pismo se gubi.
+export function PromoPodloga() {
+  return (
+    <View style={[StyleSheet.absoluteFill, styles.podloga]} pointerEvents="none">
+      <Image
+        testID="promo-sara"
+        source={require('../../assets/banner-doodles.png')}
+        style={styles.sara}
+        resizeMode="cover"
+        accessible={false}
+      />
+      <View style={[StyleSheet.absoluteFill, styles.koprena]} />
+    </View>
+  );
+}
+
+// Bez slike kartica ne moze da ostane bela: u karuselu se sve rastegnu na
+// visinu najvise, pa bi tekst stajao u vrhu a ispod njega ostala prazna
+// povrsina. Takva promocija zato ide cela u boji, sa istom sarom kao zaglavlje,
+// a tekst se spusta na sredinu - deluje kao namerna kartica, ne kao praznina.
 function Kartica({ promocija, sirina }) {
+  const bezSlike = !promocija.imageUrl;
+
   return (
     <View style={[styles.kartica, { width: sirina }]}>
-      {promocija.imageUrl ? (
+      {bezSlike ? (
+        <PromoPodloga />
+      ) : (
         <Image
           source={{ uri: mediaUrl(promocija.imageUrl) }}
           style={styles.slika}
@@ -19,15 +48,18 @@ function Kartica({ promocija, sirina }) {
           accessible
           accessibilityLabel={promocija.title}
         />
-      ) : null}
-      <View style={styles.telo}>
-        <Text style={styles.naslov} numberOfLines={2}>
+      )}
+      <View style={[styles.telo, bezSlike && styles.teloUBoji]}>
+        <Text style={[styles.naslov, bezSlike && styles.naslovUBoji]} numberOfLines={2}>
           {promocija.title}
         </Text>
         {promocija.description ? (
-          // Tri reda drze kartice na slicnoj visini; ceo tekst se ionako video
-          // u prozoru koji je iskocio pri prvom ulasku.
-          <Text style={styles.opis} numberOfLines={3}>
+          // Uz sliku tri reda drze kartice na slicnoj visini; bez nje ima mesta
+          // za ceo tekst, pa se retko koja promocija uopste sece.
+          <Text
+            style={[styles.opis, bezSlike && styles.opisUBoji]}
+            numberOfLines={bezSlike ? 6 : 3}
+          >
             {promocija.description}
           </Text>
         ) : null}
@@ -106,9 +138,17 @@ const styles = StyleSheet.create({
   // 16:9 je razmera u kojoj se slike i prave; bez fiksne razmere bi baner
   // menjao visinu od promocije do promocije.
   slika: { width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.primaryTint },
+  podloga: { backgroundColor: colors.primary },
+  sara: { width: '100%', height: '100%', opacity: colors.bannerDoodle },
+  koprena: { backgroundColor: colors.onPrimaryVeil },
   telo: { padding: spacing.lg, gap: 2 },
+  // Tekst na boji ima celu karticu za sebe, pa stoji po sredini i sa vise
+  // vazduha nego kad deli mesto sa slikom.
+  teloUBoji: { flex: 1, justifyContent: 'center', padding: spacing.xl, gap: spacing.xs },
   naslov: { ...type.heading, color: colors.text },
+  naslovUBoji: { ...type.title, fontSize: 22, color: colors.textOnPrimary },
   opis: { ...type.body, color: colors.textMuted, lineHeight: 20 },
+  opisUBoji: { color: colors.onPrimaryMuted },
 
   tacke: {
     flexDirection: 'row',

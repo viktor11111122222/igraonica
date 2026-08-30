@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import { PromoPodloga } from './PromoBanners';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PressableScale from './PressableScale';
 import { mediaUrl } from '../utils/api';
@@ -69,9 +70,12 @@ export default function PromoPopup({ promocije }) {
           {/* Uz vise promocija sadrzaj ne stane u prozor. Traka i linija iznad
               dugmeta govore da ima jos - bez toga tekst deluje odseceno. */}
           <ScrollView contentContainerStyle={styles.sadrzaj}>
-            {zaPrikaz.map((p) => (
-              <View key={p.id} style={styles.promocija}>
-                {p.imageUrl ? (
+            {zaPrikaz.map((p) =>
+              // Bez slike promocija bi bila samo dva reda teksta na belom, uz
+              // susede sa slikama - zato ide u boji sa sarom, isto kao kartica
+              // u karuselu na pocetnoj.
+              p.imageUrl ? (
+                <View key={p.id} style={styles.promocija}>
                   <Image
                     source={{ uri: mediaUrl(p.imageUrl) }}
                     style={styles.slika}
@@ -79,11 +83,19 @@ export default function PromoPopup({ promocije }) {
                     accessible
                     accessibilityLabel={p.title}
                   />
-                ) : null}
-                <Text style={styles.naslov}>{p.title}</Text>
-                {p.description ? <Text style={styles.opis}>{p.description}</Text> : null}
-              </View>
-            ))}
+                  <Text style={styles.naslov}>{p.title}</Text>
+                  {p.description ? <Text style={styles.opis}>{p.description}</Text> : null}
+                </View>
+              ) : (
+                <View key={p.id} style={styles.uBoji}>
+                  <PromoPodloga />
+                  <Text style={[styles.naslov, styles.naslovUBoji]}>{p.title}</Text>
+                  {p.description ? (
+                    <Text style={[styles.opis, styles.opisUBoji]}>{p.description}</Text>
+                  ) : null}
+                </View>
+              )
+            )}
           </ScrollView>
 
           <View style={styles.podnozje}>
@@ -118,6 +130,14 @@ const styles = StyleSheet.create({
   },
   sadrzaj: { padding: spacing.xl, gap: spacing.xl },
   promocija: { gap: spacing.sm },
+  uBoji: {
+    gap: spacing.xs,
+    padding: spacing.xl,
+    minHeight: 150,
+    justifyContent: 'center',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
   slika: {
     width: '100%',
     aspectRatio: 16 / 9,
@@ -126,6 +146,8 @@ const styles = StyleSheet.create({
   },
   naslov: { ...type.title, fontSize: 20, color: colors.text },
   opis: { ...type.body, color: colors.textMuted, lineHeight: 21 },
+  naslovUBoji: { color: colors.textOnPrimary },
+  opisUBoji: { color: colors.onPrimaryMuted },
   podnozje: { borderTopWidth: 1, borderTopColor: colors.border },
   dugme: {
     margin: spacing.xl,
