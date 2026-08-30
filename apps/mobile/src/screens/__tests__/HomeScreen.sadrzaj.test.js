@@ -36,10 +36,12 @@ const aktivnosti = [
   { id: 'a1', title: 'Sportsko jutro', startTime: '10:00', endTime: '11:00', ageRange: '4-6 godina' },
 ];
 
-function odgovori({ menu = obroci, week = { 0: aktivnosti, 1: aktivnosti, 2: aktivnosti, 3: aktivnosti, 4: aktivnosti, 5: aktivnosti, 6: aktivnosti } } = {}) {
+// Pocetna trazi plan dana ("/schedule/plan?date=..."), ne nedeljni raspored -
+// samo plan zna za rodjendane i za to koje aktivnosti oni gase.
+function odgovori({ menu = obroci, plan = aktivnosti } = {}) {
   apiRequest.mockImplementation((putanja) => {
     if (putanja.startsWith('/menu')) return Promise.resolve({ items: menu });
-    if (putanja === '/schedule') return Promise.resolve({ week });
+    if (putanja.startsWith('/schedule/plan')) return Promise.resolve({ items: plan });
     return Promise.resolve({});
   });
 }
@@ -52,6 +54,39 @@ beforeEach(() => {
   mockZatvoreno = false;
   mockPodesavanja = { mobile_tab_gallery: 'true' };
   odgovori();
+});
+
+describe('HomeScreen - rodjendan u planu dana', () => {
+  const rodjendan = {
+    id: 'r1',
+    kind: 'BIRTHDAY',
+    title: 'Rodjendan',
+    startTime: '17:00',
+    endTime: '20:00',
+    isFullDay: true,
+  };
+
+  // Server uz celodnevni rodjendan vise ne salje aktivnosti, pa se ni na
+  // pocetnoj ne pojavljuju - inace bi "Danas u igraonici" govorilo jedno, a
+  // tab "Raspored" drugo.
+  test('celodnevni rodjendan stoji sam, sa oznakom "Ceo dan"', async () => {
+    odgovori({ plan: [rodjendan] });
+
+    await prikazi();
+
+    expect(await screen.findByText('Rodjendan')).toBeTruthy();
+    expect(screen.getByText('Ceo dan')).toBeTruthy();
+    expect(screen.queryByText('Sportsko jutro')).toBeNull();
+  });
+
+  test('rodjendan u terminu zadrzava sat pocetka', async () => {
+    odgovori({ plan: [{ ...rodjendan, title: 'Rodjendan - Lena', isFullDay: false }] });
+
+    await prikazi();
+
+    expect(await screen.findByText('Rodjendan - Lena')).toBeTruthy();
+    expect(screen.getByText('17:00')).toBeTruthy();
+  });
 });
 
 describe('HomeScreen - sta se danas desava', () => {

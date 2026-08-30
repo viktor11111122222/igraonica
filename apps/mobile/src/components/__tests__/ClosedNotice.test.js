@@ -69,3 +69,39 @@ describe('ClosedNotice', () => {
     expect(toJSON()).toBeNull();
   });
 });
+
+// Celodnevni rodjendan ima svoj izgled, jedan za sve - i kad stigne iz
+// rezervacije i kad je dan rucno oznacen u panelu.
+describe('ClosedNotice - celodnevni rodjendan', () => {
+  const dan = { date: DAN, reason: 'Rodjendan', note: null, kind: 'BIRTHDAY' };
+
+  test('prikazuje karticu rodjendana umesto crvenog obavestenja', async () => {
+    mockZatvoreni = { [DAN]: dan };
+
+    await render(<ClosedNotice date={DAN} />);
+
+    expect(screen.getByTestId('rodjendan-ceo-dan')).toBeTruthy();
+    expect(screen.getByText('Rodjendan')).toBeTruthy();
+    expect(screen.getByText('Ceo dan')).toBeTruthy();
+    expect(screen.queryByText('Ovog dana ne radimo')).toBeNull();
+  });
+
+  test('napomena osoblja se zadrzava', async () => {
+    mockZatvoreni = { [DAN]: { ...dan, note: 'Zatvoreno za privatnu proslavu' } };
+
+    await render(<ClosedNotice date={DAN} />);
+
+    expect(screen.getByText('Zatvoreno za privatnu proslavu')).toBeTruthy();
+  });
+
+  // Neradni dan iz drugog razloga ostaje crven - rodjendan nije jedini razlog
+  // zbog kog se ne radi.
+  test('praznik i dalje ide kao obicno obavestenje', async () => {
+    mockZatvoreni = { [DAN]: { date: DAN, reason: 'Praznik', note: null, kind: 'CLOSED' } };
+
+    await render(<ClosedNotice date={DAN} />);
+
+    expect(screen.queryByTestId('rodjendan-ceo-dan')).toBeNull();
+    expect(screen.getByText('Ovog dana ne radimo')).toBeTruthy();
+  });
+});

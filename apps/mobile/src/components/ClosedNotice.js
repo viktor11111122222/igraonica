@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useClosedDays } from '../context/ClosedDaysContext';
+import RodjendanCeoDan from './RodjendanCeoDan';
 import { colors, radius, spacing, type } from '../theme';
 
 // Obavestenje da se tog dana ne dolazi. Za razliku od <Announcement/>, koje
@@ -14,6 +15,12 @@ export default function ClosedNotice({ date, today = false, style }) {
 
   const dan = closedOn(date);
   if (!dan) return null;
+
+  // Celodnevni rodjendan ima svoj izgled, jedan za sve - stize li iz
+  // rezervacije ili je dan rucno oznacen u panelu, roditelj vidi istu karticu.
+  if (dan.kind === 'BIRTHDAY') {
+    return <RodjendanCeoDan note={dan.note} style={[styles.rodjendan, style]} />;
+  }
 
   return (
     <View style={[styles.wrap, style]}>
@@ -46,6 +53,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.dangerSoft,
   },
+  rodjendan: { marginHorizontal: spacing.xl, marginTop: spacing.lg },
   icon: { paddingTop: 1 },
   body: { flex: 1 },
   title: { ...type.heading, color: colors.danger },

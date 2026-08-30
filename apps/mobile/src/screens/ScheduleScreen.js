@@ -15,6 +15,7 @@ import { useDaySelection } from '../hooks/useDay';
 import Banner from '../components/Banner';
 import DayStrip from '../components/DayStrip';
 import Announcement from '../components/Announcement';
+import RodjendanCeoDan from '../components/RodjendanCeoDan';
 import ClosedNotice from '../components/ClosedNotice';
 import { useClosedDays } from '../context/ClosedDaysContext';
 import { colors, radius, spacing, type, shadow } from '../theme';
@@ -141,6 +142,13 @@ export default function ScheduleScreen() {
             activities.map((a) => {
               const rodjendan = a.kind === 'BIRTHDAY';
 
+              // Celodnevni rodjendan je jedino sto se tog dana desava - server
+              // vise i ne salje aktivnosti uz njega. Zato dobija celu karticu
+              // umesto reda u spisku. Ista je i kad dan stigne kao neradni.
+              if (rodjendan && a.isFullDay) {
+                return <RodjendanCeoDan key={a.id} />;
+              }
+
               return (
               <View key={a.id} style={[styles.card, rodjendan && styles.cardRodjendan]}>
                 <View
@@ -159,9 +167,7 @@ export default function ScheduleScreen() {
                     {/* Celodnevni rodjendan nema smislen termin, pa se umesto
                         "00:00 - 23:59" pise sta to zapravo znaci. */}
                     <Text style={[styles.time, rodjendan && styles.timeRodjendan]}>
-                      {rodjendan && a.isFullDay
-                        ? 'Ceo dan'
-                        : `${a.startTime} - ${a.endTime}`}
+                      {`${a.startTime} - ${a.endTime}`}
                     </Text>
                     {rodjendan ? (
                       <View style={styles.oznaka}>

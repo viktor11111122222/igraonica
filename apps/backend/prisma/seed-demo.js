@@ -635,8 +635,10 @@ async function main() {
     console.log('Uklonjen neradni dan koji je pao na danas.');
   }
 
+  // Rodjendan se ovde ne upisuje kao neradni dan: celodnevna rezervacija sama
+  // zatvara svoj dan, pa bi rucni upis bio isti podatak na dva mesta.
   const NERADNI = [
-    { date: addDays(danas, 3), reason: 'Rodjendan', note: 'Zatvoreno za privatnu proslavu' },
+    { date: addDays(danas, 3), reason: 'Praznik', note: 'Drzavni praznik' },
     { date: addDays(danas, 6), reason: 'Privatna proslava', note: 'Krstenje, ceo dan' },
   ];
 

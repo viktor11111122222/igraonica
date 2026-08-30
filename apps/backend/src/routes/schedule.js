@@ -2,7 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const prisma = require('../config/db');
 const { protect, authorize } = require('../middleware/auth');
-const { krajPoslePocetka } = require('../utils/time');
+const { krajPoslePocetka, minutiOdPonoci } = require('../utils/time');
 
 const router = express.Router();
 
@@ -82,8 +82,10 @@ router.get('/events', async (req, res) => {
 // nedeljne aktivnosti za taj dan u nedelji, jednokratne dogadjaje bas tog
 // datuma i rodjendane iz rezervacija.
 //
-// Rodjendan ide na vrh spiska bez obzira na sat. Ostale aktivnosti tog dana
-// ostaju - i one pre i one posle rodjendana - samo idu ispod njega.
+// Rodjendan ide na vrh spiska bez obzira na sat i jaci je od redovnog
+// programa: dok on traje, aktivnosti se ne odrzavaju, pa se ni ne prikazuju.
+// Celodnevni rodjendan tako gasi ceo dan, a rodjendan u terminu samo ono sto
+// upada u njegovo vreme - sto je pre i posle njega ostaje.
 router.get('/plan', async (req, res) => {
   try {
     const { date } = req.query;
@@ -116,6 +118,21 @@ router.get('/plan', async (req, res) => {
       }),
     ]);
 
+    // Termini se dodiruju bez preklapanja: aktivnost 09:00-10:00 i rodjendan
+    // od 10:00 mogu jedno za drugim.
+    const upadaURodjendan = (a) =>
+      rodjendani.some((r) => {
+        if (r.isFullDay) return true;
+
+        const pocetak = minutiOdPonoci(a.startTime);
+        const kraj = minutiOdPonoci(a.endTime);
+        const rPocetak = minutiOdPonoci(r.startTime);
+        const rKraj = minutiOdPonoci(r.endTime);
+        if ([pocetak, kraj, rPocetak, rKraj].some((v) => v === null)) return false;
+
+        return pocetak < rKraj && rPocetak < kraj;
+      });
+
     const aktivnost = (a) => ({
       id: a.id,
       kind: 'ACTIVITY',
@@ -131,13 +148,17 @@ router.get('/plan', async (req, res) => {
       ...rodjendani.map((r) => ({
         id: r.id,
         kind: 'BIRTHDAY',
-        title: r.title,
+        // Celodnevni rodjendan je jedino sto tog dana stoji u rasporedu, pa mu
+        // ime nije ni potrebno - a naslov koji osoblje upise cesto nosi ime
+        // deteta, koje u javnom spisku nema sta da trazi.
+        title: r.isFullDay ? 'Rodjendan' : r.title,
         description: null,
         startTime: r.startTime,
         endTime: r.endTime,
         isFullDay: r.isFullDay,
       })),
       ...[...nedeljne, ...jednokratne]
+        .filter((a) => !upadaURodjendan(a))
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
         .map(aktivnost),
     ];

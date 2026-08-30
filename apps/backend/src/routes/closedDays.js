@@ -28,7 +28,32 @@ const izlaz = (row) => ({
   date: toKey(row.date),
   reason: row.reason,
   note: row.note,
+  kind: 'CLOSED',
 });
+
+// Celodnevni rodjendan zauzima igraonicu ceo dan, pa je taj dan neradni i bez
+// rucnog oznacavanja u panelu - inace bi osoblje istu stvar upisivalo dvaput, a
+// roditelj bi je video na dva razlicita nacina.
+//
+// `kind` govori aplikaciji da je razlog rodjendan, da bi svuda prikazala isto.
+// Ako je dan i rucno oznacen, rodjendan je precutan razlog, a rucna napomena se
+// zadrzava - ona obicno kaze ono sto rodjendan sam po sebi ne kaze.
+function spojiRodjendane(rows, rodjendani) {
+  const poDatumu = new Map(rows.map((r) => [r.date, r]));
+
+  for (const r of rodjendani) {
+    const datum = toKey(r.date);
+    poDatumu.set(datum, {
+      id: r.id,
+      date: datum,
+      reason: 'Rodjendan',
+      note: poDatumu.get(datum)?.note ?? null,
+      kind: 'BIRTHDAY',
+    });
+  }
+
+  return [...poDatumu.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
 
 // GET /api/closed-days?from=YYYY-MM-DD&to=YYYY-MM-DD - javno.
 // Bez parametara vraca od pocetka tekuceg meseca pa nadalje.
@@ -39,9 +64,16 @@ router.get('/', async (req, res) => {
     const where = { date: { gte: from ? toUtcDate(from) : firstOfThisMonth() } };
     if (to) where.date.lte = toUtcDate(to);
 
-    const rows = await prisma.closedDay.findMany({ where, orderBy: { date: 'asc' } });
+    const [rows, rodjendani] = await Promise.all([
+      prisma.closedDay.findMany({ where, orderBy: { date: 'asc' } }),
+      prisma.reservation.findMany({
+        where: { type: 'BIRTHDAY', isFullDay: true, status: { not: 'CANCELLED' }, date: where.date },
+        orderBy: { date: 'asc' },
+        select: { id: true, date: true },
+      }),
+    ]);
 
-    res.json({ closedDays: rows.map(izlaz) });
+    res.json({ closedDays: spojiRodjendane(rows.map(izlaz), rodjendani) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Greska na serveru.' });

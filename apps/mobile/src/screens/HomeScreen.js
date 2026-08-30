@@ -22,7 +22,7 @@ import PromoPopup from '../components/PromoPopup';
 import PressableScale from '../components/PressableScale';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
-import { dayIndex, todayKey } from '../utils/date';
+import { todayKey } from '../utils/date';
 import { mailUrl, mapsUrl, open, parseCoords, telUrl } from '../utils/contact';
 import { summarize } from '../utils/packages';
 import { photos } from '../data/gallery';
@@ -58,10 +58,12 @@ export default function HomeScreen({ navigation }) {
 
   const loadData = useCallback(async () => {
     const today = todayKey();
+    // Plan dana, a ne nedeljni raspored: samo on zna za rodjendane i za to da
+    // ih rodjendan gasi, pa se pocetna slaze sa tabom "Raspored".
     const [pkgs, todayMenu, schedule, akcije, baneri] = await Promise.all([
       apiRequest('/packages/my').catch(() => null),
       apiRequest(`/menu?date=${today}`).catch(() => null),
-      apiRequest('/schedule').catch(() => null),
+      apiRequest(`/schedule/plan?date=${today}`).catch(() => null),
       apiRequest('/promotions').catch(() => null),
       apiRequest('/promo-banners').catch(() => null),
     ]);
@@ -70,7 +72,7 @@ export default function HomeScreen({ navigation }) {
       setDebtHours(Number(pkgs.debtHours) || 0);
     }
     if (todayMenu) setMenu(todayMenu.items || []);
-    if (schedule) setActivities(schedule.week?.[dayIndex(new Date())] || []);
+    if (schedule) setActivities(schedule.items || []);
     if (akcije) setPromotions(akcije.promotions || []);
     if (baneri) setPromoBanners(baneri.promoBanners || []);
   }, []);
@@ -279,7 +281,11 @@ export default function HomeScreen({ navigation }) {
         ) : (
           activities.slice(0, 3).map((a) => (
             <View key={a.id} style={styles.line}>
-              <Text style={styles.lineLabel}>{a.startTime}</Text>
+              {/* Celodnevni rodjendan nema smislen sat pocetka - u rasporedu
+                  na svom tabu takodje pise "Ceo dan". */}
+              <Text style={styles.lineLabel}>
+                {a.kind === 'BIRTHDAY' && a.isFullDay ? 'Ceo dan' : a.startTime}
+              </Text>
               <Text style={styles.lineValue} numberOfLines={1}>
                 {a.title}
               </Text>

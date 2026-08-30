@@ -271,6 +271,27 @@ describe('ScheduleScreen - rodjendani', () => {
     expect(screen.queryByText('00:00 - 23:59')).toBeNull();
   });
 
+  // Celodnevni rodjendan je jedino sto se tog dana desava, pa dobija celu
+  // karticu umesto reda u spisku.
+  test('celodnevni rodjendan ima svoju veliku karticu', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({ items: [{ ...rodjendan, title: 'Rodjendan', isFullDay: true }] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.getByTestId('rodjendan-ceo-dan')).toBeTruthy();
+    expect(screen.getByText('Rodjendan')).toBeTruthy();
+  });
+
+  test('rodjendan u terminu ostaje obican red u spisku', async () => {
+    zamrzniDan(2026, 7, 12);
+    mockApi({ items: [rodjendan] });
+
+    await render(<ScheduleScreen />);
+
+    expect(screen.queryByTestId('rodjendan-ceo-dan')).toBeNull();
+  });
+
   test('neradnog dana se ni rodjendan ne prikazuje', async () => {
     zamrzniDan(2026, 7, 12);
     mockZatvoreni = { '2026-08-12': { date: '2026-08-12', reason: 'Praznik', note: null } };

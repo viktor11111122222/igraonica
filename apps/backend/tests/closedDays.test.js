@@ -42,6 +42,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await prisma.closedDay.deleteMany();
+  await prisma.reservation.deleteMany();
 });
 
 afterAll(async () => {
@@ -173,6 +174,85 @@ describe('GET /api/closed-days', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.closedDays).toEqual([]);
+  });
+});
+
+// Celodnevni rodjendan zauzima igraonicu ceo dan. Da roditelj ne bi za istu
+// stvar video dva razlicita obavestenja, takav dan je neradni sam po sebi i
+// nosi oznaku po kojoj ga aplikacija prikazuje uvek isto.
+describe('GET /api/closed-days - celodnevni rodjendan', () => {
+  const rodjendan = (telo) =>
+    request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        type: 'BIRTHDAY',
+        title: 'Rodjendan - Lena',
+        date: PETNAESTI,
+        startTime: '10:00',
+        endTime: '18:00',
+        isFullDay: true,
+        ...telo,
+      });
+
+  test('celodnevni rodjendan zatvara dan i bez rucnog oznacavanja', async () => {
+    await rodjendan();
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays).toHaveLength(1);
+    expect(res.body.closedDays[0].date).toBe(PETNAESTI);
+    expect(res.body.closedDays[0].reason).toBe('Rodjendan');
+    expect(res.body.closedDays[0].kind).toBe('BIRTHDAY');
+  });
+
+  test('rodjendan u terminu ne zatvara dan', async () => {
+    await rodjendan({ isFullDay: false });
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays).toHaveLength(0);
+  });
+
+  test('otkazan rodjendan ne zatvara dan', async () => {
+    const napravljen = await rodjendan();
+    await request(app)
+      .patch(`/api/reservations/${napravljen.body.reservation.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'CANCELLED' });
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays).toHaveLength(0);
+  });
+
+  test('rucno oznacen dan nosi oznaku "CLOSED"', async () => {
+    await dodaj({ date: PETNAESTI, reason: 'Praznik' });
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays[0].kind).toBe('CLOSED');
+  });
+
+  // Dan oznacen rucno i zauzet rodjendanom je i dalje jedan dan, sa jednim
+  // obavestenjem - a napomena koju je osoblje upisalo ne sme da propadne.
+  test('dan oznacen i rucno i rodjendanom se ne duplira', async () => {
+    await dodaj({ date: PETNAESTI, reason: 'Zatvoreno', note: 'Privatna proslava' });
+    await rodjendan();
+
+    const res = await request(app).get('/api/closed-days');
+
+    expect(res.body.closedDays).toHaveLength(1);
+    expect(res.body.closedDays[0].kind).toBe('BIRTHDAY');
+    expect(res.body.closedDays[0].note).toBe('Privatna proslava');
+  });
+
+  test('rodjendan van trazenog opsega ne ulazi', async () => {
+    await rodjendan({ date: DVADESETI });
+
+    const res = await request(app).get(`/api/closed-days?from=${PRVI}&to=${PETNAESTI}`);
+
+    expect(res.body.closedDays).toHaveLength(0);
   });
 });
 
