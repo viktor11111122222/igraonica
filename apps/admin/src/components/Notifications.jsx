@@ -68,7 +68,13 @@ export default function Notifications() {
           unreadCount > 0 ? `Obavestenja, ${unreadCount} neprocitano` : 'Obavestenja'
         }
       >
-        <span aria-hidden="true">🔔</span>
+        {/* Zvonce je crtez, ne znak iz fonta: jedini zvonci u Unicode-u su ili
+            emoji (u boji, ne slusaju CSS) ili APL simbol koji se crta kao lampa.
+            Popunjen je da drzi istu tezinu kao dingbati u bocnoj traci. */}
+        <svg className="zvono-ikona" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3c-.55 0-1 .45-1 1v.6C8.16 5.09 6 7.55 6 10.5v3.2l-1.4 2.1A.8.8 0 0 0 5.27 17h13.46a.8.8 0 0 0 .67-1.2L18 13.7v-3.2c0-2.95-2.16-5.41-5-5.9V4c0-.55-.45-1-1-1z" />
+          <path d="M10 18.5a2 2 0 0 0 4 0h-4z" />
+        </svg>
         {unreadCount > 0 && <span className="zvono-broj">{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../components/Layout';
-import { Alert, Badge, SettingRow, Spinner, Stepper, Switch } from '../components/ui';
+import { Alert, Badge, Confirm, Field, SettingRow, Spinner, Stepper, Switch } from '../components/ui';
 import { useFetch } from '../hooks/useFetch';
 import { useTheme, THEMES } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { patch } from '../lib/api';
 
 // Ekrani na kojima obavestenje moze da se pojavi. Imena moraju da se poklapaju
@@ -30,6 +31,76 @@ function TextSetting({ label, hint, placeholder, multiline, value, status, onSav
         }}
       />
     </SettingRow>
+  );
+}
+
+// Brisanje sopstvenog naloga. Odvojeno od ostalih podesavanja jer se jedino
+// ovde nista ne cuva samo od sebe: trazi lozinku i izricitu potvrdu.
+function BrisanjeNaloga() {
+  const { user, deleteAccount } = useAuth();
+  const [pita, setPita] = useState(false);
+  const [lozinka, setLozinka] = useState('');
+  const [radi, setRadi] = useState(false);
+  const [greska, setGreska] = useState('');
+
+  function zatvori() {
+    setPita(false);
+    setLozinka('');
+    setGreska('');
+  }
+
+  async function obrisi() {
+    setRadi(true);
+    setGreska('');
+    try {
+      // Uspeh sam odjavljuje, pa ova komponenta nestaje sa ekranom - zato se
+      // stanje posle ovoga vise ne dira.
+      await deleteAccount(lozinka);
+    } catch (err) {
+      setGreska(err.message);
+      setRadi(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <h2>Brisanje naloga</h2>
+        <div className="spacer" />
+        <Badge tone="red">nepovratno</Badge>
+      </div>
+      <div className="card-body" style={{ paddingTop: 0, paddingBottom: 0 }}>
+        <SettingRow
+          label="Obrisi svoj nalog"
+          hint={`Nalog ${user?.email} nestaje iz baze i prijava vise nije moguca. Prijave dece koje ste vi uneli ostaju u istoriji igraonice, ali bez vaseg imena. Ovo se ne moze ponistiti.`}
+        >
+          <button type="button" className="btn danger" onClick={() => setPita(true)}>
+            Obrisi nalog
+          </button>
+        </SettingRow>
+      </div>
+
+      {pita && (
+        <Confirm
+          title="Brisanje naloga"
+          text="Nalog se brise zauvek i odmah ste odjavljeni. Unesite lozinku da potvrdite da ste to zaista vi."
+          confirmLabel="Obrisi nalog"
+          onConfirm={obrisi}
+          onClose={zatvori}
+          busy={radi}
+          error={greska}
+        >
+          <Field label="Lozinka">
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={lozinka}
+              onChange={(e) => setLozinka(e.target.value)}
+            />
+          </Field>
+        </Confirm>
+      )}
+    </div>
   );
 }
 
@@ -318,6 +389,8 @@ export default function Settings() {
             />
           </div>
         </div>
+
+        <BrisanjeNaloga />
       </div>
     </>
   );

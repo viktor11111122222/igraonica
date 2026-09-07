@@ -4,10 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Layout, { PageHeader } from '../Layout';
 
+const logout = vi.fn();
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({
     user: { firstName: 'Vicko', lastName: 'Vicko', role: 'ADMIN' },
-    logout: vi.fn(),
+    logout,
   }),
 }));
 
@@ -154,5 +155,38 @@ describe('PageHeader', () => {
   test('van Layout-a radi i bez dugmeta za meni', () => {
     render(<PageHeader title="Samostalno" />);
     expect(screen.getByRole('heading', { name: 'Samostalno' })).toBeInTheDocument();
+  });
+});
+
+describe('Layout - odjava', () => {
+  test('klik na Odjava prvo pita, ne odjavljuje odmah', async () => {
+    const user = userEvent.setup();
+    prikazi();
+
+    await user.click(screen.getByRole('button', { name: 'Odjava' }));
+
+    expect(screen.getByRole('dialog', { name: 'Odjava' })).toBeInTheDocument();
+    expect(logout).not.toHaveBeenCalled();
+  });
+
+  test('potvrda odjavljuje', async () => {
+    const user = userEvent.setup();
+    prikazi();
+
+    await user.click(screen.getByRole('button', { name: 'Odjava' }));
+    await user.click(screen.getByRole('button', { name: 'Odjavi me' }));
+
+    expect(logout).toHaveBeenCalled();
+  });
+
+  test('odustajanje zatvara prozor i ostavlja prijavu', async () => {
+    const user = userEvent.setup();
+    prikazi();
+
+    await user.click(screen.getByRole('button', { name: 'Odjava' }));
+    await user.click(screen.getByRole('button', { name: 'Odustani' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(logout).not.toHaveBeenCalled();
   });
 });

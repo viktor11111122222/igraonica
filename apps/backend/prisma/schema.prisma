@@ -195,7 +195,9 @@ model Visit {
   // Deo naplacenog koji nije imao pokrice u paketu. Sam dug se vodi na
   // roditelju; ovde stoji da bi se videlo iz koje posete je nastao.
   debtHours       Decimal?    @map("debt_hours") @db.Decimal(10, 2)
-  checkedInById   String      @map("checked_in_by")
+  // Ko je prijavio i odjavio dete. Opciono jer nalog osoblja moze biti obrisan,
+  // a poseta mora da prezivi - istorija igraonice ne sme da nestane sa nalogom.
+  checkedInById   String?     @map("checked_in_by")
   checkedOutById  String?     @map("checked_out_by")
   status          VisitStatus @default(CHECKED_IN)
   notes           String?
@@ -204,8 +206,8 @@ model Visit {
 
   child        Child        @relation(fields: [childId], references: [id])
   userPackage  UserPackage? @relation(fields: [userPackageId], references: [id])
-  checkedInBy  User         @relation("CheckedInBy", fields: [checkedInById], references: [id])
-  checkedOutBy User?        @relation("CheckedOutBy", fields: [checkedOutById], references: [id])
+  checkedInBy  User?        @relation("CheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
+  checkedOutBy User?        @relation("CheckedOutBy", fields: [checkedOutById], references: [id], onDelete: SetNull)
 
   @@map("visits")
 }
@@ -217,14 +219,15 @@ model BlogPost {
   content       String
   excerpt       String?
   coverImageUrl String?   @map("cover_image_url")
-  authorId      String    @map("author_id")
+  // Isto kao kod poseta: tekst ostaje na sajtu i kad autor obrise svoj nalog.
+  authorId      String?   @map("author_id")
   isPublished   Boolean   @default(false) @map("is_published")
   isFeatured    Boolean   @default(false) @map("is_featured")
   publishedAt   DateTime? @map("published_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  author User @relation(fields: [authorId], references: [id])
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@map("blog_posts")
 }

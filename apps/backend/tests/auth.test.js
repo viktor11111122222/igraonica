@@ -375,3 +375,162 @@ describe('Deaktiviran nalog dobija svoju poruku', () => {
     expect(res.body.message).toContain('deaktiviran');
   });
 });
+
+describe('DELETE /api/auth/me', () => {
+  async function prijavi(email, password, role = 'PARENT') {
+    const korisnik = await createTestUser({
+      email,
+      password,
+      firstName: 'Za',
+      lastName: 'Brisanje',
+      role,
+    });
+    const prijava = await request(app).post('/api/auth/login').send({ email, password });
+    return { korisnik, token: prijava.body.token };
+  }
+
+  test('brise sopstveni nalog kad je lozinka tacna', async () => {
+    const { korisnik, token } = await prijavi(`brisem.${Date.now()}@primer.rs`, 'tajna123');
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'tajna123' });
+
+    expect(res.status).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: korisnik.id } })).toBeNull();
+  });
+
+  test('odbija pogresnu lozinku i ostavlja nalog', async () => {
+    const { korisnik, token } = await prijavi(`ostajem.${Date.now()}@primer.rs`, 'tajna123');
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'pogresna' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toContain('nije tacna');
+    expect(await prisma.user.findUnique({ where: { id: korisnik.id } })).not.toBeNull();
+  });
+
+  test('trazi lozinku', async () => {
+    const { token } = await prijavi(`bezlozinke.${Date.now()}@primer.rs`, 'tajna123');
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  test('trazi prijavu', async () => {
+    const res = await request(app).delete('/api/auth/me').send({ password: 'tajna123' });
+    expect(res.status).toBe(401);
+  });
+
+  test('ne pusta poslednjeg administratora da obrise sebe', async () => {
+    await prisma.user.deleteMany({ where: { role: { in: ['ADMIN', 'SUPERADMIN'] } } });
+    const { korisnik, token } = await prijavi(`jedini.${Date.now()}@primer.rs`, 'tajna123', 'ADMIN');
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'tajna123' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toContain('jedini administrator');
+    expect(await prisma.user.findUnique({ where: { id: korisnik.id } })).not.toBeNull();
+  });
+
+  test('pusta administratora kad postoji jos jedan', async () => {
+    await createTestUser({
+      email: `drugi.${Date.now()}@primer.rs`,
+      password: 'tajna123',
+      firstName: 'Drugi',
+      lastName: 'Admin',
+      role: 'ADMIN',
+    });
+    const { korisnik, token } = await prijavi(`odlazim.${Date.now()}@primer.rs`, 'tajna123', 'ADMIN');
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'tajna123' });
+
+    expect(res.status).toBe(200);
+    expect(await prisma.user.findUnique({ where: { id: korisnik.id } })).toBeNull();
+  });
+
+  test('posete ostaju u bazi kad nalog osoblja nestane', async () => {
+    await createTestUser({
+      email: `rezerva.${Date.now()}@primer.rs`,
+      password: 'tajna123',
+      firstName: 'Rezervni',
+      lastName: 'Admin',
+      role: 'ADMIN',
+    });
+    const { korisnik, token } = await prijavi(`prijavio.${Date.now()}@primer.rs`, 'tajna123', 'ADMIN');
+    const roditelj = await createTestUser({
+      email: `roditelj.${Date.now()}@primer.rs`,
+      password: 'tajna123',
+      firstName: 'Tudji',
+      lastName: 'Roditelj',
+    });
+    const dete = await prisma.child.create({
+      data: {
+        parentId: roditelj.id,
+        firstName: 'Tudje',
+        lastName: 'Dete',
+        dateOfBirth: new Date('2020-05-05'),
+        qrCode: `qr-${Date.now()}`,
+      },
+    });
+    const poseta = await prisma.visit.create({
+      data: { childId: dete.id, checkedInAt: new Date(), checkedInById: korisnik.id },
+    });
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'tajna123' });
+
+    expect(res.status).toBe(200);
+    const ostala = await prisma.visit.findUnique({ where: { id: poseta.id } });
+    expect(ostala).not.toBeNull();
+    expect(ostala.checkedInById).toBeNull();
+  });
+
+  test('brise decu i njihove posete uz roditeljski nalog', async () => {
+    const { korisnik, token } = await prijavi(`saDecom.${Date.now()}@primer.rs`, 'tajna123');
+    const admin = await createTestUser({
+      email: `prijavljivac.${Date.now()}@primer.rs`,
+      password: 'tajna123',
+      firstName: 'Prijavni',
+      lastName: 'Admin',
+      role: 'ADMIN',
+    });
+    const dete = await prisma.child.create({
+      data: {
+        parentId: korisnik.id,
+        firstName: 'Moje',
+        lastName: 'Dete',
+        dateOfBirth: new Date('2020-05-05'),
+        qrCode: `qr-d-${Date.now()}`,
+      },
+    });
+    const poseta = await prisma.visit.create({
+      data: { childId: dete.id, checkedInAt: new Date(), checkedInById: admin.id },
+    });
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: 'tajna123' });
+
+    expect(res.status).toBe(200);
+    expect(await prisma.child.findUnique({ where: { id: dete.id } })).toBeNull();
+    expect(await prisma.visit.findUnique({ where: { id: poseta.id } })).toBeNull();
+  });
+});

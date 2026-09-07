@@ -4,8 +4,19 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useActiveVisits } from '../hooks/useActiveVisits';
 import Notifications from './Notifications';
+import { Confirm } from './ui';
 import { initials } from '../lib/format';
 import logo from '../assets/logo.png';
+
+// Viljuska i noz. Kao i zvonce, crtez umesto znaka iz fonta - jedina jela u
+// Unicode-u su emoji, pa bi ikonica bila u boji i ne bi slusala temu.
+function IkonaJelovnik() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z" />
+    </svg>
+  );
+}
 
 const NAV = [
   {
@@ -36,7 +47,7 @@ const NAV = [
     group: 'Sadrzaj',
     items: [
       { to: '/promocije', label: 'Promocije', icon: '★' },
-      { to: '/jelovnik', label: 'Jelovnik', icon: '☕' },
+      { to: '/jelovnik', label: 'Jelovnik', icon: <IkonaJelovnik /> },
       { to: '/raspored', label: 'Raspored', icon: '▤' },
     ],
   },
@@ -56,6 +67,9 @@ export default function Layout() {
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  // Odjava se pita. Panel stoji na pultu ceo dan i dugme je tik uz meni, pa je
+  // slucajan klik usred smene znacio novo kucanje lozinke.
+  const [pitaZaOdjavu, setPitaZaOdjavu] = useState(false);
 
   // Broj dece koja su trenutno u igraonici stoji uz "Prijave" - to je jedini
   // podatak koji osoblje mora da vidi bez otvaranja stranice. Izvor je deljen sa
@@ -139,7 +153,7 @@ export default function Layout() {
               <div className="me-role">{user?.role}</div>
             </div>
           </div>
-          <button className="btn secondary block sm" onClick={logout}>
+          <button className="btn secondary block sm" onClick={() => setPitaZaOdjavu(true)}>
             Odjava
           </button>
         </div>
@@ -148,6 +162,17 @@ export default function Layout() {
       <div className="main">
         <Outlet />
       </div>
+
+      {pitaZaOdjavu && (
+        <Confirm
+          title="Odjava"
+          text="Sledeci put ce ponovo trebati email i lozinka. Nedovrsen unos na otvorenoj stranici se gubi."
+          confirmLabel="Odjavi me"
+          tone="danger"
+          onConfirm={logout}
+          onClose={() => setPitaZaOdjavu(false)}
+        />
+      )}
     </div>
     </SidebarCtx.Provider>
   );

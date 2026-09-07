@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { get, post, setToken, getToken, onSessionExpired, ApiError } from '../lib/api';
+import { get, post, del, setToken, getToken, onSessionExpired, ApiError } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -47,8 +47,19 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Brisanje sopstvenog naloga. Lozinka ide uz zahtev jer je radnja nepovratna,
+  // a token je mogao da ostane otvoren na tudjem racunaru. Ako server odbije,
+  // greska se propusta pozivaocu i korisnik ostaje prijavljen.
+  const deleteAccount = useCallback(
+    async (password) => {
+      await del('/auth/me', { password });
+      logout();
+    },
+    [logout]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

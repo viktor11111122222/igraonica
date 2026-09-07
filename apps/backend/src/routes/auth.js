@@ -186,4 +186,64 @@ router.post(
   }
 );
 
+// DELETE /api/auth/me
+// Brisanje sopstvenog naloga. Nepovratno i stvarno brise red iz baze - zato
+// trazi lozinku, iako je zahtev vec autorizovan tokenom: token moze da ostane
+// otvoren na tudjem racunaru, a ovo je jedina radnja koja se ne moze vratiti.
+router.delete(
+  '/me',
+  protect,
+  [body('password').notEmpty().withMessage('Lozinka je obavezna.')],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+      if (!user) {
+        return res.status(404).json({ message: 'Korisnik nije pronadjen.' });
+      }
+
+      const isMatch = await bcrypt.compare(req.body.password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Lozinka nije tacna.' });
+      }
+
+      // Panel bez ijednog administratora se ne moze vratiti kroz aplikaciju -
+      // ni da se doda nov nalog, ni da se nekom podigne uloga.
+      if (user.role === 'ADMIN' || user.role === 'SUPERADMIN') {
+        const ostaliAdmini = await prisma.user.count({
+          where: {
+            id: { not: user.id },
+            role: { in: ['ADMIN', 'SUPERADMIN'] },
+            isActive: true,
+          },
+        });
+        if (ostaliAdmini === 0) {
+          return res.status(409).json({
+            message:
+              'Vi ste jedini administrator. Postavite drugog administratora pa tek onda obrisite svoj nalog.',
+          });
+        }
+      }
+
+      // Posete dece se brisu rucno: Child ide u kaskadi za roditeljem, ali
+      // Visit.child je obavezna veza pa bi kaskada pukla na stranom kljucu.
+      // Osoblje ovde nema sta da izgubi - njihove prijave tudje dece ostaju,
+      // samo bez imena onoga ko ih je uneo.
+      await prisma.$transaction([
+        prisma.visit.deleteMany({ where: { child: { parentId: user.id } } }),
+        prisma.user.delete({ where: { id: user.id } }),
+      ]);
+
+      res.json({ message: 'Nalog je obrisan.' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Greska na serveru.' });
+    }
+  }
+);
+
 module.exports = router;

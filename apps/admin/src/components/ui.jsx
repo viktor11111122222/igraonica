@@ -237,6 +237,7 @@ export function Pagination({ page, pages, total, onChange }) {
 export function Confirm({
   title,
   text,
+  children,
   confirmLabel = 'Potvrdi',
   tone = 'danger',
   onConfirm,
@@ -264,6 +265,9 @@ export function Confirm({
       <p className="muted" style={{ margin: 0, lineHeight: 1.6 }}>
         {text}
       </p>
+      {/* Potvrde koje traze jos nesto od korisnika - recimo lozinku pred
+          brisanje naloga - taj deo dodaju ovde. */}
+      {children && <div style={{ marginTop: 14 }}>{children}</div>}
     </Modal>
   );
 }

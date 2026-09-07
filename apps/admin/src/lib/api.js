@@ -76,7 +76,7 @@ export async function api(path, { method = 'GET', body, raw } = {}) {
 export const get = (path) => api(path);
 export const post = (path, body) => api(path, { method: 'POST', body });
 export const patch = (path, body) => api(path, { method: 'PATCH', body });
-export const del = (path) => api(path, { method: 'DELETE' });
+export const del = (path, body) => api(path, { method: 'DELETE', body });
 
 // Upload ide kao multipart, bez Content-Type headera (browser ga sam postavi
 // sa boundary-jem).

@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Settings from '../Settings';
 import { get, patch } from '../../lib/api';
@@ -8,6 +8,12 @@ vi.mock('../../lib/api', () => ({ get: vi.fn(), patch: vi.fn() }));
 
 vi.mock('../../components/Layout', () => ({
   PageHeader: ({ title }) => <h1>{title}</h1>,
+}));
+
+const deleteAccount = vi.fn();
+
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ user: { email: 'admin@igraonica.com' }, deleteAccount }),
 }));
 
 vi.mock('../../context/ThemeContext', () => ({
@@ -28,6 +34,7 @@ const podesavanja = [
 beforeEach(() => {
   get.mockReset().mockResolvedValue({ settings: podesavanja });
   patch.mockReset().mockResolvedValue({});
+  deleteAccount.mockReset().mockResolvedValue();
 });
 
 afterEach(() => {
@@ -201,5 +208,53 @@ describe('Settings - prag naplate', () => {
     await waitFor(() =>
       expect(patch).toHaveBeenCalledWith('/settings/hour_grace_minutes', { value: '30' })
     );
+  });
+});
+
+describe('Settings - brisanje naloga', () => {
+  async function otvoriPotvrdu(user) {
+    render(<Settings />);
+    await user.click(await screen.findByRole('button', { name: 'Obrisi nalog' }));
+    return screen.getByRole('dialog');
+  }
+
+  test('klik na dugme ne brise odmah, nego trazi potvrdu', async () => {
+    const user = userEvent.setup();
+    const dialog = await otvoriPotvrdu(user);
+
+    expect(dialog).toBeInTheDocument();
+    expect(deleteAccount).not.toHaveBeenCalled();
+  });
+
+  test('potvrda salje unetu lozinku', async () => {
+    const user = userEvent.setup();
+    await otvoriPotvrdu(user);
+
+    await user.type(screen.getByLabelText('Lozinka'), 'admin1234');
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Obrisi nalog' }));
+
+    await waitFor(() => expect(deleteAccount).toHaveBeenCalledWith('admin1234'));
+  });
+
+  test('odustajanje zatvara prozor i ne brise nista', async () => {
+    const user = userEvent.setup();
+    await otvoriPotvrdu(user);
+
+    await user.click(screen.getByRole('button', { name: 'Odustani' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(deleteAccount).not.toHaveBeenCalled();
+  });
+
+  test('greska sa servera ostaje u prozoru', async () => {
+    deleteAccount.mockRejectedValue(new Error('Lozinka nije tacna.'));
+    const user = userEvent.setup();
+    await otvoriPotvrdu(user);
+
+    await user.type(screen.getByLabelText('Lozinka'), 'pogresna');
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Obrisi nalog' }));
+
+    expect(await screen.findByText('Lozinka nije tacna.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
