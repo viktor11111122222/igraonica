@@ -1,0 +1,17 @@
+{
+  "name": "Kids club — admin",
+  "short_name": "Kids club",
+  "description": "Panel osoblja: prijave, deca, paketi i rezervacije.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f9fb",
+  "theme_color": "#7c9fc9",
+  "lang": "sr",
+  "icons": [
+    { "src": "/ikona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/ikona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/ikona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

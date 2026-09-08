@@ -14,6 +14,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Telefon otvara panel preko tunela (`npm run dev:tunel`) ili preko imena
+    // racunara na mrezi. Vite inace odbija svaki Host koji ne poznaje, pa bi
+    // umesto panela stigla poruka "Blocked request".
+    allowedHosts: ['.trycloudflare.com', '.local'],
     // Backend je na 3001. Preko proxy-ja frontend zove /api i /uploads na
     // istom origin-u, pa nema CORS-a ni hardkodovanog URL-a u kodu.
     proxy: {

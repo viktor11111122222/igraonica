@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:https": "npm run cert && vite --config vite.config.https.js",
+    "dev:tunel": "bash scripts/dev-tunnel.sh",
     "cert": "bash scripts/dev-cert.sh",
     "build": "vite build",
     "preview": "vite preview",

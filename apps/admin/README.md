@@ -120,6 +120,25 @@ QWERTY i srpskom QWERTZ rasporedu.
 
 ### Kamera na telefonu
 
+Najkraci put: **otvori panel na adresi servera**, ne na dev serveru sa laptopa.
+Sertifikat prave adrese telefon vec priznaje, pa radnik dozvolu za kameru
+potvrdi jednom i pitanje se vise ne vraca - bez ijednog koraka na telefonu.
+
+Za rad na laptopu isto to daje tunel:
+
+```bash
+npm run dev:tunel     # ispise https://...trycloudflare.com adresu za telefon
+```
+
+Ta adresa ima sertifikat kojem svaki telefon veruje, pa nema ni upozorenja ni
+instaliranja profila. Adresa je nasumicna pri svakom pokretanju, a dozvola se
+pamti po adresi - za adresu koja se ne menja ide imenovan Cloudflare tunel ili
+prosto adresa servera.
+
+Sve ispod je stariji put, preko sopstvenog sertifikata. Radi, ali trazi tri
+koraka na svakom telefonu.
+
+
 WebKit trazi **validan** sertifikat za `getUserMedia`. Bez njega Safari ne
 postavi ni `navigator.mediaDevices` — nema greske, skener prosto cuti. Zato
 `http://<ip>:5173` nikad nece dobiti kameru, a ni samopotpisan sertifikat koji
