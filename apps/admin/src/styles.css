@@ -333,6 +333,53 @@ select:focus-visible {
   padding: 1px 7px;
 }
 
+/* Pravni tekstovi u panelu. Duga forma za citanje, pa je red sirok koliko i
+   oko podnosi, a ne koliko kartica dozvoljava. */
+.pravno-tekst {
+  max-width: 760px;
+  line-height: 1.7;
+}
+.pravno-tekst h2 {
+  font-size: 17px;
+  margin: 28px 0 8px;
+}
+.pravno-tekst section:first-of-type h2 {
+  margin-top: 20px;
+}
+.pravno-tekst h3 {
+  font-size: 15px;
+  margin: 18px 0 4px;
+}
+.pravno-tekst p {
+  margin: 8px 0;
+}
+.pravno-tekst li {
+  margin: 4px 0;
+}
+.pravno-tekst a {
+  color: var(--primary-darker);
+  text-decoration: underline;
+}
+.pravno-karta {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  margin: 14px 0;
+}
+.pravno-karta p {
+  margin: 4px 0;
+}
+/* Mesto koje vlasnik jos nije popunio - mora da bode oci pre slanja na
+   prodavnicu, i u panelu i na javnoj stranici. */
+.popuni {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
 /* Sitni linkovi na dnu bocne trake - dokumenti, ne navigacija. */
 .pravno {
   display: flex;

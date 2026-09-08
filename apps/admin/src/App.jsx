@@ -18,6 +18,7 @@ import Promotions from './pages/Promotions';
 import PromoBanners from './pages/PromoBanners';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
+import Pravno from './pages/Pravno';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -28,6 +29,9 @@ export default function App() {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* Pravni tekstovi se citaju i bez naloga: adresa iz opisa na
+            prodavnici ne sme da vodi na ekran za prijavu. */}
+        <Route path="/pravno/:dokument" element={<Pravno />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -51,6 +55,7 @@ export default function App() {
         <Route path="jelovnik" element={<Menu />} />
         <Route path="raspored" element={<Schedule />} />
         <Route path="podesavanja" element={<Settings />} />
+        <Route path="pravno/:dokument" element={<Pravno />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

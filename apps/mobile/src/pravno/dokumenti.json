@@ -1,0 +1,1101 @@
+{
+  "jezici": [
+    {
+      "kod": "sr",
+      "naziv": "Srpski"
+    },
+    {
+      "kod": "en",
+      "naziv": "English"
+    }
+  ],
+  "dokumenti": {
+    "privatnost": {
+      "datoteka": {
+        "sr": "privatnost",
+        "en": "privacy"
+      },
+      "putanja": "privatnost",
+      "naslov": {
+        "sr": "Politika privatnosti",
+        "en": "Privacy Policy"
+      },
+      "sr": {
+        "azurirano": "8. septembar 2026.",
+        "uvod": "Ova politika objašnjava koje podatke prikuplja aplikacija **Kids club** (mobilna aplikacija za roditelje) i panel koji koristi osoblje igraonice, zašto ih prikuplja, koliko dugo ih čuva i koja prava imate.",
+        "sekcije": [
+          {
+            "naslov": "1. Ko je rukovalac podacima",
+            "blokovi": [
+              {
+                "t": "karta",
+                "x": [
+                  {
+                    "t": "p",
+                    "x": "**{{POPUNITI: puno poslovno ime radnje}}**"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Adresa sedišta: {{POPUNITI: ulica, broj, poštanski broj, grad}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "PIB: {{POPUNITI: PIB}} · Matični broj: {{POPUNITI: matični broj}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "E-pošta za zahteve u vezi sa podacima: {{POPUNITI: adresa e-pošte}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Telefon: {{POPUNITI: broj telefona}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Rukovalac odlučuje o svrsi i načinu obrade podataka i odgovara za njihovu zaštitu."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "2. Koje podatke prikupljamo",
+            "blokovi": [
+              {
+                "t": "h3",
+                "x": "Podaci o roditelju"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "ime i prezime;",
+                  "adresa e-pošte (ujedno i korisničko ime za prijavu);",
+                  "broj telefona, ako ga unesete;",
+                  "lozinka — čuva se isključivo kao kriptografski otisak, ne kao tekst;",
+                  "fotografija profila, ako je postavite."
+                ]
+              },
+              {
+                "t": "h3",
+                "x": "Podaci o detetu — unosi ih roditelj"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "ime i prezime;",
+                  "datum rođenja;",
+                  "pol, ako ga unesete;",
+                  "**alergije i zdravstvene napomene, ako ih unesete.** To su podaci o zdravlju i posebno su zaštićeni — vidi tačku 4;",
+                  "QR kod deteta, koji aplikacija generiše i koji služi za prijavu dolaska."
+                ]
+              },
+              {
+                "t": "h3",
+                "x": "Podaci o korišćenju igraonice"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "vreme dolaska i odlaska deteta i trajanje boravka;",
+                  "stanje paketa sati, potrošeni sati i eventualni dug u satima;",
+                  "rezervacije: naziv i vrsta termina, datum i vreme, broj gostiju, ime i uzrast deteta i kontakt telefon, ako te podatke unesete;",
+                  "obaveštenja koja vam je igraonica poslala kroz aplikaciju."
+                ]
+              },
+              {
+                "t": "h3",
+                "x": "Tehnički podaci"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "token za slanje obaveštenja na vaš uređaj (dobija se od Expo servisa, vidi tačku 6);",
+                  "uobičajeni zapisi servera pri pozivu servisa (IP adresa, vreme, putanja) — nastaju automatski i služe bezbednosti i otklanjanju grešaka."
+                ]
+              },
+              {
+                "t": "karta",
+                "x": [
+                  {
+                    "t": "p",
+                    "x": "**Šta ne radimo.** Aplikacija nema reklame, nema analitiku ponašanja i ne prati vas kroz druge aplikacije i sajtove. Ne prodajemo i ne ustupamo podatke trećim licima u marketinške svrhe. Ne prikupljamo lokaciju, ne pristupamo kontaktima, fotografijama, mikrofonu ni kameri vašeg telefona."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "3. Zašto obrađujemo podatke i po kom osnovu",
+            "blokovi": [
+              {
+                "t": "tabela",
+                "zaglavlje": [
+                  "Svrha",
+                  "Podaci",
+                  "Pravni osnov"
+                ],
+                "redovi": [
+                  [
+                    "Vođenje naloga i prijava u aplikaciju",
+                    "e-pošta, lozinka, ime i prezime",
+                    "izvršenje ugovora o korišćenju usluge"
+                  ],
+                  [
+                    "Evidencija dolaska i odlaska deteta preko QR koda",
+                    "podaci o detetu, vreme boravka",
+                    "izvršenje ugovora"
+                  ],
+                  [
+                    "Obračun paketa sati i duga",
+                    "boravci, paketi, dug u satima",
+                    "izvršenje ugovora"
+                  ],
+                  [
+                    "Briga o bezbednosti deteta tokom boravka",
+                    "alergije i zdravstvene napomene",
+                    "izričit pristanak roditelja (vidi tačku 4)"
+                  ],
+                  [
+                    "Rezervacije termina i rođendana",
+                    "podaci iz rezervacije, kontakt telefon",
+                    "izvršenje ugovora, odnosno radnje pre zaključenja"
+                  ],
+                  [
+                    "Obaveštenja o dolasku, odlasku i novostima",
+                    "token uređaja, ime deteta u tekstu obaveštenja",
+                    "izvršenje ugovora i vaš pristanak u sistemu telefona"
+                  ],
+                  [
+                    "Bezbednost sistema i sprečavanje zloupotrebe",
+                    "zapisi servera",
+                    "legitimni interes rukovaoca"
+                  ],
+                  [
+                    "Ispunjenje zakonskih obaveza (npr. računovodstvenih)",
+                    "podaci o uplaćenim paketima",
+                    "zakonska obaveza"
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "4. Podaci o zdravlju deteta",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Polje za alergije i napomene o detetu je **neobavezno**. Ako ga popunite, ti podaci se smatraju naročito osetljivim podacima o ličnosti i obrađujemo ih isključivo na osnovu vašeg izričitog pristanka, koji dajete samim unosom. Svrha je jedina — da osoblje zna kako da postupi dok je dete u igraonici."
+              },
+              {
+                "t": "p",
+                "x": "Pristanak možete povući u svakom trenutku tako što ćete obrisati sadržaj tog polja u aplikaciji ili nam se obratiti na adresu iz tačke 1. Povlačenje pristanka ne utiče na zakonitost obrade pre povlačenja."
+              }
+            ]
+          },
+          {
+            "naslov": "5. Podaci o deci",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Aplikacija je namenjena roditeljima i starateljima, ne deci. Nalog otvara i podatke o detetu unosi punoletni roditelj ili staratelj, koji time daje i saglasnost za obradu podataka svog deteta. Ne prikupljamo podatke direktno od dece i deca ne otvaraju naloge."
+              }
+            ]
+          },
+          {
+            "naslov": "6. Ko još ima pristup podacima",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "**Osoblje igraonice** — vidi podatke potrebne za prijavu deteta, obračun sati i bezbednost, kroz interni panel zaštićen lozinkom.",
+                  "**DigitalOcean, LLC** — pružalac usluge servera. Podaci se čuvaju na serveru u **data centru u Evropskoj uniji**.",
+                  "**Expo Project, Inc. (SAD)** — posreduje pri slanju obaveštenja na vaš telefon. Do njih dolazi token vašeg uređaja i tekst obaveštenja, koji može sadržati ime deteta i podatak da je prijavljeno ili odjavljeno. Prenos se vrši na osnovu standardnih ugovornih klauzula i neophodan je za uslugu obaveštenja. Obaveštenja možete isključiti u podešavanjima telefona i aplikacija radi i bez njih.",
+                  "**Apple i Google** — isporučuju obaveštenja do uređaja kroz svoje sisteme za slanje poruka."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "Podatke ne dostavljamo nikome drugom, osim ako to zahteva zakon ili nadležni državni organ."
+              }
+            ]
+          },
+          {
+            "naslov": "7. Koliko dugo čuvamo podatke",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "**Nalog i podaci o deci** — dok postoji nalog. Kada obrišete nalog, brišu se odmah i trajno.",
+                  "**Istorija dolazaka i odlazaka** — najduže **2 godine** od boravka, radi pregleda posećenosti i rešavanja neslaganja u obračunu. Brišu se i ranije ako obrišete nalog.",
+                  "**Podaci potrebni za računovodstvo** — onoliko koliko nalaže zakon, i posle brisanja naloga, u zakonom propisanom obimu.",
+                  "**Zapisi servera** — kratkoročno, radi bezbednosti i otklanjanja grešaka."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "8. Brisanje naloga",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Nalog možete obrisati sami, iz aplikacije: **Moj paket → Nalog → Obriši nalog**. Brisanje je trajno i uklanja vaš nalog, podatke o vašoj deci i istoriju njihovih dolazaka. Uputstvo i spisak onoga što se briše nalaze se i u dokumentu **Brisanje naloga**."
+              }
+            ]
+          },
+          {
+            "naslov": "9. Vaša prava",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Prema Zakonu o zaštiti podataka o ličnosti imate pravo na:"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "pristup podacima koje o vama obrađujemo i kopiju tih podataka;",
+                  "ispravku netačnih i dopunu nepotpunih podataka;",
+                  "brisanje podataka;",
+                  "ograničenje obrade;",
+                  "prigovor na obradu zasnovanu na legitimnom interesu;",
+                  "prenosivost podataka u uobičajenom elektronskom obliku;",
+                  "povlačenje pristanka, bez uticaja na zakonitost prethodne obrade."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "Zahtev šaljete na {{POPUNITI: adresa e-pošte}}. Odgovaramo najkasnije u roku od 30 dana."
+              },
+              {
+                "t": "p",
+                "x": "Ako smatrate da su vam prava povređena, možete podneti pritužbu Povereniku za informacije od javnog značaja i zaštitu podataka o ličnosti, Bulevar kralja Aleksandra 15, 11120 Beograd, [www.poverenik.rs](https://www.poverenik.rs)."
+              }
+            ]
+          },
+          {
+            "naslov": "10. Bezbednost",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "sva komunikacija između aplikacije i servera ide preko šifrovane HTTPS veze;",
+                  "lozinke se čuvaju isključivo kao kriptografski otisak (bcrypt), nikada kao tekst;",
+                  "token za prijavu čuva se u zaštićenom skladištu telefona (Keychain na iOS-u, Keystore na Androidu);",
+                  "promena lozinke odjavljuje sve ostale uređaje na kojima je nalog ostao otvoren;",
+                  "panelu osoblja pristupa se lozinkom, a pristup je ograničen ulogom korisnika."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "11. Kolačići i lokalno skladište",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Mobilna aplikacija ne koristi kolačiće. Panel osoblja u pregledaču koristi lokalno skladište samo za ono što je nužno za rad: token prijave, izbor teme i izbor kamere za skeniranje. Nema kolačića za praćenje ni za oglašavanje, pa saglasnost za kolačiće nije potrebna."
+              }
+            ]
+          },
+          {
+            "naslov": "12. Izmene ove politike",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Politiku možemo izmeniti kada se promeni način rada aplikacije ili propis. Datum poslednje izmene stoji na vrhu. O bitnim izmenama obavestićemo vas kroz aplikaciju."
+              }
+            ]
+          },
+          {
+            "naslov": "13. Kontakt",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Za sva pitanja u vezi sa podacima pišite na {{POPUNITI: adresa e-pošte}}."
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "azurirano": "September 8, 2026",
+        "uvod": "This policy explains what data the **Kids club** app (a mobile app for parents) and the staff panel collect, why they collect it, how long it is kept, and what rights you have.",
+        "sekcije": [
+          {
+            "naslov": "1. Who the data controller is",
+            "blokovi": [
+              {
+                "t": "karta",
+                "x": [
+                  {
+                    "t": "p",
+                    "x": "**{{POPUNITI: registered business name}}**"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Registered address: {{POPUNITI: street, number, postal code, city}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Tax ID (PIB): {{POPUNITI: tax ID}} · Company number: {{POPUNITI: company number}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Email for data requests: {{POPUNITI: email address}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Phone: {{POPUNITI: phone number}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "The controller determines the purposes and means of processing and is responsible for protecting your data."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "2. What data we collect",
+            "blokovi": [
+              {
+                "t": "h3",
+                "x": "Parent data"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "first and last name;",
+                  "email address (also the username for signing in);",
+                  "phone number, if you provide one;",
+                  "password — stored only as a cryptographic hash, never as text;",
+                  "profile photo, if you upload one."
+                ]
+              },
+              {
+                "t": "h3",
+                "x": "Child data — entered by the parent"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "first and last name;",
+                  "date of birth;",
+                  "gender, if provided;",
+                  "**allergies and health notes, if provided.** This is health data and receives special protection — see section 4;",
+                  "the child's QR code, generated by the app and used to record arrival."
+                ]
+              },
+              {
+                "t": "h3",
+                "x": "Play centre usage data"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "arrival and departure times and length of stay;",
+                  "hour package balance, hours used, and any hours owed;",
+                  "bookings: title and type of the slot, date and time, number of guests, child name and age, and a contact phone number, if provided;",
+                  "notifications the play centre has sent you through the app."
+                ]
+              },
+              {
+                "t": "h3",
+                "x": "Technical data"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "a token used to deliver notifications to your device (issued by the Expo service, see section 6);",
+                  "ordinary server logs for each request (IP address, time, path) — created automatically and used for security and troubleshooting."
+                ]
+              },
+              {
+                "t": "karta",
+                "x": [
+                  {
+                    "t": "p",
+                    "x": "**What we do not do.** The app has no ads, no behavioural analytics, and does not track you across other apps or websites. We do not sell or share data with third parties for marketing. We do not collect your location and do not access your contacts, photos, microphone, or camera."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "3. Why we process data and on what basis",
+            "blokovi": [
+              {
+                "t": "tabela",
+                "zaglavlje": [
+                  "Purpose",
+                  "Data",
+                  "Legal basis"
+                ],
+                "redovi": [
+                  [
+                    "Account management and signing in",
+                    "email, password, name",
+                    "performance of a contract"
+                  ],
+                  [
+                    "Recording arrival and departure via QR code",
+                    "child data, time of stay",
+                    "performance of a contract"
+                  ],
+                  [
+                    "Calculating hour packages and hours owed",
+                    "stays, packages, hours owed",
+                    "performance of a contract"
+                  ],
+                  [
+                    "Caring for the child's safety during a stay",
+                    "allergies and health notes",
+                    "explicit parental consent (see section 4)"
+                  ],
+                  [
+                    "Bookings and birthday parties",
+                    "booking data, contact phone",
+                    "contract, or steps taken before entering one"
+                  ],
+                  [
+                    "Notifications about arrival, departure and news",
+                    "device token, child name inside the message",
+                    "contract and your consent in device settings"
+                  ],
+                  [
+                    "System security and abuse prevention",
+                    "server logs",
+                    "legitimate interest of the controller"
+                  ],
+                  [
+                    "Meeting legal obligations (e.g. accounting)",
+                    "records of paid packages",
+                    "legal obligation"
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "4. Child health data",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "The allergies and notes field is **optional**. If you fill it in, that data counts as a special category of personal data and we process it solely on the basis of your explicit consent, given by entering it. It serves one purpose only — so staff know how to act while the child is at the play centre."
+              },
+              {
+                "t": "p",
+                "x": "You can withdraw consent at any time by clearing that field in the app or by contacting us at the address in section 1. Withdrawal does not affect the lawfulness of processing before it."
+              }
+            ]
+          },
+          {
+            "naslov": "5. Children's data",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "The app is intended for parents and guardians, not for children. Accounts are opened and child data is entered by an adult parent or guardian, who thereby also consents to the processing of their child’s data. We do not collect data directly from children and children do not create accounts."
+              }
+            ]
+          },
+          {
+            "naslov": "6. Who else can access the data",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "**Play centre staff** — see the data needed to check a child in, calculate hours, and keep children safe, through an internal panel protected by a password.",
+                  "**DigitalOcean, LLC** — server hosting provider. Data is stored on a server in a **data centre in the European Union**.",
+                  "**Expo Project, Inc. (USA)** — delivers notifications to your phone. It receives your device token and the notification text, which may contain the child’s name and whether they were checked in or out. The transfer relies on standard contractual clauses and is necessary for the notification feature. You can turn notifications off in your phone settings and the app still works.",
+                  "**Apple and Google** — deliver notifications to the device through their messaging systems."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "We do not disclose data to anyone else, unless required by law or by a competent authority."
+              }
+            ]
+          },
+          {
+            "naslov": "7. How long we keep data",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "**Account and child data** — for as long as the account exists. When you delete the account, they are erased immediately and permanently.",
+                  "**Arrival and departure history** — at most **2 years** after the stay, to review attendance and resolve billing disputes. Erased sooner if you delete your account.",
+                  "**Accounting records** — for the period required by law, including after account deletion, to the extent the law requires.",
+                  "**Server logs** — short term, for security and troubleshooting."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "8. Deleting your account",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "You can delete your account yourself, in the app: **My package → Account → Delete account**. Deletion is permanent and removes your account, your children’s data, and their visit history. Instructions and the full list of what is deleted are in the **Account deletion** document."
+              }
+            ]
+          },
+          {
+            "naslov": "9. Your rights",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Under the Serbian Personal Data Protection Act you have the right to:"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "access the data we process about you and receive a copy;",
+                  "have inaccurate data corrected and incomplete data completed;",
+                  "have your data erased;",
+                  "restrict processing;",
+                  "object to processing based on legitimate interest;",
+                  "data portability in a common electronic format;",
+                  "withdraw consent, without affecting the lawfulness of prior processing."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "Send requests to {{POPUNITI: email address}}. We reply within 30 days at the latest."
+              },
+              {
+                "t": "p",
+                "x": "If you believe your rights have been infringed, you may lodge a complaint with the Commissioner for Information of Public Importance and Personal Data Protection, Bulevar kralja Aleksandra 15, 11120 Belgrade, Serbia, [www.poverenik.rs](https://www.poverenik.rs)."
+              }
+            ]
+          },
+          {
+            "naslov": "10. Security",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "all traffic between the app and the server runs over encrypted HTTPS;",
+                  "passwords are stored only as a cryptographic hash (bcrypt), never as text;",
+                  "the sign-in token is kept in the phone’s protected storage (Keychain on iOS, Keystore on Android);",
+                  "changing your password signs out every other device where the account was left open;",
+                  "the staff panel requires a password and access is limited by user role."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "11. Cookies and local storage",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "The mobile app uses no cookies. The staff panel uses browser local storage only for what is strictly necessary: the sign-in token, the theme choice, and the selected scanning camera. There are no tracking or advertising cookies, so no cookie consent is required."
+              }
+            ]
+          },
+          {
+            "naslov": "12. Changes to this policy",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "We may update this policy when the app changes or the law changes. The date of the last change appears at the top. We will notify you in the app about material changes."
+              }
+            ]
+          },
+          {
+            "naslov": "13. Contact",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "For any question about your data, write to {{POPUNITI: email address}}."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "uslovi": {
+      "datoteka": {
+        "sr": "uslovi",
+        "en": "terms"
+      },
+      "putanja": "uslovi",
+      "naslov": {
+        "sr": "Uslovi korišćenja",
+        "en": "Terms of Service"
+      },
+      "sr": {
+        "azurirano": "8. septembar 2026.",
+        "uvod": "Ovi uslovi uređuju korišćenje mobilne aplikacije **Kids club**. Otvaranjem naloga potvrđujete da ste ih pročitali i da ih prihvatate. Ako ih ne prihvatate, nemojte koristiti aplikaciju.",
+        "sekcije": [
+          {
+            "naslov": "1. Ko pruža uslugu",
+            "blokovi": [
+              {
+                "t": "karta",
+                "x": [
+                  {
+                    "t": "p",
+                    "x": "**{{POPUNITI: puno poslovno ime radnje}}**"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Adresa: {{POPUNITI: ulica, broj, poštanski broj, grad}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "PIB: {{POPUNITI: PIB}} · Matični broj: {{POPUNITI: matični broj}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Kontakt: {{POPUNITI: adresa e-pošte}}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "2. Šta aplikacija radi",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Aplikacija je pomoćni alat uz uslugu igraonice. Kroz nju možete:"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "prikazati QR kod deteta, kojim osoblje evidentira dolazak i odlazak;",
+                  "pratiti stanje paketa sati i eventualni dug u satima;",
+                  "videti jelovnik, raspored aktivnosti i obaveštenja igraonice;",
+                  "zatražiti rezervaciju termina ili rođendana."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "Aplikacija ne pruža uslugu čuvanja dece i nije sredstvo nadzora nad detetom. Sama usluga boravka pruža se u prostoru igraonice, pod pravilima kućnog reda."
+              }
+            ]
+          },
+          {
+            "naslov": "3. Nalog",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "Nalog može otvoriti samo punoletno lice — roditelj ili staratelj deteta.",
+                  "Podaci koje unosite moraju biti tačni i ažurni.",
+                  "Odgovorni ste za čuvanje lozinke i za sve što se preduzme sa vašeg naloga. Ako posumnjate da je neko drugi pristupio nalogu, odmah promenite lozinku i obavestite nas.",
+                  "Unosom podataka o detetu potvrđujete da ste roditelj ili staratelj i da imate pravo da te podatke date."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "4. QR kod deteta",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "QR kod je ključ za prijavu i odjavu deteta. Ne delite ga sa trećim licima i ne objavljujte ga javno. Prvo očitavanje koda prijavljuje dolazak deteta, sledeće očitavanje odjavljuje odlazak. Ako posumnjate da je kod dostupan nekome ko ne treba da ga ima, javite osoblju da izda nov."
+              }
+            ]
+          },
+          {
+            "naslov": "5. Paketi sati, obračun i plaćanje",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "Paket sati dodeljuje osoblje igraonice nakon uplate. **Plaćanje se ne vrši kroz aplikaciju** — aplikacija samo prikazuje stanje.",
+                  "Boravak se obračunava po pravilima koja igraonica objavljuje u aplikaciji i u prostoru. Ako boravak nije pokriven paketom, razlika se evidentira kao dug u satima i izmiruje se u igraonici.",
+                  "Rok važenja paketa prikazan je uz sam paket i istekom roka paket prestaje da važi.",
+                  "Podatak prikazan u aplikaciji je informativan. U slučaju neslaganja, merodavna je evidencija igraonice, koju možete proveriti na licu mesta."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "6. Rezervacije",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Zahtev za rezervaciju poslat kroz aplikaciju nije potvrđena rezervacija. Rezervacija važi tek kada je osoblje potvrdi. Uslovi otkazivanja dogovaraju se sa igraonicom."
+              }
+            ]
+          },
+          {
+            "naslov": "7. Obaveštenja",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Uz vašu dozvolu, aplikacija šalje obaveštenja o dolasku i odlasku deteta i o novostima igraonice. Dozvolu možete povući u podešavanjima telefona; aplikacija i tada radi, samo bez obaveštenja."
+              }
+            ]
+          },
+          {
+            "naslov": "8. Kako se aplikacija ne sme koristiti",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "otvaranje naloga sa tuđim podacima ili predstavljanje kao drugo lice;",
+                  "pokušaj pristupa tuđim nalozima ili podacima;",
+                  "ometanje rada servisa, automatizovano preuzimanje podataka, obrnuti inženjering;",
+                  "unos sadržaja koji vređa druge ili krši propise."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "9. Prekid korišćenja",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Nalog možete obrisati u svakom trenutku, iz aplikacije: **Moj paket → Nalog → Obriši nalog**. Brisanje je trajno."
+              },
+              {
+                "t": "p",
+                "x": "Igraonica može onemogućiti nalog koji se koristi protivno ovim uslovima ili na štetu drugih korisnika, uz prethodno upozorenje kada je to moguće."
+              }
+            ]
+          },
+          {
+            "naslov": "10. Dostupnost i izmene",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Trudimo se da aplikacija radi bez prekida, ali to ne možemo garantovati — mogući su zastoji zbog održavanja, kvara ili razloga van naše kontrole. Zadržavamo pravo da menjamo i ukidamo pojedine funkcije, a o bitnim izmenama obaveštavamo kroz aplikaciju."
+              }
+            ]
+          },
+          {
+            "naslov": "11. Odgovornost",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Aplikacija se pruža takva kakva jeste. Ne odgovaramo za štetu nastalu iz netačnih podataka koje ste sami uneli, iz nedostupnosti servisa, niti iz gubitka pristupa nalogu zbog izgubljene lozinke. Ovo ne isključuje odgovornost koja se po zakonu ne može isključiti, niti utiče na vaša prava kao potrošača."
+              }
+            ]
+          },
+          {
+            "naslov": "12. Merodavno pravo",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Na ove uslove primenjuje se pravo Republike Srbije. Sporove ćemo pokušati da rešimo dogovorom, a ako to ne uspe, nadležan je stvarno nadležni sud u {{POPUNITI: grad sedišta}}."
+              }
+            ]
+          },
+          {
+            "naslov": "13. Kontakt",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Pitanja o ovim uslovima šaljite na {{POPUNITI: adresa e-pošte}}."
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "azurirano": "September 8, 2026",
+        "uvod": "These terms govern the use of the **Kids club** mobile app. By creating an account you confirm that you have read and accept them. If you do not accept them, please do not use the app.",
+        "sekcije": [
+          {
+            "naslov": "1. Who provides the service",
+            "blokovi": [
+              {
+                "t": "karta",
+                "x": [
+                  {
+                    "t": "p",
+                    "x": "**{{POPUNITI: registered business name}}**"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Address: {{POPUNITI: street, number, postal code, city}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Tax ID (PIB): {{POPUNITI: tax ID}} · Company number: {{POPUNITI: company number}}"
+                  },
+                  {
+                    "t": "p",
+                    "x": "Contact: {{POPUNITI: email address}}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "2. What the app does",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "The app is a companion to the play centre service. With it you can:"
+              },
+              {
+                "t": "ul",
+                "x": [
+                  "show your child's QR code, which staff scan to record arrival and departure;",
+                  "follow your hour package balance and any hours owed;",
+                  "see the menu, the activity schedule, and announcements;",
+                  "request a booking for a slot or a birthday party."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "The app does not provide childcare and is not a means of supervising your child. The service itself is provided on the play centre premises, under its house rules."
+              }
+            ]
+          },
+          {
+            "naslov": "3. Your account",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "Only an adult — the child's parent or guardian — may open an account.",
+                  "The data you enter must be accurate and up to date.",
+                  "You are responsible for keeping your password safe and for everything done from your account. If you suspect someone else has accessed it, change the password immediately and tell us.",
+                  "By entering a child's data you confirm that you are the parent or guardian and are entitled to provide it."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "4. The child's QR code",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "The QR code is the key to checking a child in and out. Do not share it with third parties and do not publish it. The first scan checks the child in, the next one checks them out. If you suspect the code has reached someone who should not have it, ask staff to issue a new one."
+              }
+            ]
+          },
+          {
+            "naslov": "5. Hour packages, billing and payment",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "Hour packages are assigned by staff after payment. **Payment does not happen in the app** — the app only shows the balance.",
+                  "Stays are billed under the rules the play centre publishes in the app and on the premises. If a stay is not covered by a package, the difference is recorded as hours owed and settled at the play centre.",
+                  "A package’s expiry date is shown next to it and the package stops being valid once it passes.",
+                  "The figures shown in the app are informational. In case of a discrepancy, the play centre's own records prevail and you can check them on site."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "6. Bookings",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "A booking request sent through the app is not a confirmed booking. A booking is valid only once staff confirm it. Cancellation terms are agreed with the play centre."
+              }
+            ]
+          },
+          {
+            "naslov": "7. Notifications",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "With your permission, the app sends notifications about your child’s arrival and departure and about play centre news. You can withdraw that permission in your phone settings; the app still works, just without notifications."
+              }
+            ]
+          },
+          {
+            "naslov": "8. How the app must not be used",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "creating an account with someone else's data or impersonating another person;",
+                  "attempting to access other people's accounts or data;",
+                  "disrupting the service, automated scraping, reverse engineering;",
+                  "entering content that offends others or breaks the law."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "9. Ending use",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "You can delete your account at any time, in the app: **My package → Account → Delete account**. Deletion is permanent."
+              },
+              {
+                "t": "p",
+                "x": "The play centre may disable an account used contrary to these terms or to the detriment of other users, with prior warning where possible."
+              }
+            ]
+          },
+          {
+            "naslov": "10. Availability and changes",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "We aim to keep the app running without interruption but cannot guarantee it — outages may occur due to maintenance, faults, or reasons beyond our control. We may change or remove features, and will announce material changes in the app."
+              }
+            ]
+          },
+          {
+            "naslov": "11. Liability",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "The app is provided as is. We are not liable for damage arising from inaccurate data you entered yourself, from service unavailability, or from losing access to your account through a lost password. This does not exclude liability that cannot be excluded by law, nor does it affect your rights as a consumer."
+              }
+            ]
+          },
+          {
+            "naslov": "12. Governing law",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "These terms are governed by the law of the Republic of Serbia. We will try to resolve disputes by agreement; failing that, the competent court in {{POPUNITI: city of registered seat}} has jurisdiction."
+              }
+            ]
+          },
+          {
+            "naslov": "13. Contact",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Questions about these terms go to {{POPUNITI: email address}}."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "brisanje": {
+      "datoteka": {
+        "sr": "brisanje-naloga",
+        "en": "account-deletion"
+      },
+      "putanja": "brisanje-naloga",
+      "naslov": {
+        "sr": "Brisanje naloga",
+        "en": "Account deletion"
+      },
+      "sr": {
+        "azurirano": "8. septembar 2026.",
+        "uvod": "Nalog u aplikaciji Kids club možete obrisati sami, bez javljanja podršci. Brisanje je trajno i ne može se poništiti.",
+        "sekcije": [
+          {
+            "naslov": "Kako se briše iz aplikacije",
+            "blokovi": [
+              {
+                "t": "ol",
+                "x": [
+                  "Otvorite aplikaciju i prijavite se.",
+                  "Idite na karticu **Moj paket**.",
+                  "Na dnu ekrana, u odeljku **Nalog**, dodirnite **Obriši nalog**.",
+                  "Unesite lozinku i potvrdite."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "Nalog se briše odmah i bićete odjavljeni sa uređaja."
+              }
+            ]
+          },
+          {
+            "naslov": "Šta se briše",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "vaš nalog: ime i prezime, adresa e-pošte, broj telefona, lozinka, slika profila;",
+                  "podaci o vašoj deci: ime i prezime, datum rođenja, pol, alergije i napomene, QR kod;",
+                  "istorija dolazaka i odlazaka vaše dece;",
+                  "vaši paketi sati i evidencija utrošenih sati;",
+                  "obaveštenja poslata vašem nalogu i token vašeg uređaja."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "Šta ostaje i zašto",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "**Rezervacije termina** ostaju u kalendaru igraonice, ali bez veze sa vašim nalogom — termin je već zauzet u rasporedu.",
+                  "**Podaci koje zakon nalaže da se čuvaju**, pre svega računovodstvena dokumentacija o uplaćenim paketima, čuvaju se u zakonom propisanom roku i obimu."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "Ako ne možete da se prijavite",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "Ako ste izgubili pristup nalogu, pošaljite zahtev za brisanje sa adrese e-pošte kojom je nalog otvoren na {{POPUNITI: adresa e-pošte}}. Nalog brišemo najkasnije u roku od 30 dana od provere da je zahtev stigao od vlasnika naloga."
+              }
+            ]
+          }
+        ]
+      },
+      "en": {
+        "azurirano": "September 8, 2026",
+        "uvod": "You can delete your Kids club account yourself, without contacting support. Deletion is permanent and cannot be undone.",
+        "sekcije": [
+          {
+            "naslov": "How to delete it in the app",
+            "blokovi": [
+              {
+                "t": "ol",
+                "x": [
+                  "Open the app and sign in.",
+                  "Go to the **My package** tab.",
+                  "At the bottom of the screen, under **Account**, tap **Delete account**.",
+                  "Enter your password and confirm."
+                ]
+              },
+              {
+                "t": "p",
+                "x": "The account is deleted immediately and you are signed out on the device."
+              }
+            ]
+          },
+          {
+            "naslov": "What is deleted",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "your account: name, email address, phone number, password, profile photo;",
+                  "your children's data: name, date of birth, gender, allergies and notes, QR code;",
+                  "your children's arrival and departure history;",
+                  "your hour packages and the record of hours used;",
+                  "notifications sent to your account and your device token."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "What remains and why",
+            "blokovi": [
+              {
+                "t": "ul",
+                "x": [
+                  "**Bookings** stay in the play centre calendar but are no longer linked to your account — the slot is already reserved in the schedule.",
+                  "**Records the law requires us to keep**, primarily accounting documentation for paid packages, are kept for the period and to the extent the law prescribes."
+                ]
+              }
+            ]
+          },
+          {
+            "naslov": "If you cannot sign in",
+            "blokovi": [
+              {
+                "t": "p",
+                "x": "If you have lost access to your account, send a deletion request from the email address the account was opened with to {{POPUNITI: email address}}. We delete the account within 30 days at the latest, once we confirm the request came from the account owner."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

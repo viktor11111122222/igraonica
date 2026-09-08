@@ -306,7 +306,7 @@ export default function PackageScreen({ navigation }) {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Nalog</Text>
       </View>
-      <BrisanjeNaloga />
+      <BrisanjeNaloga navigation={navigation} />
     </ScrollView>
   );
 }

@@ -1,9 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { Linking } from 'react-native';
 import BrisanjeNaloga from '../BrisanjeNaloga';
-import { PRAVNO } from '../../utils/pravno';
 
 const mockDeleteAccount = jest.fn();
+const navigation = { navigate: jest.fn() };
 jest.mock('../../context/AuthContext', () => ({
   useAuth: () => ({
     user: { email: 'roditelj@primer.rs' },
@@ -13,12 +12,13 @@ jest.mock('../../context/AuthContext', () => ({
 
 beforeEach(() => {
   mockDeleteAccount.mockReset().mockResolvedValue();
+  navigation.navigate.mockReset();
 });
 
 // Obe prodavnice traze da se nalog moze obrisati iz same aplikacije.
 describe('BrisanjeNaloga', () => {
   test('dodir na dugme ne brise odmah, nego trazi lozinku', async () => {
-    await render(<BrisanjeNaloga />);
+    await render(<BrisanjeNaloga navigation={navigation} />);
 
     await fireEvent.press(screen.getByLabelText('Obrisi nalog'));
 
@@ -27,7 +27,7 @@ describe('BrisanjeNaloga', () => {
   });
 
   test('potvrda salje unetu lozinku', async () => {
-    await render(<BrisanjeNaloga />);
+    await render(<BrisanjeNaloga navigation={navigation} />);
     await fireEvent.press(screen.getByLabelText('Obrisi nalog'));
 
     await fireEvent.changeText(screen.getByPlaceholderText('Lozinka'), 'tajna123');
@@ -38,7 +38,7 @@ describe('BrisanjeNaloga', () => {
 
   test('greska sa servera ostaje u prozoru', async () => {
     mockDeleteAccount.mockRejectedValue(new Error('Lozinka nije tacna.'));
-    await render(<BrisanjeNaloga />);
+    await render(<BrisanjeNaloga navigation={navigation} />);
     await fireEvent.press(screen.getByLabelText('Obrisi nalog'));
 
     await fireEvent.changeText(screen.getByPlaceholderText('Lozinka'), 'pogresna');
@@ -49,7 +49,7 @@ describe('BrisanjeNaloga', () => {
   });
 
   test('odustajanje zatvara prozor i ne brise nista', async () => {
-    await render(<BrisanjeNaloga />);
+    await render(<BrisanjeNaloga navigation={navigation} />);
     await fireEvent.press(screen.getByLabelText('Obrisi nalog'));
 
     await fireEvent.press(screen.getByText('Odustani'));
@@ -58,15 +58,18 @@ describe('BrisanjeNaloga', () => {
     expect(mockDeleteAccount).not.toHaveBeenCalled();
   });
 
-  // Recenzent trazi oba dokumenta u aplikaciji, ne samo u opisu na prodavnici.
-  test('vodi na politiku privatnosti i uslove', async () => {
-    const otvori = jest.spyOn(Linking, 'openURL').mockResolvedValue();
-    await render(<BrisanjeNaloga />);
+  // Dokumenti se otvaraju u samoj aplikaciji, ne u pregledacu: roditelj ne
+  // ispada iz aplikacije, a tekst se cita i bez mreze.
+  test('vodi na dokumente unutar aplikacije', async () => {
+    await render(<BrisanjeNaloga navigation={navigation} />);
 
     await fireEvent.press(screen.getByText('Politika privatnosti'));
-    expect(otvori).toHaveBeenCalledWith(PRAVNO.privatnost);
+    expect(navigation.navigate).toHaveBeenCalledWith('Pravno', { dokument: 'privatnost' });
 
     await fireEvent.press(screen.getByText('Uslovi koriscenja'));
-    expect(otvori).toHaveBeenCalledWith(PRAVNO.uslovi);
+    expect(navigation.navigate).toHaveBeenCalledWith('Pravno', { dokument: 'uslovi' });
+
+    await fireEvent.press(screen.getByText('Sta se brise sa nalogom'));
+    expect(navigation.navigate).toHaveBeenCalledWith('Pravno', { dokument: 'brisanje-naloga' });
   });
 });

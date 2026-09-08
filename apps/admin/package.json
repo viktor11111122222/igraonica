@@ -8,6 +8,7 @@
     "dev:https": "npm run cert && vite --config vite.config.https.js",
     "dev:tunel": "bash scripts/dev-tunnel.sh",
     "cert": "bash scripts/dev-cert.sh",
+    "pravno": "node ../../pravno/generisi.mjs",
     "pravno:proveri": "bash scripts/pravno-proveri.sh",
     "build": "vite build",
     "preview": "vite preview",

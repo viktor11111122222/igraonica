@@ -157,15 +157,12 @@ export default function Layout() {
             Odjava
           </button>
 
-          {/* Pravni tekstovi se sluze sa iste adrese kao panel, pa su i
-              roditeljima i recenzentima prodavnica dostupni bez prijave. */}
+          {/* Otvaraju se kao stranica panela, ne u novoj kartici. Isti tekst
+              stoji i na javnoj adresi /pravno/*.html, za prodavnice i za
+              posetioce bez naloga. */}
           <div className="pravno">
-            <a href="/pravno/privatnost.html" target="_blank" rel="noreferrer">
-              Privatnost
-            </a>
-            <a href="/pravno/uslovi.html" target="_blank" rel="noreferrer">
-              Uslovi
-            </a>
+            <NavLink to="/pravno/privatnost">Privatnost</NavLink>
+            <NavLink to="/pravno/uslovi">Uslovi</NavLink>
           </div>
         </div>
       </aside>

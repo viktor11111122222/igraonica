@@ -21,11 +21,21 @@ piše ko prikuplja podatke.
 
 Provera da nijedno nije ostalo: `npm run pravno:proveri` u `apps/admin`.
 
-Adrese posle objave:
+Tekst se pise na jednom mestu, u `pravno/dokumenti.mjs`, pa `npm run pravno` u
+`apps/admin` iz njega pravi sve kopije: javne stranice, ekran u panelu i ekran u
+mobilnoj aplikaciji. Nikad se ne menja kopija - politika u aplikaciji i ona koju
+vidi recenzent moraju da budu isti dokument.
 
-- https://admin.207.154.218.139.sslip.io/pravno/privatnost.html
-- https://admin.207.154.218.139.sslip.io/pravno/uslovi.html
-- https://admin.207.154.218.139.sslip.io/pravno/brisanje-naloga.html
+Adrese posle objave (osnova `https://admin.207.154.218.139.sslip.io/pravno/`):
+
+| Dokument | Srpski | English |
+|---|---|---|
+| Politika privatnosti | `privatnost.html` | `privacy.html` |
+| Uslovi koriscenja | `uslovi.html` | `terms.html` |
+| Brisanje naloga | `brisanje-naloga.html` | `account-deletion.html` |
+
+U prodavnice se upisuju **srpske** adrese; sa svake se jednim klikom prelazi na
+englesku. Isti tekst stoji i u samoj aplikaciji, na oba jezika.
 
 ## 2. Tri stvari koje moraju od tebe
 
@@ -111,7 +121,9 @@ Popuni obavezno, inače pregled staje na prvom ekranu:
 
 - **Brisanje naloga iz aplikacije** — *Moj paket → Nalog → Obriši nalog*. Tvrd
   uslov obe prodavnice; bez toga aplikacija ne prolazi.
-- **Politika privatnosti i uslovi dostupni iz aplikacije** — na istom mestu.
+- **Politika privatnosti i uslovi u samoj aplikaciji** — kao ekran, ne kao
+  adresa u pregledacu, na srpskom i engleskom. Roditelj ne ispada iz aplikacije
+  i tekst se cita bez mreze.
 - **Dozvole svedene na stvarne** — aplikacija traži samo obaveštenja. Kamera,
   mikrofon, lokacija i skladište su izričito blokirani u `app.json`, pa Play ne
   traži obrazloženje za dozvole kojih nema.

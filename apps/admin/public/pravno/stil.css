@@ -59,3 +59,12 @@ th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: upp
 }
 footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
 footer a { margin-right: 16px; }
+
+/* Prekidač jezika stoji iznad naslova - dokument se čita na oba jezika, a
+   prevod je isti dokument, ne druga stranica. */
+.jezici {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.jezici a { margin-left: 8px; }

@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, StyleSheet, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import PressableScale from './PressableScale';
-import { PRAVNO } from '../utils/pravno';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
 // Brisanje naloga iz same aplikacije.
@@ -15,7 +14,7 @@ import { colors, radius, spacing, type, shadow } from '../theme';
 //
 // Sta se brise stoji u tekstu pre potvrde, jer je nepovratno: sa nalogom odlaze
 // i deca i njihova istorija poseta.
-export default function BrisanjeNaloga() {
+export default function BrisanjeNaloga({ navigation }) {
   const { user, deleteAccount } = useAuth();
   const [otvoren, setOtvoren] = useState(false);
   const [lozinka, setLozinka] = useState('');
@@ -45,22 +44,32 @@ export default function BrisanjeNaloga() {
       <View style={styles.karta}>
         <PressableScale
           style={styles.red}
-          onPress={() => Linking.openURL(PRAVNO.privatnost)}
-          accessibilityRole="link"
+          onPress={() => navigation.navigate('Pravno', { dokument: 'privatnost' })}
+          accessibilityRole="button"
         >
           <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
           <Text style={styles.tekst}>Politika privatnosti</Text>
-          <Ionicons name="open-outline" size={14} color={colors.textFaint} />
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
         </PressableScale>
 
         <PressableScale
           style={styles.red}
-          onPress={() => Linking.openURL(PRAVNO.uslovi)}
-          accessibilityRole="link"
+          onPress={() => navigation.navigate('Pravno', { dokument: 'uslovi' })}
+          accessibilityRole="button"
         >
           <Ionicons name="document-text-outline" size={16} color={colors.primary} />
           <Text style={styles.tekst}>Uslovi koriscenja</Text>
-          <Ionicons name="open-outline" size={14} color={colors.textFaint} />
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </PressableScale>
+
+        <PressableScale
+          style={styles.red}
+          onPress={() => navigation.navigate('Pravno', { dokument: 'brisanje-naloga' })}
+          accessibilityRole="button"
+        >
+          <Ionicons name="help-circle-outline" size={16} color={colors.primary} />
+          <Text style={styles.tekst}>Sta se brise sa nalogom</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
         </PressableScale>
 
         <PressableScale

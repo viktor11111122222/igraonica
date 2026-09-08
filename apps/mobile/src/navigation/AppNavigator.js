@@ -20,6 +20,7 @@ import GalleryScreen from '../screens/GalleryScreen';
 import ChildrenListScreen from '../screens/ChildrenListScreen';
 import AddChildScreen from '../screens/AddChildScreen';
 import ChildDetailScreen from '../screens/ChildDetailScreen';
+import PravnoScreen from '../screens/PravnoScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -137,6 +138,10 @@ function MainStack() {
         component={AddChildScreen}
         options={{ title: 'Dodaj dete' }}
       />
+      {/* Uslovi i politika privatnosti su ekran u aplikaciji, ne adresa u
+          pregledacu: citaju se i bez mreze, a roditelj ne ispada iz
+          aplikacije. Naslov postavlja sam ekran, jer zavisi od jezika. */}
+      <Stack.Screen name="Pravno" component={PravnoScreen} options={{ title: '' }} />
       <Stack.Screen
         name="ChildDetail"
         component={ChildDetailScreen}
