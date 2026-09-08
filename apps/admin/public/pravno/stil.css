@@ -1,0 +1,61 @@
+/* Zajednički izgled pravnih stranica. Stoji odvojeno da bi sve tri stranice
+   izgledale isto i da bi se boje menjale na jednom mestu. Tokeni prate panel
+   (styles.css), ali su ovde upisani vrednostima jer su stranice samostalne -
+   služe se i pre prijave, i recenzentima prodavnica. */
+:root {
+  --bg: #f7f9fb;
+  --surface: #ffffff;
+  --border: #e6ecf2;
+  --text: #1f2a37;
+  --muted: #6b7a8d;
+  --primary: #3f6289;
+  --accent-soft: #fef4e3;
+  --accent-text: #9a6410;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10161e;
+    --surface: #182029;
+    --border: #26313d;
+    --text: #e8edf3;
+    --muted: #a3b0bf;
+    --primary: #93b1d5;
+    --accent-soft: #35291a;
+    --accent-text: #f0c17f;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 32px 20px 80px;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 720px; margin: 0 auto; }
+h1 { font-size: 28px; line-height: 1.25; margin: 0 0 6px; }
+h2 { font-size: 19px; margin: 34px 0 10px; }
+h3 { font-size: 16px; margin: 22px 0 6px; }
+p, li { color: var(--text); }
+a { color: var(--primary); }
+.datum { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
+.karta {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 22px 0;
+}
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .4px; }
+.tabela-okvir { overflow-x: auto; }
+.popuni {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+footer a { margin-right: 16px; }

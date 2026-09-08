@@ -156,6 +156,17 @@ export default function Layout() {
           <button className="btn secondary block sm" onClick={() => setPitaZaOdjavu(true)}>
             Odjava
           </button>
+
+          {/* Pravni tekstovi se sluze sa iste adrese kao panel, pa su i
+              roditeljima i recenzentima prodavnica dostupni bez prijave. */}
+          <div className="pravno">
+            <a href="/pravno/privatnost.html" target="_blank" rel="noreferrer">
+              Privatnost
+            </a>
+            <a href="/pravno/uslovi.html" target="_blank" rel="noreferrer">
+              Uslovi
+            </a>
+          </div>
         </div>
       </aside>
 
