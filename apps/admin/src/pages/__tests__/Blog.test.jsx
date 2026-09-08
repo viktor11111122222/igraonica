@@ -202,3 +202,16 @@ describe('Blog - brisanje', () => {
     expect(await within(dijalog).findByText('Objava je vec obrisana.')).toBeInTheDocument();
   });
 });
+
+// Autor je opcion otkad nalog moze da se obrise. Bez ovoga bi cela stranica
+// pukla na prvom tekstu ciji je autor otisao.
+describe('Blog - tekst bez autora', () => {
+  test('prikazuje crticu umesto imena', async () => {
+    get.mockResolvedValue(odgovor([{ ...objava, author: null }]));
+
+    render(<Blog />);
+
+    expect(await screen.findByText('Letnji raspust')).toBeInTheDocument();
+    expect(screen.queryByText(/Vicko/)).not.toBeInTheDocument();
+  });
+});

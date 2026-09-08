@@ -125,38 +125,42 @@ postavi ni `navigator.mediaDevices` — nema greske, skener prosto cuti. Zato
 `http://<ip>:5173` nikad nece dobiti kameru, a ni samopotpisan sertifikat koji
 je korisnik "propustio" kroz upozorenje.
 
-Postupak:
+Isti sertifikat resava i drugu stvar: **pregledac pamti dozvolu za kameru samo
+za origin kome veruje.** Ako se upozorenje o sertifikatu preskace rucno, pitanje
+"would like to access the camera" vraca se pri svakoj poseti — koliko god puta
+radnik potvrdio.
+
+Origin je i ime, ne samo adresa. LAN adresa se menja (druga mreza, hotspot,
+DHCP) i sa njom se gubi zapamcena dozvola, pa sertifikat pokriva i
+`<ime-racunara>.local`. **Na telefonu treba otvarati bas to ime**, ne IP.
 
 ```bash
-# 1. Sopstveni CA i sertifikat za LAN adresu (SAN mora da bude bas taj IP)
-mkdir -p ~/.local/share/igraonica-dev-certs && cd $_
-openssl req -x509 -newkey rsa:2048 -sha256 -days 825 -nodes \
-  -keyout rootCA.key -out rootCA.crt -subj "/CN=Igraonica Dev CA" \
-  -addext "basicConstraints=critical,CA:TRUE" \
-  -addext "keyUsage=critical,keyCertSign,cRLSign"
-
-IP=$(ipconfig getifaddr en0)
-openssl req -newkey rsa:2048 -nodes -keyout server.key -out server.csr -subj "/CN=$IP"
-printf "subjectAltName=IP:$IP,IP:127.0.0.1,DNS:localhost\nextendedKeyUsage=serverAuth\n" > ext.cnf
-openssl x509 -req -in server.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial \
-  -out server.crt -days 397 -sha256 -extfile ext.cnf
-
-# 2. Dev server preko HTTPS-a, otvoren ka mrezi
-cd -; npx vite --config vite.config.https.js
+# Sertifikat (CA se pravi samo prvi put) pa dev server preko HTTPS-a
+npm run dev:https
 ```
 
-Zatim na telefonu, jednom:
+Skripta ispise tacnu adresu i putanju do CA. Zatim na telefonu, **jednom**:
 
 1. Otvori `rootCA.crt` (npr. `python3 -m http.server 8000` u fascikli sa
    sertifikatima, pa `http://<ip>:8000/rootCA.crt`) → Allow
 2. Settings → General → VPN & Device Management → instaliraj profil
 3. Settings → General → About → **Certificate Trust Settings** → ukljuci ga
 
-Posle toga `https://<ip>:5173` radi sa kamerom.
+Bez treceg koraka profil je instaliran ali sertifikat i dalje nije od
+poverenja — a to je tacno stanje u kome se dozvola za kameru ne pamti.
 
-**SAN je vezan za IP**, pa se sertifikat mora ponovo izdati kad se LAN adresa
-promeni; Vite ga cita samo pri pokretanju, pa i on mora da se restartuje.
-Putanju do sertifikata menja `SSL_CERT_DIR`.
+**Safari pita iznova i kad je sertifikat ispravan**, jer je podrazumevano
+"Ask" po poseti. Da bi pitanje nestalo zauvek:
+
+- Settings → Safari → Camera → **Allow**, ili
+- na samoj stranici: `aA` u traci adrese → Website Settings → Camera → **Allow**
+
+Za Chrome na telefonu isto vazi: dozvola se pamti tek kad sertifikat prodje bez
+upozorenja.
+
+Sertifikat vazi 397 dana i vezan je za trenutnu LAN adresu i ime racunara;
+`npm run cert` ga izdaje ponovo (CA ostaje isti, telefon ne mora nista da radi
+ponovo). Vite ga cita samo pri pokretanju. Putanju menja `SSL_CERT_DIR`.
 
 U simulator se isti CA ubacuje jednom komandom:
 

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:https": "npm run cert && vite --config vite.config.https.js",
+    "cert": "bash scripts/dev-cert.sh",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

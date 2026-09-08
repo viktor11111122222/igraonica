@@ -149,7 +149,9 @@ export default function Blog() {
                           </div>
                         </td>
                         <td className="muted" data-label="Autor">
-                          {p.author.firstName} {p.author.lastName}
+                          {/* Autor je opcion otkad nalog moze da se obrise -
+                              tekst ostaje objavljen i bez njega. */}
+                          {p.author ? `${p.author.firstName} ${p.author.lastName}` : '—'}
                         </td>
                         <td className="muted" data-label="Objavljen">
                           {p.publishedAt ? formatDate(p.publishedAt) : '—'}
