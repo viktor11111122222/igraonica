@@ -8,6 +8,7 @@ import Announcement from '../components/Announcement';
 import Banner from '../components/Banner';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
+import BrisanjeNaloga from '../components/BrisanjeNaloga';
 import HoursRing from '../components/HoursRing';
 import { ageInYears, yearsLabel } from '../utils/date';
 import { summarize } from '../utils/packages';
@@ -299,6 +300,13 @@ export default function PackageScreen({ navigation }) {
           </View>
         </>
       )}
+
+      {/* Nalog: uslovi, privatnost i brisanje. Stoji na dnu ekrana na kome je
+          vec odjava, da roditelj sve oko naloga nalazi na jednom mestu. */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Nalog</Text>
+      </View>
+      <BrisanjeNaloga />
     </ScrollView>
   );
 }

@@ -65,6 +65,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  // Brisanje sopstvenog naloga. Obe prodavnice traze da nalog napravljen u
+  // aplikaciji moze i da se obrise iz nje, bez pisanja podrsci. Lozinka ide uz
+  // zahtev jer je radnja nepovratna, a telefon zna da ostane otkljucan u tudjim
+  // rukama.
+  async function deleteAccount(password) {
+    await apiRequest('/auth/me', { method: 'DELETE', body: { password } });
+    await storage.deleteItem('token');
+    setUser(null);
+  }
+
   async function updateProfile(fields) {
     const data = await apiRequest('/auth/profile', {
       method: 'PATCH',
@@ -75,7 +85,9 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, updateProfile, deleteAccount }}
+    >
       {children}
     </AuthContext.Provider>
   );
