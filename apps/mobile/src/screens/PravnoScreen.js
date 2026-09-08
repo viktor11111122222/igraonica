@@ -170,7 +170,9 @@ const styles = StyleSheet.create({
   pasus: { ...type.body, color: colors.textMuted, marginVertical: spacing.xs, lineHeight: 23 },
   jako: { color: colors.text, fontWeight: '700' },
   veza: { color: colors.primary, textDecorationLine: 'underline' },
-  popuni: { color: colors.accentText, fontWeight: '700' },
+  // Nepopunjeno mesto mora da bode oci, isto kao na javnoj stranici. U ovoj
+  // paleti je zlatna `primary`, pa par soft/darker daje istu podlogu i tekst.
+  popuni: { color: colors.primaryDarker, backgroundColor: colors.primarySoft, fontWeight: '700' },
 
   lista: { marginVertical: spacing.xs },
   stavka: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xs },
