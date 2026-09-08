@@ -137,18 +137,34 @@ describe('CheckIn - kamera', () => {
     );
   });
 
-  // Bez ovoga bi isti kod pred objektivom odmah okinuo i suprotnu radnju.
-  test('kamera se gasi posle jednog citanja', async () => {
+  // Kamera ostaje upaljena: svako gasenje znaci novo pitanje za pristup, a
+  // radnik prijavljuje dete za detetom.
+  test('kamera ostaje upaljena posle citanja', async () => {
     const user = userEvent.setup();
     render(<CheckIn />);
     await ukljuciKameru(user);
 
     await h.onSuccess(KOD);
+    await screen.findByRole('status');
 
-    await waitFor(() => expect(h.stop).toHaveBeenCalled());
-    expect(
-      await screen.findByRole('button', { name: 'Skeniraj kamerom' })
-    ).toBeInTheDocument();
+    expect(h.stop).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Ugasi kameru' })).toBeInTheDocument();
+  });
+
+  // Bez ovoga bi isti kod pred objektivom odmah okinuo i suprotnu radnju.
+  test('isti kod pred objektivom ne okida drugi zahtev', async () => {
+    const user = userEvent.setup();
+    render(<CheckIn />);
+    await ukljuciKameru(user);
+
+    await h.onSuccess(KOD);
+    await screen.findByRole('status');
+    post.mockClear();
+
+    await h.onSuccess(KOD);
+    await h.onSuccess(KOD);
+
+    expect(post).not.toHaveBeenCalled();
   });
 
   test('rezultat se objavljuje kao status, van forme', async () => {
@@ -163,18 +179,25 @@ describe('CheckIn - kamera', () => {
     expect(status).toHaveTextContent('Preostalo');
   });
 
-  test('sa rezultata se jednim dugmetom pali sledece skeniranje', async () => {
+  // Dugme samo skida pauzu - kamera vec radi, pa se ne pali ponovo i pregledac
+  // nema sta da pita.
+  test('sa rezultata se jednim dugmetom nastavlja skeniranje', async () => {
     const user = userEvent.setup();
     render(<CheckIn />);
     await ukljuciKameru(user);
     await h.onSuccess(KOD);
     await screen.findByRole('status');
     h.start.mockClear();
+    post.mockClear();
 
     await user.click(screen.getByRole('button', { name: 'Skeniraj sledece' }));
 
-    await waitFor(() => expect(h.start).toHaveBeenCalled());
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(h.start).not.toHaveBeenCalled();
+    expect(h.stop).not.toHaveBeenCalled();
+
+    await h.onSuccess(KOD);
+    await waitFor(() => expect(post).toHaveBeenCalled());
   });
 
   test('posle skeniranja se osvezava lista prisutnih', async () => {

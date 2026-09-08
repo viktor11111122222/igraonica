@@ -24,6 +24,14 @@ vi.mock('html5-qrcode', () => {
   return { Html5Qrcode };
 });
 
+// Spisak za birac se posle pokretanja kupi iz enumerateDevices - to ne trazi
+// pristup, pa je i u testu odvojeno od `getCameras`.
+function uredjaji(...kamere) {
+  navigator.mediaDevices.enumerateDevices = vi
+    .fn()
+    .mockResolvedValue(kamere.map((k) => ({ kind: 'videoinput', deviceId: k.id, label: k.label })));
+}
+
 const KAMERA_ZADNJA = { id: 'cam-back', label: 'Back Camera' };
 const KAMERA_PREDNJA = { id: 'cam-front', label: 'Front Camera' };
 const KAMERA_USB = { id: 'cam-usb', label: 'Logitech USB Camera' };
@@ -52,12 +60,14 @@ describe('QrScanner - ukljucivanje', () => {
     expect(h.start).not.toHaveBeenCalled();
   });
 
-  test('kada je aktivan, pokrece zadnju kameru', async () => {
-    h.getCameras.mockResolvedValue([KAMERA_PREDNJA, KAMERA_ZADNJA]);
+  // Trazi se zadnja kamera, ali bez nabrajanja - ono je zaseban zahtev za
+  // pristup, pa bi jedno skeniranje pitalo za kameru dvaput.
+  test('kada je aktivan, trazi zadnju kameru bez nabrajanja', async () => {
     render(<QrScanner active onScan={vi.fn()} />);
 
     await waitFor(() => expect(h.start).toHaveBeenCalled());
-    expect(h.start.mock.calls[0][0]).toBe('cam-back');
+    expect(h.start.mock.calls[0][0]).toEqual({ facingMode: 'environment' });
+    expect(h.getCameras).not.toHaveBeenCalled();
   });
 
   test('gasi kameru kada se ekran napusti', async () => {
@@ -250,7 +260,7 @@ describe('QrScanner - izbor kamere', () => {
   });
 
   test('sa vise kamera nudi izbor', async () => {
-    h.getCameras.mockResolvedValue([KAMERA_PREDNJA, KAMERA_USB]);
+    uredjaji(KAMERA_PREDNJA, KAMERA_USB);
     render(<QrScanner active onScan={vi.fn()} />);
 
     const birac = await screen.findByLabelText('Kamera');
@@ -260,7 +270,7 @@ describe('QrScanner - izbor kamere', () => {
 
   test('promena kamere je restartuje', async () => {
     const user = userEvent.setup();
-    h.getCameras.mockResolvedValue([KAMERA_PREDNJA, KAMERA_USB]);
+    uredjaji(KAMERA_PREDNJA, KAMERA_USB);
     render(<QrScanner active onScan={vi.fn()} />);
     await waitFor(() => expect(h.start).toHaveBeenCalled());
     h.start.mockClear();
@@ -274,7 +284,7 @@ describe('QrScanner - izbor kamere', () => {
   // Recepcija koristi istu kameru svaki put - izbor ne treba praviti iznova.
   test('izabrana kamera se pamti do sledeceg puta', async () => {
     const user = userEvent.setup();
-    h.getCameras.mockResolvedValue([KAMERA_PREDNJA, KAMERA_USB]);
+    uredjaji(KAMERA_PREDNJA, KAMERA_USB);
     const { unmount } = render(<QrScanner active onScan={vi.fn()} />);
     await screen.findByLabelText('Kamera');
     await user.selectOptions(screen.getByLabelText('Kamera'), 'cam-usb');
@@ -286,29 +296,119 @@ describe('QrScanner - izbor kamere', () => {
     await waitFor(() => expect(h.start.mock.calls[0][0]).toBe('cam-usb'));
   });
 
-  test('zapamcena kamera koja vise ne postoji se preskace', async () => {
+  // USB kamera izvucena iz pulta: pokretanje puca, pa se tek tada placa
+  // nabrajanje i zapamceni izbor se brise.
+  test('zapamcena kamera koja vise ne postoji pada na nabrajanje', async () => {
     localStorage.setItem('igraonica_admin_kamera', 'cam-nema-je');
     h.getCameras.mockResolvedValue([KAMERA_PREDNJA, KAMERA_USB]);
+    h.start.mockImplementation(async (id, opts, onSuccess) => {
+      if (id === 'cam-nema-je') {
+        const err = new Error('nema je');
+        err.name = 'OverconstrainedError';
+        throw err;
+      }
+      h.onSuccess = onSuccess;
+    });
+
     render(<QrScanner active onScan={vi.fn()} />);
 
-    await waitFor(() => expect(h.start.mock.calls[0][0]).toBe('cam-front'));
+    await waitFor(() => expect(h.start.mock.calls[1][0]).toBe('cam-front'));
+  });
+
+  // Nabrajanje kamera je zaseban zahtev za pristup. Kad se zna koja je kamera
+  // bila poslednja, pregledac se pita jednom umesto dvaput.
+  test('zapamcena kamera se pali bez nabrajanja', async () => {
+    localStorage.setItem('igraonica_admin_kamera', 'cam-usb');
+    render(<QrScanner active onScan={vi.fn()} />);
+
+    await waitFor(() => expect(h.start).toHaveBeenCalled());
+    expect(h.start.mock.calls[0][0]).toBe('cam-usb');
+    expect(h.getCameras).not.toHaveBeenCalled();
+  });
+
+  // Kamera koju je pregledac sam dao se ne pamti: bez trajne dozvole se
+  // `deviceId` menja izmedju poseta, pa bi zapamcen id samo propao.
+  test('kamera koju niko nije birao se ne pamti', async () => {
+    render(<QrScanner active onScan={vi.fn()} />);
+
+    await waitFor(() => expect(h.start).toHaveBeenCalled());
+    expect(localStorage.getItem('igraonica_admin_kamera')).toBeNull();
   });
 
   test('bez ijedne kamere upucuje na rucni unos', async () => {
-    h.getCameras.mockResolvedValue([]);
+    const err = new Error('nema kamere');
+    err.name = 'NotFoundError';
+    h.start.mockRejectedValue(err);
     const onError = vi.fn();
     render(<QrScanner active onScan={vi.fn()} onError={onError} />);
 
     expect(await screen.findByText(/nema kamere/i)).toBeInTheDocument();
-    expect(h.start).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalled();
   });
 
-  test('odbijena dozvola pri popisu kamera daje jasnu poruku', async () => {
+  test('odbijena dozvola daje jasnu poruku', async () => {
     const err = new Error('denied');
     err.name = 'NotAllowedError';
-    h.getCameras.mockRejectedValue(err);
+    h.start.mockRejectedValue(err);
     render(<QrScanner active onScan={vi.fn()} onError={vi.fn()} />);
 
     expect(await screen.findByText(/nije dozvoljen/i)).toBeInTheDocument();
+  });
+
+  // Zapamcena kamera vise ne postoji, pa se pada na nabrajanje - i ako ni tada
+  // nema nijedne, radnik dobija uputstvo umesto praznog ekrana.
+  test('bez kamera i posle nabrajanja upucuje na rucni unos', async () => {
+    localStorage.setItem('igraonica_admin_kamera', 'cam-usb');
+    const err = new Error('nema je');
+    err.name = 'OverconstrainedError';
+    h.start.mockRejectedValue(err);
+    h.getCameras.mockResolvedValue([]);
+    render(<QrScanner active onScan={vi.fn()} onError={vi.fn()} />);
+
+    expect(await screen.findByText(/nema kamere/i)).toBeInTheDocument();
+  });
+});
+
+// Kamera se ne gasi izmedju dece: svako paljenje je nov zahtev za pristup, a
+// pregledac koji dozvolu ne pamti pita iznova.
+describe('QrScanner - pauza', () => {
+  test('bez pauze javlja tacno jedan kod po paljenju', async () => {
+    const onScan = vi.fn();
+    render(<QrScanner active onScan={onScan} />);
+    await waitFor(() => expect(h.start).toHaveBeenCalled());
+
+    skeniraj('ABC123');
+    skeniraj('ABC123');
+    skeniraj('DEF456');
+
+    expect(onScan).toHaveBeenCalledTimes(1);
+    expect(onScan).toHaveBeenCalledWith('ABC123');
+  });
+
+  test('dok je pauzirana ne javlja nista, a kamera radi', async () => {
+    const onScan = vi.fn();
+    const { rerender } = render(<QrScanner active paused onScan={onScan} />);
+    await waitFor(() => expect(h.start).toHaveBeenCalled());
+
+    skeniraj('ABC123');
+    expect(onScan).not.toHaveBeenCalled();
+    expect(h.stop).not.toHaveBeenCalled();
+
+    rerender(<QrScanner active paused={false} onScan={onScan} />);
+    skeniraj('ABC123');
+
+    expect(onScan).toHaveBeenCalledWith('ABC123');
+  });
+
+  test('skidanje pauze ne restartuje kameru', async () => {
+    const onScan = vi.fn();
+    const { rerender } = render(<QrScanner active paused onScan={onScan} />);
+    await waitFor(() => expect(h.start).toHaveBeenCalled());
+    h.start.mockClear();
+
+    rerender(<QrScanner active paused={false} onScan={onScan} />);
+
+    expect(h.start).not.toHaveBeenCalled();
+    expect(h.stop).not.toHaveBeenCalled();
   });
 });

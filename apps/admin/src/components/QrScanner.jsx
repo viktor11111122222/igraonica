@@ -8,12 +8,46 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 //
 // Rucni unos ostaje kao rezerva - kamera moze da zakaze (nema dozvole, los
 // telefon, ekran roditelja pretaman), a prijava tada ne sme da stane.
+//
+// Kamera se pali sto redje: svako pokretanje je nov zahtev za pristup, a
+// pregledac koji dozvolu ne pamti (telefon na samopotpisanom sertifikatu) pita
+// iznova svaki put. Zato posle procitanog koda stream ostaje ziv, samo se
+// rezultati pauziraju - pa ceo dan prodje sa jednim pitanjem umesto sa dva po
+// detetu.
 
 const READER_ID = 'qr-reader';
 
 // Izabrana kamera se pamti po uredjaju. Na recepciji je to najcesce USB kamera
 // uperena u pult, a ne ugradjena - i taj izbor ne treba praviti svaki put.
+//
+// Pamti se samo izbor iz biraca. Kamera koju je pregledac sam dao se ne pamti:
+// kad dozvola nije trajna, `deviceId` se menja izmedju poseta, pa bi zapamcen
+// id sledeci put samo propao i doneo jos jedno pitanje.
 const IZBOR_KAMERE = 'igraonica_admin_kamera';
+
+function zapamcenaKamera() {
+  try {
+    return localStorage.getItem(IZBOR_KAMERE);
+  } catch {
+    return null;
+  }
+}
+
+function zapamtiKameru(id) {
+  try {
+    localStorage.setItem(IZBOR_KAMERE, id);
+  } catch {
+    // Privatni prozor bez skladista: sledeci put se samo opet nabraja.
+  }
+}
+
+function zaboraviKameru() {
+  try {
+    localStorage.removeItem(IZBOR_KAMERE);
+  } catch {
+    // Isto - nema sta da se ocisti.
+  }
+}
 
 // Deo kadra koji se gleda. Fiksnih 220px je pucalo na uskim telefonima -
 // html5-qrcode odbija okvir siri od samog videa, pa se skener nije ni pokrenuo.
@@ -60,7 +94,7 @@ function podrazumevana(kamere) {
   return (zadnja || kamere[0]).id;
 }
 
-export default function QrScanner({ active, onScan, onError }) {
+export default function QrScanner({ active, paused = false, onScan, onError }) {
   const scannerRef = useRef(null);
   const [status, setStatus] = useState('starting');
   const [message, setMessage] = useState('');
@@ -69,9 +103,7 @@ export default function QrScanner({ active, onScan, onError }) {
   // Rucni izbor je jedina stvar koja sme da restartuje kameru osim paljenja i
   // gasenja - zato je on zavisnost effect-a, a ne id kamere koja trenutno radi.
   // Pamti se po uredjaju: na recepciji je to USB kamera uperena u pult.
-  const [rucniIzbor, setRucniIzbor] = useState(() =>
-    typeof localStorage === 'undefined' ? null : localStorage.getItem(IZBOR_KAMERE)
-  );
+  const [rucniIzbor, setRucniIzbor] = useState(zapamcenaKamera);
   const [aktivna, setAktivna] = useState(null);
 
   // U ref-u, da promena funkcije ne restartuje kameru usred rada. Sinhronizuje
@@ -80,6 +112,16 @@ export default function QrScanner({ active, onScan, onError }) {
   const onScanRef = useRef(onScan);
   useLayoutEffect(() => {
     onScanRef.current = onScan;
+  });
+
+  // Biblioteka javlja kod vise puta u sekundi, a `paused` sa vrha stize tek
+  // posle novog rendera - u tom procepu bi isti kod otisao jos jednom. Zato uz
+  // spoljnu pauzu ide i lokalna brava, koja se zatvara istog trena.
+  const pauzaRef = useRef(paused);
+  const isporuceno = useRef(false);
+  useLayoutEffect(() => {
+    pauzaRef.current = paused;
+    if (!paused) isporuceno.current = false;
   });
 
   const javiGresku = useCallback(
@@ -97,11 +139,43 @@ export default function QrScanner({ active, onScan, onError }) {
     let scanner;
     let stopped = false;
 
-    // Kod stoji pred objektivom i cita se vise puta u sekundi. Jedno paljenje
-    // kamere sme da da tacno jedan rezultat: drugo citanje istog koda bi bila
-    // odjava deteta koje je upravo prijavljeno. Radnik koji hoce jos jedno dete
-    // ponovo pali kameru, i to je namerna radnja.
-    let poslato = false;
+    function procitano(text) {
+      // Kod stoji pred objektivom i cita se vise puta u sekundi. Dok radnik ne
+      // zatrazi sledece dete, sve posle prvog citanja se preskace - inace bi
+      // isti kod odmah odjavio dete koje je upravo prijavljen.
+      if (isporuceno.current || pauzaRef.current) return;
+
+      const code = String(text || '').trim().toUpperCase();
+      if (!code) return;
+
+      isporuceno.current = true;
+      onScanRef.current?.(code);
+    }
+
+    async function nabroj(Html5Qrcode) {
+      const lista = await Html5Qrcode.getCameras();
+      if (stopped) return null;
+      if (!lista.length) {
+        javiGresku(PORUKE.NotFoundError);
+        return null;
+      }
+      setKamere(lista);
+      return podrazumevana(lista);
+    }
+
+    // Spisak kamera se posle uspesnog pokretanja moze pokupiti bez novog
+    // zahteva za pristup: dok stream radi, uredjaji vec imaju nazive.
+    async function dopuniSpisak() {
+      try {
+        const uredjaji = (await navigator.mediaDevices?.enumerateDevices?.()) || [];
+        const video = uredjaji.filter((u) => u.kind === 'videoinput');
+        if (video.length > 1 && !stopped) {
+          setKamere(video.map((u, i) => ({ id: u.deviceId, label: u.label || `Kamera ${i + 1}` })));
+        }
+      } catch {
+        // Birac kamere ostaje sakriven; skeniranje radi i bez njega.
+      }
+    }
 
     async function pokreni() {
       const stanje = stanjeKamere();
@@ -117,39 +191,34 @@ export default function QrScanner({ active, onScan, onError }) {
         const { Html5Qrcode } = await import('html5-qrcode');
         if (stopped) return;
 
-        // Na racunaru kamera zna biti vise - ugradjena i USB - pa radnik mora
-        // da moze da izabere.
-        const lista = await Html5Qrcode.getCameras();
-        if (stopped) return;
-        if (!lista.length) {
-          javiGresku(PORUKE.NotFoundError);
-          return;
-        }
-        setKamere(lista);
-
-        const id = lista.some((k) => k.id === rucniIzbor) ? rucniIzbor : podrazumevana(lista);
-        setAktivna(id);
-
         scanner = new Html5Qrcode(READER_ID, { verbose: false });
         scannerRef.current = scanner;
 
-        await scanner.start(
-          id,
-          { fps: 10, qrbox },
-          (text) => {
-            if (poslato) return;
-            const code = String(text || '').trim().toUpperCase();
-            if (!code) return;
+        // Nabrajanje kamera je zaseban zahtev za pristup, pa je jedno
+        // skeniranje trazilo kameru dvaput. Bez izbora iz biraca trazi se
+        // odmah zadnja kamera - `facingMode` je zelja, ne uslov, pa laptop sa
+        // samo prednjom kamerom vraca nju umesto da pukne. Spisak za birac
+        // stize posle pokretanja, iz `enumerateDevices`, sto se ne pita.
+        let id = rucniIzbor;
 
-            poslato = true;
-            onScanRef.current?.(code);
-          },
-          () => {
+        try {
+          await scanner.start(id || { facingMode: 'environment' }, { fps: 10, qrbox }, procitano, () => {
             // Okida se na svaki kadar bez koda - nije greska, preskace se.
-          }
-        );
+          });
+        } catch (err) {
+          // Zapamcena kamera vise ne postoji - USB izvucen ili drugi racunar.
+          // Tek tada se placa nabrajanje.
+          if (!id || stopped) throw err;
+          zaboraviKameru();
+          id = await nabroj(Html5Qrcode);
+          if (id === null || stopped) return;
+          await scanner.start(id, { fps: 10, qrbox }, procitano, () => {});
+        }
 
-        if (!stopped) setStatus('running');
+        if (stopped) return;
+        setAktivna(id || scanner.getRunningTrackSettings?.()?.deviceId || null);
+        setStatus('running');
+        dopuniSpisak();
       } catch (err) {
         if (!stopped) javiGresku(PORUKE[err?.name] || PORUKE.default);
       }
@@ -171,7 +240,7 @@ export default function QrScanner({ active, onScan, onError }) {
   if (!active) return null;
 
   function promeniKameru(id) {
-    localStorage.setItem(IZBOR_KAMERE, id);
+    zapamtiKameru(id);
     setRucniIzbor(id);
   }
 
@@ -207,7 +276,9 @@ export default function QrScanner({ active, onScan, onError }) {
       {status === 'error' && <div className="field-hint">{message}</div>}
       {status === 'running' && (
         <div className="field-hint center">
-          Prinesite QR kod iz roditeljske aplikacije kameri.
+          {paused
+            ? 'Kod je procitan. Kamera ceka sledece dete.'
+            : 'Prinesite QR kod iz roditeljske aplikacije kameri.'}
         </div>
       )}
     </div>

@@ -21,6 +21,9 @@ export default function CheckIn() {
   // Greska iz "Zatvori sve" ide u sam dijalog - traka ishoda je iza njega.
   const [closeError, setCloseError] = useState('');
   const [scanning, setScanning] = useState(false);
+  // Posle procitanog koda kamera ostaje upaljena, samo prestaje da javlja
+  // rezultate. Gasenje bi znacilo novo pitanje za pristup pri svakom detetu.
+  const [pauza, setPauza] = useState(false);
   const busyRef = useRef(false);
   const inputRef = useRef(null);
   const resultRef = useRef(null);
@@ -104,7 +107,9 @@ export default function CheckIn() {
   // radilo iza dijaloga - zato je tada iskljuceno.
   useHardwareScanner(
     (qrCode) => {
-      setScanning(false);
+      // Kamera se ne gasi ni ovde: radnik je mozda samo uzeo citac u ruke, a
+      // sledece dete opet ide pred objektiv.
+      setPauza(true);
       setCode('');
       submit(null, qrCode);
     },
@@ -172,6 +177,7 @@ export default function CheckIn() {
               className="btn secondary scan-result-next"
               onClick={() => {
                 setResult(null);
+                setPauza(false);
                 setScanning(true);
               }}
             >
@@ -187,18 +193,23 @@ export default function CheckIn() {
                 type="button"
                 className={`btn ${scanning ? '' : 'secondary'} block`}
                 style={{ marginBottom: 14 }}
-                onClick={() => setScanning((s) => !s)}
+                onClick={() => {
+                  setPauza(false);
+                  setScanning((s) => !s);
+                }}
               >
                 {scanning ? 'Ugasi kameru' : 'Skeniraj kamerom'}
               </button>
 
               {/* Skenirani kod ide istim putem kao rucno unet, pa se ponasanje
-                  ne racva na dva mesta. Kamera se gasi posle jednog citanja -
-                  inace bi isti kod pred objektivom odmah okinuo i odjavu. */}
+                  ne racva na dva mesta. Posle citanja kamera ide na pauzu, ne
+                  gasi se: inace bi isti kod pred objektivom odmah okinuo i
+                  odjavu, a svako novo paljenje je novo pitanje za pristup. */}
               <QrScanner
                 active={scanning}
+                paused={pauza}
                 onScan={(qrCode) => {
-                  setScanning(false);
+                  setPauza(true);
                   submit(null, qrCode);
                 }}
               />
