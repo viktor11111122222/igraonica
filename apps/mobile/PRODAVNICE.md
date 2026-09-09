@@ -3,35 +3,36 @@
 Sve što je u kodu je urađeno. Ovde stoji ono što se popunjava u nalozima
 prodavnica, plus tri stvari koje moraju da dođu od tebe.
 
-## 1. Pre svega ostalog: popuni pravne tekstove
+## 1. Pravni tekstovi su popunjeni
 
-Tekstovi su napisani i objavljuju se zajedno sa admin panelom, iz
-`apps/admin/public/pravno/`. U njima su **žuto označena polja** koja moraju da
-se popune pre slanja na pregled — Apple odbija predaju sa politikom u kojoj ne
-piše ko prikuplja podatke.
+Podaci o rukovaocu su upisani iz registra:
 
-| Polje | Gde se pojavljuje |
+| Polje | Vrednost |
 |---|---|
-| Puno poslovno ime radnje | privatnost, uslovi |
-| Adresa sedišta | privatnost, uslovi |
-| PIB i matični broj | privatnost, uslovi |
-| Adresa e-pošte za zahteve | privatnost, uslovi, brisanje naloga |
-| Telefon | privatnost |
-| Grad nadležnog suda | uslovi |
+| Poslovno ime | Milica Anđelković PR Ostale zabavne i rekreativne delatnosti Kids Club Waterfront Beograd (Savski Venac) |
+| Pravna forma | Preduzetnik |
+| Adresa sedišta | Hercegovačka 23, 11000 Beograd (Savski Venac) |
+| PIB | 113650241 |
+| Matični broj | 66976815 |
+| E-pošta | kidsclubbw@gmail.com |
+| Telefon | 060 4721997 |
 
-Provera da nijedno nije ostalo: `npm run pravno:proveri` u `apps/admin`.
+**Ime u nalozima prodavnica mora da se poklapa sa poslovnim imenom gore.** Apple
+i Google porede naziv izdavača sa imenom iz politike privatnosti; neslaganje je
+čest razlog za odbijanje.
 
-Tekst se pise na jednom mestu, u `pravno/dokumenti.mjs`, pa `npm run pravno` u
+Tekst se piše na jednom mestu, u `pravno/dokumenti.mjs`, pa `npm run pravno` u
 `apps/admin` iz njega pravi sve kopije: javne stranice, ekran u panelu i ekran u
-mobilnoj aplikaciji. Nikad se ne menja kopija - politika u aplikaciji i ona koju
-vidi recenzent moraju da budu isti dokument.
+mobilnoj aplikaciji. Nikad se ne menja kopija — politika u aplikaciji i ona koju
+vidi recenzent moraju da budu isti dokument. Provera da nije ostalo nepopunjeno
+polje: `npm run pravno:proveri`.
 
 Adrese posle objave (osnova `https://admin.207.154.218.139.sslip.io/pravno/`):
 
 | Dokument | Srpski | English |
 |---|---|---|
 | Politika privatnosti | `privatnost.html` | `privacy.html` |
-| Uslovi koriscenja | `uslovi.html` | `terms.html` |
+| Uslovi korišćenja | `uslovi.html` | `terms.html` |
 | Brisanje naloga | `brisanje-naloga.html` | `account-deletion.html` |
 
 U prodavnice se upisuju **srpske** adrese; sa svake se jednim klikom prelazi na

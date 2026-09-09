@@ -18,14 +18,20 @@
 // U tekstu rade: **podebljano**, [natpis](adresa) i {{POPUNITI: sta}} za
 // mesta koja popunjava vlasnik.
 
-const AZURIRANO = { sr: '8. septembar 2026.', en: 'September 8, 2026' };
+const AZURIRANO = { sr: '9. septembar 2026.', en: 'September 9, 2026' };
 
-const IME = '{{POPUNITI: puno poslovno ime radnje}}';
-const IME_EN = '{{POPUNITI: registered business name}}';
-const ADRESA = '{{POPUNITI: ulica, broj, poštanski broj, grad}}';
-const ADRESA_EN = '{{POPUNITI: street, number, postal code, city}}';
-const EPOSTA = '{{POPUNITI: adresa e-pošte}}';
-const EPOSTA_EN = '{{POPUNITI: email address}}';
+// Podaci o rukovaocu iz registra. Preduzetnik, pa je poslovno ime po zakonu
+// ime vlasnika plus delatnost plus poslovno ime - u dokumentu stoji tako kako
+// je registrovano, ne skraceno.
+const IME = 'Milica Anđelković PR Ostale zabavne i rekreativne delatnosti Kids Club Waterfront Beograd (Savski Venac)';
+const IME_EN = IME;
+const ADRESA = 'Hercegovačka 23, 11000 Beograd (Savski Venac), Srbija';
+const ADRESA_EN = ADRESA;
+const EPOSTA = 'kidsclubbw@gmail.com';
+const EPOSTA_EN = EPOSTA;
+const TELEFON = '060 4721997';
+const PIB = '113650241';
+const MATICNI = '66976815';
 
 export const JEZICI = [
   { kod: 'sr', naziv: 'Srpski' },
@@ -50,9 +56,9 @@ export const DOKUMENTI = {
               x: [
                 { t: 'p', x: `**${IME}**` },
                 { t: 'p', x: `Adresa sedišta: ${ADRESA}` },
-                { t: 'p', x: 'PIB: {{POPUNITI: PIB}} · Matični broj: {{POPUNITI: matični broj}}' },
+                { t: 'p', x: `PIB: ${PIB} · Matični broj: ${MATICNI}` },
                 { t: 'p', x: `E-pošta za zahteve u vezi sa podacima: ${EPOSTA}` },
-                { t: 'p', x: 'Telefon: {{POPUNITI: broj telefona}}' },
+                { t: 'p', x: `Telefon: ${TELEFON}` },
                 {
                   t: 'p',
                   x: 'Rukovalac odlučuje o svrsi i načinu obrade podataka i odgovara za njihovu zaštitu.',
@@ -275,9 +281,9 @@ export const DOKUMENTI = {
               x: [
                 { t: 'p', x: `**${IME_EN}**` },
                 { t: 'p', x: `Registered address: ${ADRESA_EN}` },
-                { t: 'p', x: 'Tax ID (PIB): {{POPUNITI: tax ID}} · Company number: {{POPUNITI: company number}}' },
+                { t: 'p', x: `Tax ID (PIB): ${PIB} · Company number: ${MATICNI}` },
                 { t: 'p', x: `Email for data requests: ${EPOSTA_EN}` },
-                { t: 'p', x: 'Phone: {{POPUNITI: phone number}}' },
+                { t: 'p', x: `Phone: ${TELEFON}` },
                 {
                   t: 'p',
                   x: 'The controller determines the purposes and means of processing and is responsible for protecting your data.',
@@ -503,7 +509,7 @@ export const DOKUMENTI = {
               x: [
                 { t: 'p', x: `**${IME}**` },
                 { t: 'p', x: `Adresa: ${ADRESA}` },
-                { t: 'p', x: 'PIB: {{POPUNITI: PIB}} · Matični broj: {{POPUNITI: matični broj}}' },
+                { t: 'p', x: `PIB: ${PIB} · Matični broj: ${MATICNI}` },
                 { t: 'p', x: `Kontakt: ${EPOSTA}` },
               ],
             },
@@ -633,7 +639,7 @@ export const DOKUMENTI = {
           blokovi: [
             {
               t: 'p',
-              x: 'Na ove uslove primenjuje se pravo Republike Srbije. Sporove ćemo pokušati da rešimo dogovorom, a ako to ne uspe, nadležan je stvarno nadležni sud u {{POPUNITI: grad sedišta}}.',
+              x: 'Na ove uslove primenjuje se pravo Republike Srbije. Sporove ćemo pokušati da rešimo dogovorom, a ako to ne uspe, nadležan je stvarno nadležni sud u Beogradu.',
             },
           ],
         },
@@ -656,7 +662,7 @@ export const DOKUMENTI = {
               x: [
                 { t: 'p', x: `**${IME_EN}**` },
                 { t: 'p', x: `Address: ${ADRESA_EN}` },
-                { t: 'p', x: 'Tax ID (PIB): {{POPUNITI: tax ID}} · Company number: {{POPUNITI: company number}}' },
+                { t: 'p', x: `Tax ID (PIB): ${PIB} · Company number: ${MATICNI}` },
                 { t: 'p', x: `Contact: ${EPOSTA_EN}` },
               ],
             },
@@ -786,7 +792,7 @@ export const DOKUMENTI = {
           blokovi: [
             {
               t: 'p',
-              x: 'These terms are governed by the law of the Republic of Serbia. We will try to resolve disputes by agreement; failing that, the competent court in {{POPUNITI: city of registered seat}} has jurisdiction.',
+              x: 'These terms are governed by the law of the Republic of Serbia. We will try to resolve disputes by agreement; failing that, the competent court in Belgrade has jurisdiction.',
             },
           ],
         },
