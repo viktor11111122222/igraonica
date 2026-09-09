@@ -199,6 +199,13 @@ export default function Reservations() {
                           </td>
                           <td data-label="Status">
                             <Badge tone={s.tone}>{s.label || r.status}</Badge>
+                            {/* Dok ceka, rezervacija ne postoji za roditelje:
+                                ne stoji u rasporedu i ne zauzima dan. Bez ove
+                                napomene osoblje ne bi imalo odakle da zna
+                                zasto je nema u aplikaciji. */}
+                            {r.status === 'PENDING' && (
+                              <div className="field-hint">Roditelji je ne vide</div>
+                            )}
                           </td>
                           <td className="actions">
                             {r.status !== 'CONFIRMED' && (

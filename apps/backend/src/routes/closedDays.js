@@ -70,7 +70,9 @@ router.get('/', async (req, res) => {
     const [rows, rezervacije] = await Promise.all([
       prisma.closedDay.findMany({ where, orderBy: { date: 'asc' } }),
       prisma.reservation.findMany({
-        where: { isFullDay: true, status: { not: 'CANCELLED' }, date: where.date },
+        // Samo potvrdjene: dan se roditelju zatvara tek kada je celodnevna
+        // rezervacija dogovorena, ne dok je zahtev jos na cekanju.
+        where: { isFullDay: true, status: 'CONFIRMED', date: where.date },
         orderBy: { date: 'asc' },
         select: { id: true, date: true, type: true, customType: true },
       }),

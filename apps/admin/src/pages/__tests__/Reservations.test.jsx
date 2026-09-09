@@ -290,3 +290,24 @@ describe('Reservations - tipovi', () => {
     expect(within(dijalog).getByLabelText('Naziv tipa')).toHaveValue('Skolska ekskurzija');
   });
 });
+
+// Roditelji od sada vide samo potvrdjene rezervacije. Osoblju to mora biti
+// vidljivo u spisku, inace ne zna zasto rodjendan nije u aplikaciji.
+describe('Reservations - sta roditelji vide', () => {
+  test('uz rezervaciju na cekanju stoji da je roditelji ne vide', async () => {
+    get.mockResolvedValue(odgovor([{ ...rezervacija, status: 'PENDING' }]));
+
+    render(<Reservations />);
+
+    expect(await screen.findByText('Roditelji je ne vide')).toBeInTheDocument();
+  });
+
+  test('uz potvrdjenu rezervaciju te napomene nema', async () => {
+    get.mockResolvedValue(odgovor([{ ...rezervacija, status: 'CONFIRMED' }]));
+
+    render(<Reservations />);
+
+    await screen.findByText('Potvrdjeno');
+    expect(screen.queryByText('Roditelji je ne vide')).not.toBeInTheDocument();
+  });
+});

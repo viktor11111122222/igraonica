@@ -89,6 +89,10 @@ router.get('/events', async (req, res) => {
 // ona u terminu samo ono sto upada u njeno vreme. Sto je pre i posle nje ostaje.
 //
 // Rezervacije idu na vrh spiska bez obzira na sat.
+//
+// Racunaju se samo potvrdjene. Zahtev na cekanju nije dogovoren posao: ne
+// prikazuje se roditelju, i - jednako vazno - ne gasi aktivnosti tog dana.
+// Suprotno bi znacilo prazan dan zbog rodjendana koji mozda nece ni biti.
 router.get('/plan', async (req, res) => {
   try {
     const { date } = req.query;
@@ -114,7 +118,7 @@ router.get('/plan', async (req, res) => {
         orderBy: { startTime: 'asc' },
       }),
       prisma.reservation.findMany({
-        where: { date: dan, status: { not: 'CANCELLED' } },
+        where: { date: dan, status: 'CONFIRMED' },
         orderBy: { startTime: 'asc' },
         // Ime deteta se namerno ne salje - spisak vidi svaki roditelj.
         select: {

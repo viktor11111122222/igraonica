@@ -30,8 +30,10 @@ const nedeljnaAktivnost = (telo) =>
     ...telo,
   });
 
-const rodjendan = (telo) =>
-  kaoAdmin('post', '/api/reservations').send({
+// Roditelji vide samo potvrdjene rezervacije, pa fixture odmah potvrdjuje.
+// Testovi koji bas gadjaju cekanje to rade sami, eksplicitno.
+const rodjendan = async (telo) => {
+  const odgovor = await kaoAdmin('post', '/api/reservations').send({
     type: 'BIRTHDAY',
     title: 'Rodjendan',
     date: DAN,
@@ -39,6 +41,16 @@ const rodjendan = (telo) =>
     endTime: '20:00',
     ...telo,
   });
+  await potvrdi(odgovor);
+  return odgovor;
+};
+
+async function potvrdi(odgovor) {
+  if (odgovor.status !== 201) return;
+  await kaoAdmin('patch', `/api/reservations/${odgovor.body.reservation.id}`).send({
+    status: 'CONFIRMED',
+  });
+}
 
 const plan = (datum = DAN) => request(app).get(`/api/schedule/plan?date=${datum}`);
 
@@ -360,8 +372,8 @@ describe('GET /api/schedule/plan - rodjendan gasi aktivnosti', () => {
 // grupna poseta ili nesto sto je osoblje samo nazvalo drze isto pravo na
 // termin, pa gase redovan program isto kao i rodjendan.
 describe('GET /api/schedule/plan - rezervacije koje nisu rodjendan', () => {
-  const rezervacija = (telo) =>
-    kaoAdmin('post', '/api/reservations').send({
+  const rezervacija = async (telo) => {
+    const odgovor = await kaoAdmin('post', '/api/reservations').send({
       type: 'PRIVATE_EVENT',
       title: 'Interna beleska',
       date: DAN,
@@ -369,6 +381,9 @@ describe('GET /api/schedule/plan - rezervacije koje nisu rodjendan', () => {
       endTime: '20:00',
       ...telo,
     });
+    await potvrdi(odgovor);
+    return odgovor;
+  };
 
   test('privatna proslava ulazi u plan pod nazivom tipa', async () => {
     await rezervacija();

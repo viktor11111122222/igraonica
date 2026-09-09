@@ -11,6 +11,9 @@ const VALID_TYPES = ['BIRTHDAY', 'PRIVATE_EVENT', 'GROUP_BOOKING', 'MONTHLY_EVEN
 const VALID_STATUSES = ['PENDING', 'CONFIRMED', 'CANCELLED'];
 
 // GET /api/reservations - javno, nadolazece rezervacije (da roditelji vide kad je zauzeto)
+//
+// Samo potvrdjene. Zahtev na cekanju jos nije dogovoren - moze da otpadne ili
+// da promeni termin - pa dok osoblje ne potvrdi, roditelj ga ne vidi.
 router.get('/', async (req, res) => {
   try {
     const today = new Date();
@@ -19,7 +22,7 @@ router.get('/', async (req, res) => {
     const reservations = await prisma.reservation.findMany({
       where: {
         date: { gte: today },
-        status: { not: 'CANCELLED' },
+        status: 'CONFIRMED',
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
       select: {

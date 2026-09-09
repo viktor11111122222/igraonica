@@ -189,21 +189,71 @@ describe('GET /api/reservations', () => {
         status: 'CANCELLED',
       },
     });
+
+    // Jedina koja sme da se vidi javno: buduca i potvrdjena.
+    await prisma.reservation.create({
+      data: {
+        type: 'BIRTHDAY',
+        title: 'Dogovoren rodjendan',
+        date: new Date(futureDateStr + 'T00:00:00.000Z'),
+        startTime: '13:00',
+        endTime: '15:00',
+        status: 'CONFIRMED',
+      },
+    });
   });
 
-  test('javno prikazuje samo buduche neotkazane rezervacije', async () => {
+  test('javno prikazuje samo potvrdjene buduce rezervacije', async () => {
     const res = await request(app).get('/api/reservations');
 
     expect(res.status).toBe(200);
-    expect(res.body.reservations.length).toBeGreaterThanOrEqual(2);
+    expect(res.body.reservations.length).toBeGreaterThanOrEqual(1);
 
     res.body.reservations.forEach((r) => {
-      expect(r.status).not.toBe('CANCELLED');
+      expect(r.status).toBe('CONFIRMED');
       // Ne prikazuje privatne podatke
       expect(r.contactPhone).toBeUndefined();
       expect(r.notes).toBeUndefined();
       expect(r.userId).toBeUndefined();
     });
+  });
+
+  // Zahtev na cekanju jos nije dogovoren posao: moze da otpadne ili da promeni
+  // termin, pa roditelj ne sme da ga vidi dok ga osoblje ne potvrdi.
+  test('rezervacija na cekanju se ne vidi, a posle potvrde se vidi', async () => {
+    const napravljena = await request(app)
+      .post('/api/reservations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        type: 'BIRTHDAY',
+        title: 'Jos nedogovoren rodjendan',
+        date: futureDateStr,
+        startTime: '15:00',
+        endTime: '17:00',
+      });
+    const id = napravljena.body.reservation.id;
+    expect(napravljena.body.reservation.status).toBe('PENDING');
+
+    const naCekanju = await request(app).get('/api/reservations');
+    expect(naCekanju.body.reservations.some((r) => r.id === id)).toBe(false);
+
+    await request(app)
+      .patch(`/api/reservations/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'CONFIRMED' });
+
+    const potvrdjena = await request(app).get('/api/reservations');
+    expect(potvrdjena.body.reservations.some((r) => r.id === id)).toBe(true);
+  });
+
+  // Osoblju ostaje ceo spisak - njima je cekanje radni podatak, ne skriveno.
+  test('osoblje i dalje vidi rezervacije na cekanju', async () => {
+    const res = await request(app)
+      .get('/api/reservations/all')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.reservations.some((r) => r.status === 'PENDING')).toBe(true);
   });
 
   test('ne prikazuje prosle rezervacije', async () => {
@@ -507,7 +557,7 @@ describe('Tipovi rezervacije: mesecni dogadjaji i sopstveni tip', () => {
     await request(app)
       .patch(`/api/reservations/${sopstvenaId}`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ type: 'OTHER', customType: 'Skolska ekskurzija' });
+      .send({ type: 'OTHER', customType: 'Skolska ekskurzija', status: 'CONFIRMED' });
 
     const res = await request(app).get('/api/reservations');
 

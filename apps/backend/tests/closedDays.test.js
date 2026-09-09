@@ -180,9 +180,11 @@ describe('GET /api/closed-days', () => {
 // Celodnevna rezervacija zauzima igraonicu ceo dan. Da roditelj ne bi za istu
 // stvar video dva razlicita obavestenja, takav dan je neradni sam po sebi i
 // nosi oznaku po kojoj ga aplikacija prikazuje uvek isto.
+// Roditelji vide samo potvrdjene rezervacije, pa fixture odmah potvrdjuje.
+// Testovi koji bas gadjaju cekanje to rade sami, eksplicitno.
 describe('GET /api/closed-days - celodnevna rezervacija', () => {
-  const rodjendan = (telo) =>
-    request(app)
+  const rodjendan = async (telo) => {
+    const odgovor = await request(app)
       .post('/api/reservations')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
@@ -194,6 +196,14 @@ describe('GET /api/closed-days - celodnevna rezervacija', () => {
         isFullDay: true,
         ...telo,
       });
+    if (odgovor.status === 201) {
+      await request(app)
+        .patch(`/api/reservations/${odgovor.body.reservation.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'CONFIRMED' });
+    }
+    return odgovor;
+  };
 
   test('celodnevni rodjendan zatvara dan i bez rucnog oznacavanja', async () => {
     await rodjendan();
@@ -358,8 +368,8 @@ describe('DELETE /api/closed-days/:id', () => {
 // Ceo dan je ceo dan - svejedno je li rezervisan za rodjendan ili za bilo sta
 // drugo.
 describe('GET /api/closed-days - celodnevna rezervacija koja nije rodjendan', () => {
-  const celodnevna = (telo) =>
-    request(app)
+  const celodnevna = async (telo) => {
+    const odgovor = await request(app)
       .post('/api/reservations')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
@@ -371,6 +381,14 @@ describe('GET /api/closed-days - celodnevna rezervacija koja nije rodjendan', ()
         isFullDay: true,
         ...telo,
       });
+    if (odgovor.status === 201) {
+      await request(app)
+        .patch(`/api/reservations/${odgovor.body.reservation.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'CONFIRMED' });
+    }
+    return odgovor;
+  };
 
   test('privatna proslava zatvara dan', async () => {
     await celodnevna();
