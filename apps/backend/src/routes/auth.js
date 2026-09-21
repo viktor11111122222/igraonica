@@ -46,7 +46,9 @@ router.post(
         },
       });
 
-      const token = generateToken(user.id, user.passwordChangedAt);
+      // Ko je upravo napravio nalog, napravio ga je na svom uredjaju - izbaciti
+      // ga posle nekoliko sati bilo bi neocekivano, pa registracija nosi duzi rok.
+      const token = generateToken(user.id, user.passwordChangedAt, { rememberMe: true });
       const { password: _, ...userWithoutPassword } = user;
 
       // Osoblje inace ne bi videlo nov nalog dok samo ne otvori spisak.
@@ -67,6 +69,7 @@ router.post(
   [
     body('email').trim().isEmail().withMessage('Unesite validan email.'),
     body('password').notEmpty().withMessage('Lozinka je obavezna.'),
+    body('rememberMe').optional().isBoolean().withMessage('Nevazeca vrednost za "Zapamti me".'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -91,10 +94,15 @@ router.post(
         return res.status(401).json({ message: 'Pogresan email ili lozinka.' });
       }
 
-      const token = generateToken(user.id, user.passwordChangedAt);
+      // "Zapamti me" produzava rok tokena; bez njega sesija traje jedan boravak.
+      // Klijent salje pravi boolean, ali forme umeju da posalju i "true" kao
+      // tekst, pa se vrednost svodi na boolean ovde a ne u svakoj aplikaciji.
+      const rememberMe = req.body.rememberMe === true || req.body.rememberMe === 'true';
+
+      const token = generateToken(user.id, user.passwordChangedAt, { rememberMe });
       const { password: _, ...userWithoutPassword } = user;
 
-      res.json({ token, user: userWithoutPassword });
+      res.json({ token, user: userWithoutPassword, rememberMe });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Greska na serveru.' });

@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useClosedDays } from '../context/ClosedDaysContext';
 import { apiRequest } from '../utils/api';
+import * as kes from '../utils/kes';
 import Banner from '../components/Banner';
 import PromoList from '../components/PromoList';
 import PromoBanners from '../components/PromoBanners';
@@ -81,6 +82,9 @@ export default function HomeScreen({ navigation }) {
 
   async function onRefresh() {
     setRefreshing(true);
+    // Povlacenje nadole je izricit zahtev za svezim podatkom, pa kes ovde
+    // ne sme da odgovori umesto servera.
+    kes.ponisti();
     await loadData();
     setRefreshing(false);
   }

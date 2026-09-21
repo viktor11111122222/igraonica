@@ -69,7 +69,20 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/promotions', promotionsRoutes);
 app.use('/api/promo-banners', promoBannersRoutes);
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Helmet podrazumevano salje Cross-Origin-Resource-Policy: same-origin, sto
+// pretrazivacu zabranjuje da povuce sliku sa druge adrese - a mobilna
+// aplikacija se u razvoju vrti na Metru (8081) i gadja backend na 3001, pa su
+// slike u promocijama i na blogu ostajale prazne. Ovde su u pitanju javne
+// slike koje se ionako prikazuju svakome, pa se za njih zaglavlje spusta.
+// (Admin panel ovo nije primecivao jer /uploads ide kroz Vite proxy.)
+app.use(
+  '/uploads',
+  (req, res, next) => {
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(path.join(__dirname, '../uploads'))
+);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Ruta nije pronadjena.' });

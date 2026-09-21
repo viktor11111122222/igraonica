@@ -1,9 +1,13 @@
 import { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import * as storage from '../utils/storage';
+import * as kes from '../utils/kes';
 import { registrujUredjaj } from '../utils/push';
 import { apiRequest, onSessionExpired } from '../utils/api';
 
 const AuthContext = createContext(null);
+
+// Kljuc stoji ovde da ga i ekran prijave i kontekst gledaju pod istim imenom.
+export const ZAPAMCEN_EMAIL = 'zapamcen_email';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -39,12 +43,23 @@ export function AuthProvider({ children }) {
   // prijavu umesto da svaki ekran pise gresku bez izlaza.
   useEffect(() => onSessionExpired(() => setUser(null)), []);
 
-  async function login(email, password) {
+  // `rememberMe` ide na dva mesta i oba su potrebna: backend po njemu bira rok
+  // tokena, a storage da li token prezivi gasenje aplikacije. Trajno cuvanje
+  // kratkog tokena samo bi odlozilo istu odjavu.
+  async function login(email, password, rememberMe = false) {
     const data = await apiRequest('/auth/login', {
       method: 'POST',
-      body: { email, password },
+      body: { email, password, rememberMe },
     });
-    await storage.setItem('token', data.token);
+    // Kes se prazni pri svakoj promeni naloga: bez toga bi novi korisnik u
+    // prvim sekundama video podatke prethodnog.
+    kes.ponisti();
+    await storage.setItem('token', data.token, { trajno: rememberMe });
+    // Email se pamti odvojeno, da polje bude popunjeno i kada sesija istekne.
+    // Lozinka se ne cuva nigde.
+    if (rememberMe) await storage.setItem(ZAPAMCEN_EMAIL, email);
+    else await storage.deleteItem(ZAPAMCEN_EMAIL);
+
     setUser(data.user);
     registrujUredjaj(data.user.pushToken);
     return data;
@@ -55,6 +70,7 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body: fields,
     });
+    kes.ponisti();
     await storage.setItem('token', data.token);
     setUser(data.user);
     return data;
@@ -62,6 +78,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     await storage.deleteItem('token');
+    kes.ponisti();
     setUser(null);
   }
 
@@ -72,6 +89,7 @@ export function AuthProvider({ children }) {
   async function deleteAccount(password) {
     await apiRequest('/auth/me', { method: 'DELETE', body: { password } });
     await storage.deleteItem('token');
+    kes.ponisti();
     setUser(null);
   }
 

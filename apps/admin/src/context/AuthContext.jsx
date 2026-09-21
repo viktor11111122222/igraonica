@@ -1,5 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { get, post, del, setToken, getToken, onSessionExpired, ApiError } from '../lib/api';
+import {
+  get,
+  post,
+  del,
+  setToken,
+  getToken,
+  setRememberedEmail,
+  onSessionExpired,
+  ApiError,
+} from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -29,8 +38,12 @@ export function AuthProvider({ children }) {
   // sam od sebe - umesto da gleda "Greska 401" na svakoj stranici.
   useEffect(() => onSessionExpired(() => setUser(null)), []);
 
-  const login = useCallback(async (email, password) => {
-    const { token, user } = await post('/auth/login', { email, password });
+  // `rememberMe` ide i na backend (odredjuje rok tokena) i u lib/api
+  // (odredjuje da li token prezivi zatvaranje pretrazivaca). Oba moraju da se
+  // slazu: trajno skladiste sa kratkim tokenom samo bi produzilo cekanje do
+  // iste odjave.
+  const login = useCallback(async (email, password, rememberMe = false) => {
+    const { token, user } = await post('/auth/login', { email, password, rememberMe });
 
     // Roditeljski nalozi ne smeju u admin panel. Backend bi ih ionako odbio na
     // svakoj ruti sa 403, ali bolje je odbiti odmah i sa jasnom porukom.
@@ -38,10 +51,13 @@ export function AuthProvider({ children }) {
       throw new ApiError('Ovaj nalog nema administratorska prava.', 403);
     }
 
-    setToken(token);
+    setToken(token, { trajno: rememberMe });
+    setRememberedEmail(rememberMe ? email : '');
     setUser(user);
   }, []);
 
+  // Odjava brise token iz oba skladista, ali NE i zapamceni email: poenta
+  // "Zapamti me" je da se sledeci put ne kuca sve iznova.
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);

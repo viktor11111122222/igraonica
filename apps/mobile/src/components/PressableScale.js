@@ -1,4 +1,5 @@
-import { Animated, Pressable, useAnimatedValue } from 'react-native';
+import { Animated, Pressable } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { motion } from '../theme';
 
 // Svako dugme mora da reaguje na dodir. Scale 0.96 daje trenutni feedback.

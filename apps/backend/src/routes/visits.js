@@ -311,7 +311,7 @@ router.get(
           userPackage: { include: { package: true } },
           checkedInBy: { omit: { password: true } },
         },
-        orderBy: { checkedInAt: 'asc' },
+        orderBy: [{ checkedInAt: 'asc' }, { id: 'asc' }],
       });
 
       // Dodaj koliko je svako dete vec u igraonici
@@ -360,7 +360,7 @@ router.get(
             checkedInBy: { omit: { password: true } },
             checkedOutBy: { omit: { password: true } },
           },
-          orderBy: { checkedInAt: 'desc' },
+          orderBy: [{ checkedInAt: 'desc' }, { id: 'desc' }],
           skip,
           take: limit,
         }),
@@ -402,7 +402,7 @@ router.get('/my', async (req, res) => {
           child: true,
           userPackage: { include: { package: true } },
         },
-        orderBy: { checkedInAt: 'desc' },
+        orderBy: [{ checkedInAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
       }),

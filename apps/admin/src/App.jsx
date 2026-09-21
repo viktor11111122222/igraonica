@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
-import { Spinner } from './components/ui';
+import LoadingScreen from './components/LoadingScreen';
+import { useMinimalniBoot } from './hooks/useMinimalniBoot';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -22,8 +23,10 @@ import Pravno from './pages/Pravno';
 
 export default function App() {
   const { user, loading } = useAuth();
+  // `bootProsao` drzi ekran dovoljno dugo da se vidi umesto da bljesne.
+  const bootProsao = useMinimalniBoot();
 
-  if (loading) return <Spinner />;
+  if (loading || !bootProsao) return <LoadingScreen />;
 
   if (!user) {
     return (

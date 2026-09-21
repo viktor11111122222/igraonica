@@ -28,7 +28,7 @@ describe('Login', () => {
     await user.type(screen.getByLabelText('Lozinka'), 'admin1234');
     await user.click(screen.getByRole('button', { name: 'Prijavi se' }));
 
-    expect(login).toHaveBeenCalledWith('admin@igraonica.com', 'admin1234');
+    expect(login).toHaveBeenCalledWith('admin@igraonica.com', 'admin1234', false);
   });
 
   test('lozinka se ne vidi na ekranu', () => {
@@ -56,5 +56,44 @@ describe('Login', () => {
     await user.click(screen.getByRole('button', { name: 'Prijavi se' }));
 
     expect(login).not.toHaveBeenCalled();
+  });
+});
+
+describe('Login - "Zapamti me"', () => {
+  const KVACICA = /Zapamti me/i;
+
+  test('kvacica nije unapred stiklirana na deljenom racunaru', () => {
+    render(<Login />);
+    expect(screen.getByLabelText(KVACICA)).not.toBeChecked();
+  });
+
+  test('stiklirana kvacica stize do prijave', async () => {
+    const user = userEvent.setup();
+    render(<Login />);
+
+    await user.type(screen.getByLabelText('Email'), 'admin@igraonica.com');
+    await user.type(screen.getByLabelText('Lozinka'), 'admin1234');
+    await user.click(screen.getByLabelText(KVACICA));
+    await user.click(screen.getByRole('button', { name: 'Prijavi se' }));
+
+    expect(login).toHaveBeenCalledWith('admin@igraonica.com', 'admin1234', true);
+  });
+
+  test('zapamcen email popunjava polje i vraca kvacicu', () => {
+    localStorage.setItem('igraonica_admin_email', 'vicko@igraonica.com');
+
+    render(<Login />);
+
+    expect(screen.getByLabelText('Email')).toHaveValue('vicko@igraonica.com');
+    expect(screen.getByLabelText(KVACICA)).toBeChecked();
+  });
+
+  // Polje za lozinku uvek krece prazno - pamti se samo email.
+  test('lozinka se ne popunjava unapred', () => {
+    localStorage.setItem('igraonica_admin_email', 'vicko@igraonica.com');
+
+    render(<Login />);
+
+    expect(screen.getByLabelText('Lozinka')).toHaveValue('');
   });
 });

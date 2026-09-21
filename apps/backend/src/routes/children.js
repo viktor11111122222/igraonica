@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
   try {
     const children = await prisma.child.findMany({
       where: { parentId: req.user.id, isActive: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         // Otvorena poseta, ako je ima. Roditelj po istom QR kodu i prijavljuje i
         // odjavljuje dete, pa mora da vidi u kom je stanju - inace ne zna sta ce
@@ -69,7 +69,7 @@ router.get('/all', authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
             include: { userPackages: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
       }),

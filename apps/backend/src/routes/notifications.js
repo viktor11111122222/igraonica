@@ -21,7 +21,13 @@ router.get('/', async (req, res) => {
     const [notifications, total, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        // `id` je tu kao razresilac izjednacenja, ne kao dodatno sortiranje.
+        // Obavestenja se upisuju u grupi (jedno po clanu osoblja), pa vise
+        // redova ima isti `createdAt` do milisekunde. Baza kod izjednacenja ne
+        // garantuje redosled, a uz `skip`/`take` to znaci da isti red ume da se
+        // pojavi na dve stranice ili da se preskoci. `id` je jedinstven, pa je
+        // poredak odredjen.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
       }),

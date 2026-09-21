@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN } = require('./setup');
+const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, prijaviSe } = require('./setup');
 
 // Dete se prijavljuje i kad roditelj nema paket. Boravak se tada pri odjavi
 // upisuje roditelju u minus sate, koji se skidaju kad plati - dugmetom u
@@ -17,8 +17,7 @@ async function napraviRoditelja(prefiks) {
     firstName: 'Minus',
     lastName: 'Roditelj',
   });
-  const prijava = await request(app).post('/api/auth/login').send({ email, password: 'tajna123' });
-  return { id: user.id, token: prijava.body.token };
+  return { id: user.id, token: await prijaviSe(app, { email, password: 'tajna123' }) };
 }
 
 async function napraviDete(roditelj, ime = 'Dete') {
@@ -26,6 +25,15 @@ async function napraviDete(roditelj, ime = 'Dete') {
     .post('/api/children')
     .set('Authorization', `Bearer ${roditelj.token}`)
     .send({ firstName: ime, lastName: 'Minusic', dateOfBirth: '2021-01-01' });
+
+  // Bez ove provere test pada kasnije i na pogresnom mestu ("citanje qrCode sa
+  // undefined"), a prava greska - status i poruka servera - nigde se ne vidi.
+  if (res.status !== 201 || !res.body.child) {
+    throw new Error(
+      `Pravljenje deteta u pripremi nije uspelo: status ${res.status}, ` +
+        `telo ${JSON.stringify(res.body)}`
+    );
+  }
   return res.body.child;
 }
 
@@ -70,10 +78,7 @@ beforeAll(async () => {
   await cleanDB();
   await createTestUser(TEST_ADMIN);
 
-  const prijava = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_ADMIN.email, password: TEST_ADMIN.password });
-  adminToken = prijava.body.token;
+  adminToken = await prijaviSe(app, TEST_ADMIN);
 
   await prisma.setting.create({ data: { key: 'hour_grace_minutes', value: '15' } });
 

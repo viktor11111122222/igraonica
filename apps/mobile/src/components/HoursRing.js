@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Animated, StyleSheet, View, useAnimatedValue } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import Svg, { Circle } from 'react-native-svg';
 import { colors } from '../theme';
 

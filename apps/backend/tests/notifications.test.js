@@ -1,6 +1,14 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const {
+  prisma,
+  cleanDB,
+  createTestUser,
+  disconnectDB,
+  TEST_ADMIN,
+  TEST_PARENT,
+  prijaviSe,
+} = require('./setup');
 
 let adminToken;
 let drugaSmenaToken;
@@ -12,13 +20,6 @@ let deteId;
 let userPackageId;
 let packageId;
 
-async function prijaviSe(korisnik) {
-  const res = await request(app)
-    .post('/api/auth/login')
-    .send({ email: korisnik.email, password: korisnik.password });
-  return res.body.token;
-}
-
 const mojaObavestenja = async (token, upit = '') =>
   (await request(app).get(`/api/notifications${upit}`).set('Authorization', `Bearer ${token}`)).body;
 
@@ -28,14 +29,14 @@ beforeAll(async () => {
   const parent = await createTestUser(TEST_PARENT);
   adminId = admin.id;
   parentId = parent.id;
-  adminToken = await prijaviSe(TEST_ADMIN);
-  parentToken = await prijaviSe(TEST_PARENT);
+  adminToken = await prijaviSe(app, TEST_ADMIN);
+  parentToken = await prijaviSe(app, TEST_PARENT);
 
   // Drugi admin postoji da bi se videlo sta osoblje dobija: onaj ko je izvrsio
   // radnju ne dobija obavestenje o njoj, jer je ishod vec pred njim na ekranu.
   const DRUGA_SMENA = { ...TEST_ADMIN, email: 'druga.smena@igraonica.com' };
   await createTestUser(DRUGA_SMENA);
-  drugaSmenaToken = await prijaviSe(DRUGA_SMENA);
+  drugaSmenaToken = await prijaviSe(app, DRUGA_SMENA);
 
   const pkg = await request(app)
     .post('/api/packages')
@@ -326,8 +327,7 @@ describe('Auto-zatvaranje javlja roditelju', () => {
   beforeAll(async () => {
     const email = `autoclose.${Date.now()}@primer.rs`;
     await createTestUser({ email, password: 'tajna123', firstName: 'Auto', lastName: 'Roditelj' });
-    const prijava = await request(app).post('/api/auth/login').send({ email, password: 'tajna123' });
-    tokenRoditelja = prijava.body.token;
+    tokenRoditelja = await prijaviSe(app, { email, password: 'tajna123' });
 
     const dete = await request(app)
       .post('/api/children')
@@ -387,5 +387,109 @@ describe('Naplata minusa javlja roditelju', () => {
     expect(o).toBeTruthy();
     expect(o.body).toContain('3,0 h');
     expect(o.data.hours).toBe(3);
+  });
+});
+
+// Obavestenja se upisuju u grupi (`createMany`, jedno po clanu osoblja), pa
+// vise redova ima isti `createdAt` do milisekunde. Sortiranje samo po vremenu
+// tada nije odredjeno - baza sme da vrati redove u bilo kom poretku, a uz
+// `skip`/`take` to znaci da isti red ume da se pojavi na dve strane ili da se
+// preskoci. Zato u sortiranju stoji i `id` kao razresilac izjednacenja.
+describe('Stranicenje je stabilno i kada je vreme isto', () => {
+  const UKUPNO = 25;
+  let mojToken;
+  let mojId;
+
+  beforeAll(async () => {
+    const email = `stranicenje.${Date.now()}@primer.rs`;
+    const korisnik = await createTestUser({
+      email,
+      password: 'tajna123',
+      firstName: 'Strana',
+      lastName: 'Test',
+    });
+    mojId = korisnik.id;
+    mojToken = await prijaviSe(app, { email, password: 'tajna123' });
+  });
+
+  // Fajl ima beforeEach koji brise sva obavestenja, a on ide pre ovog - zato
+  // se podaci prave ovde, a ne u beforeAll.
+  beforeEach(async () => {
+    // Sva obavestenja sa istim `createdAt` - bas slucaj koji je pucao.
+    const isti = new Date();
+    await prisma.notification.createMany({
+      data: Array.from({ length: UKUPNO }, (_, i) => ({
+        userId: mojId,
+        type: 'PARENT_REGISTERED',
+        title: `Naslov ${i}`,
+        body: `Telo ${i}`,
+        createdAt: isti,
+      })),
+    });
+  });
+
+  const strana = async (broj, limit = 10) =>
+    (
+      await request(app)
+        .get(`/api/notifications?page=${broj}&limit=${limit}`)
+        .set('Authorization', `Bearer ${mojToken}`)
+    ).body;
+
+  test('isti upit dva puta vraca isti redosled', async () => {
+    const prvi = await strana(1);
+    const drugi = await strana(1);
+
+    expect(prvi.notifications.map((n) => n.id)).toEqual(drugi.notifications.map((n) => n.id));
+  });
+
+  test('strane se ne preklapaju i nista ne izostaje', async () => {
+    const [a, b, c] = [await strana(1), await strana(2), await strana(3)];
+    const svi = [...a.notifications, ...b.notifications, ...c.notifications].map((n) => n.id);
+
+    // Nijedan red dvaput...
+    expect(new Set(svi).size).toBe(svi.length);
+    // ...i svi su tu.
+    expect(svi).toHaveLength(UKUPNO);
+    expect(a.pagination.total).toBe(UKUPNO);
+  });
+
+  // Ovaj test je taj koji stvarno cuva popravku.
+  //
+  // Poredjenje rezultata sa samim sobom nije dovoljno: i bez razresioca
+  // izjednacenja baza vrati redove nekim svojim redom, pa su dva citanja
+  // slucajno ista. Zato se ovde tvrdi APSOLUTAN poredak - kod istog vremena
+  // odlucuje `id` opadajuce. Bez toga poredak prati fizicki raspored redova u
+  // tabeli i ovaj test pada.
+  test('kod istog vremena poredak odredjuje id, opadajuce', async () => {
+    const svi = [];
+    for (let p = 1; p <= 3; p++) svi.push(...(await strana(p)).notifications.map((n) => n.id));
+
+    expect(svi).toEqual([...svi].sort().reverse());
+  });
+
+  // UPDATE u Postgresu ne menja red na mestu nego upisuje novu verziju na kraj
+  // tabele, pa se azurirani redovi u citanju pomeraju. Sa razresiocem to nista
+  // ne menja; bez njega bi prva strana izgledala drugacije - a to je ono sto
+  // roditelj vidi kao obavestenje koje "nestane" ili se pojavi dvaput.
+  test('poredak prezivljava izmenu redova u tabeli', async () => {
+    const pre = (await strana(1)).notifications.map((n) => n.id);
+
+    for (const id of pre.slice(0, 5)) {
+      await prisma.notification.update({ where: { id }, data: { title: 'Pomeren' } });
+    }
+
+    const posle = (await strana(1)).notifications.map((n) => n.id);
+
+    expect(posle).toEqual(pre);
+  });
+
+  test('ponovljeno listanje daje isti skup', async () => {
+    const pokupi = async () => {
+      const out = [];
+      for (let p = 1; p <= 3; p++) out.push(...(await strana(p)).notifications.map((n) => n.id));
+      return out;
+    };
+
+    expect(await pokupi()).toEqual(await pokupi());
   });
 });

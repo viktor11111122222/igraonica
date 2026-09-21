@@ -96,3 +96,76 @@ describe('storage na webu', () => {
     await expect(storage.deleteItem('token')).resolves.toBeUndefined();
   });
 });
+
+// "Zapamti me": trajno u Keychain / localStorage, privremeno samo u memoriju,
+// gde nestane cim se aplikacija ugasi.
+describe('privremeno cuvanje (bez "Zapamti me")', () => {
+  test('na uredjaju ne dira Keychain', async () => {
+    const { storage, SecureStore } = ucitaj('ios');
+
+    await storage.setItem('token', 'kratki', { trajno: false });
+
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
+    await expect(storage.getItem('token')).resolves.toBe('kratki');
+  });
+
+  test('na webu ne dira localStorage', async () => {
+    const lager = postaviLocalStorage();
+    const { storage } = ucitaj('web');
+
+    await storage.setItem('token', 'kratki', { trajno: false });
+
+    expect(lager.getItem('token')).toBeNull();
+    await expect(storage.getItem('token')).resolves.toBe('kratki');
+  });
+
+  // Inace bi se pri sledecem pokretanju vratio stari trajni token i ponistio
+  // izbor da se prijava ne pamti.
+  test('brise raniju trajnu vrednost', async () => {
+    const { storage, SecureStore } = ucitaj('ios');
+    SecureStore.getItemAsync.mockResolvedValue('stari-trajni');
+
+    await storage.setItem('token', 'kratki', { trajno: false });
+
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('token');
+  });
+
+  test('privremena vrednost ima prednost nad trajnom', async () => {
+    const { storage, SecureStore } = ucitaj('ios');
+    SecureStore.getItemAsync.mockResolvedValue('trajni');
+
+    await storage.setItem('token', 'privremeni', { trajno: false });
+
+    await expect(storage.getItem('token')).resolves.toBe('privremeni');
+  });
+
+  test('trajno cuvanje posle privremenog pregazi memoriju', async () => {
+    const { storage, SecureStore } = ucitaj('ios');
+    SecureStore.getItemAsync.mockResolvedValue('trajni');
+
+    await storage.setItem('token', 'privremeni', { trajno: false });
+    await storage.setItem('token', 'trajni', { trajno: true });
+
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('token', 'trajni');
+    await expect(storage.getItem('token')).resolves.toBe('trajni');
+  });
+
+  test('brisanje cisti i memoriju i trajno skladiste', async () => {
+    const { storage, SecureStore } = ucitaj('ios');
+    SecureStore.getItemAsync.mockResolvedValue(null);
+
+    await storage.setItem('token', 'privremeni', { trajno: false });
+    await storage.deleteItem('token');
+
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('token');
+    await expect(storage.getItem('token')).resolves.toBeNull();
+  });
+
+  test('podrazumevano je i dalje trajno', async () => {
+    const { storage, SecureStore } = ucitaj('ios');
+
+    await storage.setItem('token', 'podrazumevani');
+
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith('token', 'podrazumevani');
+  });
+});

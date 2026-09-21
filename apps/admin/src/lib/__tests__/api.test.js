@@ -10,6 +10,8 @@ import {
   ApiError,
   uploadImage,
   onSessionExpired,
+  getRememberedEmail,
+  setRememberedEmail,
 } from '../api';
 
 // Odgovor servera se pravi rucno, da se ne zavisi od pravog backenda.
@@ -221,5 +223,77 @@ describe('istekla sesija', () => {
     await expect(get('/users')).rejects.toThrow();
 
     expect(javi).not.toHaveBeenCalled();
+  });
+});
+
+// "Zapamti me" bira SKLADISTE u pretrazivacu; rok samog tokena odredjuje
+// backend. Oba moraju da se poklope, pa se ovde proverava samo ovaj deo.
+describe('gde token zivi ("Zapamti me")', () => {
+  const KLJUC = 'igraonica_admin_token';
+
+  test('bez kvacice token ide u sesiju kartice', () => {
+    setToken('t1');
+
+    expect(sessionStorage.getItem(KLJUC)).toBe('t1');
+    expect(localStorage.getItem(KLJUC)).toBeNull();
+    expect(getToken()).toBe('t1');
+  });
+
+  test('sa kvacicom token prezivi zatvaranje pretrazivaca', () => {
+    setToken('t2', { trajno: true });
+
+    expect(localStorage.getItem(KLJUC)).toBe('t2');
+    expect(sessionStorage.getItem(KLJUC)).toBeNull();
+    expect(getToken()).toBe('t2');
+  });
+
+  // Inace bi posle prijave "samo za sada" u localStorage ostao stari trajni
+  // token i vratio bi se u igru cim se sesija kartice zavrsi.
+  test('nova prijava brise token iz onog drugog skladista', () => {
+    setToken('stari', { trajno: true });
+    setToken('novi');
+
+    expect(sessionStorage.getItem(KLJUC)).toBe('novi');
+    expect(localStorage.getItem(KLJUC)).toBeNull();
+  });
+
+  test('odjava cisti oba skladista', () => {
+    setToken('a', { trajno: true });
+    sessionStorage.setItem(KLJUC, 'b');
+
+    setToken(null);
+
+    expect(localStorage.getItem(KLJUC)).toBeNull();
+    expect(sessionStorage.getItem(KLJUC)).toBeNull();
+    expect(getToken()).toBeNull();
+  });
+
+  test('sesija kartice ima prednost nad zapamcenim tokenom', () => {
+    localStorage.setItem(KLJUC, 'trajni');
+    sessionStorage.setItem(KLJUC, 'trenutni');
+
+    expect(getToken()).toBe('trenutni');
+  });
+});
+
+describe('zapamceni email', () => {
+  test('pamti se i cita, a prazna vrednost ga brise', () => {
+    setRememberedEmail('admin@igraonica.com');
+    expect(getRememberedEmail()).toBe('admin@igraonica.com');
+
+    setRememberedEmail('');
+    expect(getRememberedEmail()).toBe('');
+  });
+
+  test('lozinka se nikad ne upisuje u pretrazivac', () => {
+    setToken('t', { trajno: true });
+    setRememberedEmail('admin@igraonica.com');
+
+    const sve = [
+      ...Object.keys(localStorage).map((k) => `${k}=${localStorage.getItem(k)}`),
+      ...Object.keys(sessionStorage).map((k) => `${k}=${sessionStorage.getItem(k)}`),
+    ].join('|');
+
+    expect(sve).not.toMatch(/lozinka|password/i);
   });
 });

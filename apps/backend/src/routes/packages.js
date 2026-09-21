@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
   try {
     const packages = await prisma.package.findMany({
       where: { isActive: true },
-      orderBy: { totalHours: 'asc' },
+      orderBy: [{ totalHours: 'asc' }, { id: 'asc' }],
     });
 
     res.json({ packages });
@@ -205,7 +205,7 @@ router.get('/my', protect, async (req, res) => {
       prisma.userPackage.findMany({
         where: { userId: req.user.id },
         include: { package: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       }),
       prisma.user.findUnique({ where: { id: req.user.id }, select: { debtHours: true } }),
     ]);
@@ -234,7 +234,7 @@ router.get(
       const userPackages = await prisma.userPackage.findMany({
         where: { userId: req.params.userId },
         include: { package: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       });
 
       res.json({ userPackages });
@@ -332,7 +332,7 @@ router.get(
         include: {
           adjustedBy: { omit: { password: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       });
 
       res.json({ adjustments });

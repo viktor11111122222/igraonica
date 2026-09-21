@@ -1,5 +1,6 @@
 import { apiRequest, mediaUrl, onSessionExpired } from '../api';
 import * as storage from '../storage';
+import * as kes from '../kes';
 
 jest.mock('../storage', () => ({
   getItem: jest.fn(),
@@ -15,6 +16,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   storage.getItem.mockResolvedValue(null);
   global.fetch = jest.fn().mockResolvedValue(odgovor());
+  // Kes zivi na nivou modula, pa bi bez ovoga odgovor iz jednog testa bio
+  // posluzen narednom i fetch se ne bi ni pozvao.
+  kes.ponisti();
 });
 
 describe('apiRequest - oblik zahteva', () => {
@@ -217,5 +221,95 @@ describe('apiRequest - kad server ne odgovori kako treba', () => {
     });
 
     await expect(apiRequest('/schedule')).rejects.toThrow('Neocekivan odgovor servera.');
+  });
+});
+
+// Kes je zakacen na apiRequest: GET prolazi kroz njega, izmene ga cise.
+describe('apiRequest - kes', () => {
+  test('dva GET-a na istu rutu salju jedan zahtev', async () => {
+    await apiRequest('/menu');
+    await apiRequest('/menu');
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('istovremeni GET-ovi se spajaju u jedan', async () => {
+    await Promise.all([apiRequest('/menu'), apiRequest('/menu'), apiRequest('/menu')]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('razlicite rute idu svaka za sebe', async () => {
+    await apiRequest('/menu');
+    await apiRequest('/schedule');
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('svez: true zaobilazi kes', async () => {
+    await apiRequest('/menu');
+    await apiRequest('/menu', { svez: true });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('oznaka svez ne odlazi u fetch', async () => {
+    await apiRequest('/menu', { svez: true });
+
+    expect(fetch.mock.calls[0][1]).not.toHaveProperty('svez');
+  });
+
+  test('POST ne ide kroz kes', async () => {
+    await apiRequest('/visits/check-in', { method: 'POST', body: {} });
+    await apiRequest('/visits/check-in', { method: 'POST', body: {} });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  // Prijava deteta menja i pakete i posete i obavestenja, pa posle izmene
+  // nista zapamceno vise ne vazi.
+  test('izmena cisti zapamceno', async () => {
+    await apiRequest('/packages/my');
+    await apiRequest('/visits/check-in', { method: 'POST', body: {} });
+    await apiRequest('/packages/my');
+
+    // GET, POST, pa opet GET jer je kes ocisten.
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  test('neuspela izmena ne baca zapamceno', async () => {
+    await apiRequest('/packages/my');
+
+    fetch.mockResolvedValueOnce(odgovor({ ok: false, status: 400, body: { message: 'Ne moze.' } }));
+    await expect(apiRequest('/children', { method: 'POST', body: {} })).rejects.toThrow('Ne moze.');
+
+    fetch.mockResolvedValue(odgovor());
+    await apiRequest('/packages/my');
+
+    // Treci poziv se nije desio: zapamcen odgovor je preziveo neuspelu izmenu.
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('greska sa mreze se ne pamti', async () => {
+    fetch.mockRejectedValueOnce(new Error('pao internet'));
+    await expect(apiRequest('/menu')).rejects.toThrow();
+
+    fetch.mockResolvedValue(odgovor({ body: { ok: true } }));
+    await apiRequest('/menu');
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  // Inace bi podaci jednog naloga mogli da se posluze sledecem.
+  test('401 prazni kes', async () => {
+    await apiRequest('/menu');
+
+    fetch.mockResolvedValueOnce(odgovor({ ok: false, status: 401, body: {} }));
+    await expect(apiRequest('/packages/my')).rejects.toThrow();
+
+    fetch.mockResolvedValue(odgovor());
+    await apiRequest('/menu');
+
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 });

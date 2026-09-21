@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 
     const items = await prisma.menuItem.findMany({
       where: { date },
-      orderBy: { mealType: 'asc' },
+      orderBy: [{ mealType: 'asc' }, { id: 'asc' }],
     });
 
     res.json({ date: dateStr, items });
@@ -43,7 +43,7 @@ router.get('/week', async (req, res) => {
       where: {
         date: { gte: monday, lte: sunday },
       },
-      orderBy: [{ date: 'asc' }, { mealType: 'asc' }],
+      orderBy: [{ date: 'asc' }, { mealType: 'asc' }, { id: 'asc' }],
     });
 
     // Grupisanje po danu

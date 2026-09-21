@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../utils/api';
+import * as kes from '../utils/kes';
 import { useDaySelection } from '../hooks/useDay';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import Banner from '../components/Banner';
@@ -64,6 +65,9 @@ export default function MenuScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
+    // Povlacenje nadole je izricit zahtev za svezim podatkom, pa kes ovde
+    // ne sme da odgovori umesto servera.
+    kes.ponisti();
     await load(selectedDay);
     setRefreshing(false);
   }

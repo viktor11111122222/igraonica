@@ -1,6 +1,7 @@
 const request = require('supertest');
+const jwt = require('jsonwebtoken');
 const app = require('../src/app');
-const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT, prijaviSe } = require('./setup');
 
 beforeAll(async () => {
   await cleanDB();
@@ -135,14 +136,105 @@ describe('POST /api/auth/login', () => {
   });
 });
 
+describe('"Zapamti me" odredjuje koliko token vazi', () => {
+  // Svoj nalog, jer jedan od testova menja lozinku - TEST_PARENT posle toga ne
+  // bi mogao da se prijavi u blokovima koji dolaze nize u fajlu.
+  const PAMTI = {
+    email: 'zapamti@test.com',
+    password: 'zapamti123',
+    firstName: 'Zapamti',
+    lastName: 'Me',
+  };
+
+  beforeAll(async () => {
+    await createTestUser(PAMTI);
+  });
+
+  // Rok se cita iz samog tokena, a ne iz env promenljive: tako test pada i ako
+  // neko slucajno prestane da prosledjuje rememberMe do potpisivanja.
+  function trajanjeSati(token) {
+    const { iat, exp } = jwt.decode(token);
+    return (exp - iat) / 3600;
+  }
+
+  async function prijava(rememberMe) {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: PAMTI.email, password: PAMTI.password, rememberMe });
+    expect(res.status).toBe(200);
+    return res;
+  }
+
+  test('bez kvacice sesija traje jedan boravak (12h)', async () => {
+    const res = await prijava(false);
+    expect(trajanjeSati(res.body.token)).toBe(12);
+    expect(res.body.rememberMe).toBe(false);
+  });
+
+  test('izostavljen rememberMe se ponasa kao iskljucen', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: PAMTI.email, password: PAMTI.password });
+
+    expect(res.status).toBe(200);
+    expect(trajanjeSati(res.body.token)).toBe(12);
+    expect(res.body.rememberMe).toBe(false);
+  });
+
+  test('sa kvacicom token vazi 30 dana', async () => {
+    const res = await prijava(true);
+    expect(trajanjeSati(res.body.token)).toBe(30 * 24);
+    expect(res.body.rememberMe).toBe(true);
+  });
+
+  test('prihvata i tekstualno "true" iz obrasca', async () => {
+    const res = await prijava('true');
+    expect(trajanjeSati(res.body.token)).toBe(30 * 24);
+    expect(res.body.rememberMe).toBe(true);
+  });
+
+  test('odbija vrednost koja nije boolean', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: PAMTI.email, password: PAMTI.password, rememberMe: 'mozda' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toBeDefined();
+  });
+
+  test('duzi token i dalje otvara zasticene rute', async () => {
+    const { body } = await prijava(true);
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${body.token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe(PAMTI.email);
+  });
+
+  test('promena lozinke obara i zapamcenu sesiju', async () => {
+    const { body } = await prijava(true);
+
+    await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${body.token}`)
+      .send({ currentPassword: PAMTI.password, newPassword: 'novaLozinka123' });
+
+    // Trajna prijava ne sme da nadzivi promenu lozinke - to je jedini nacin da
+    // roditelj izbaci uredjaj koji je ostao prijavljen mesec dana.
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${body.token}`);
+
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('GET /api/auth/me', () => {
   let token;
 
   beforeAll(async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: TEST_ADMIN.email, password: TEST_ADMIN.password });
-    token = res.body.token;
+    token = await prijaviSe(app, TEST_ADMIN);
   });
 
   test('vraca trenutnog korisnika sa validnim tokenom', async () => {
@@ -176,10 +268,7 @@ describe('PATCH /api/auth/profile', () => {
   let token;
 
   beforeAll(async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: TEST_PARENT.email, password: TEST_PARENT.password });
-    token = res.body.token;
+    token = await prijaviSe(app, TEST_PARENT);
   });
 
   test('azurira profil korisnika', async () => {
@@ -225,10 +314,7 @@ describe('POST /api/auth/change-password', () => {
       firstName: 'Change',
       lastName: 'Pass',
     });
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: testEmail, password: 'stara123' });
-    token = res.body.token;
+    token = await prijaviSe(app, { email: testEmail, password: 'stara123' });
   });
 
   test('menja lozinku sa ispravnom trenutnom', async () => {

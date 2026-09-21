@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,19 +14,23 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth, ZAPAMCEN_EMAIL } from '../context/AuthContext';
+import * as storage from '../utils/storage';
+import {
+  ILLUSTRATION_LEFT_SHARE,
+  ILLUSTRATION_RATIO,
+  ILLUSTRATION_SHARE,
+  LOGO_MAX,
+  LOGO_RATIO,
+  LOGO_SHARE,
+} from './authLayout';
 import { useSettings } from '../context/SettingsContext';
 import PressableScale from '../components/PressableScale';
+import LoadingScreen from '../components/LoadingScreen';
+import { useNajmanjeTrajanje } from '../hooks/useUcitavanje';
 import { colors, radius, spacing, type, font } from '../theme';
 
-// Mere su preuzete iz predloska (ekran 796x1703 px, tj. 393x841 pt) i ovde
-// stoje kao udeo sirine, da bi se raspored isto ponasao i na uzem i na sirem
-// telefonu. Razmere slika su iz samih fajlova, pa se nista ne rasteze.
-const LOGO_RATIO = 536 / 260;
-const LOGO_SHARE = 264 / 393;
-const ILLUSTRATION_RATIO = 591 / 579;
-const ILLUSTRATION_SHARE = 292 / 393;
-const ILLUSTRATION_LEFT_SHARE = 34 / 393;
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -36,6 +40,21 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // Telefon je licni uredjaj, pa je pamcenje ovde podrazumevano - suprotno od
+  // admin panela, gde racunar na recepciji deli vise ljudi.
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Zapamcen email stize iz Keychain-a, dakle tek posle prvog rendera.
+  useEffect(() => {
+    let otkazano = false;
+    storage.getItem(ZAPAMCEN_EMAIL).then((sacuvan) => {
+      // Ako je korisnik vec poceo da kuca, ne diramo mu polje.
+      if (!otkazano && sacuvan) setEmail((trenutni) => trenutni || sacuvan);
+    });
+    return () => {
+      otkazano = true;
+    };
+  }, []);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -45,7 +64,7 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login(email.trim().toLowerCase(), password, rememberMe);
     } catch (err) {
       Alert.alert('Greska', err.message);
     } finally {
@@ -53,9 +72,16 @@ export default function LoginScreen({ navigation }) {
     }
   }
 
+  // Dok prijava traje, ceo ekran prelazi u ucitavanje umesto da se vrti samo
+  // tockic u dugmetu: posle uspesne prijave ionako sledi isti taj ekran dok se
+  // pocetna puni, pa je prelaz prijava -> ucitavanje -> pocetna jedan potez.
+  const ucitava = useNajmanjeTrajanje(loading);
+
+  if (ucitava) return <LoadingScreen />;
+
   const clubName = (settings.club_name || 'Kids club').trim();
 
-  const logoWidth = Math.min(width * LOGO_SHARE, 300);
+  const logoWidth = Math.min(width * LOGO_SHARE, LOGO_MAX);
   const illustrationWidth = width * ILLUSTRATION_SHARE;
 
   return (
@@ -141,6 +167,26 @@ export default function LoginScreen({ navigation }) {
             />
 
             <PressableScale
+              style={styles.remember}
+              onPress={() => setRememberMe((v) => !v)}
+              accessibilityRole="checkbox"
+              // accessibilityState pokriva iOS i Android; react-native-web ga u
+              // ovoj verziji ne prevodi u aria-checked, pa bi na webu ostao
+              // role="checkbox" bez stanja - citac ekrana ne bi znao da li je
+              // kvacica ukljucena. Zato oba.
+              accessibilityState={{ checked: rememberMe }}
+              aria-checked={rememberMe}
+              accessibilityLabel="Zapamti me"
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
+                {rememberMe && (
+                  <Ionicons name="checkmark" size={15} color={colors.textOnAuth} />
+                )}
+              </View>
+              <Text style={styles.rememberText}>Zapamti me</Text>
+            </PressableScale>
+
+            <PressableScale
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={loading}
@@ -206,6 +252,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     marginBottom: 13,
+  },
+  remember: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm - 2,
+    borderWidth: 2,
+    borderColor: colors.textOnAuth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxOn: {
+    backgroundColor: colors.authAction,
+    borderColor: colors.authAction,
+  },
+  rememberText: {
+    ...type.body,
+    fontSize: 15,
+    color: colors.textOnAuth,
   },
   button: {
     backgroundColor: colors.authAction,

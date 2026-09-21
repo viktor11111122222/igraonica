@@ -1,12 +1,14 @@
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Platform, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { isOn, useSettings } from '../context/SettingsContext';
-import { colors, font } from '../theme';
+import { colors, font, radius, spacing } from '../theme';
 import TabBar from '../components/TabBar';
+import LoadingScreen from '../components/LoadingScreen';
+import { useMinimalniBoot } from '../hooks/useUcitavanje';
 import { BannerBackground } from '../components/Banner';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -75,25 +77,32 @@ function MainTabs() {
   );
 }
 
-// Ekrani van tabova nemaju tab traku, pa je strelica u zaglavlju jedini
-// izlaz. Kada istorija postoji, strelicu crta sam navigator. Ako je nema
-// (ekran otvoren direktno, obnovljeno stanje), korisnik bi ostao zarobljen -
-// zato se tada ubacuje dugme koje vraca na tabove.
-function escapeHatch(navigation) {
-  if (navigation.canGoBack()) return {};
-  return {
-    headerLeft: () => (
-      <Pressable
-        onPress={() => navigation.navigate('Tabs')}
-        hitSlop={12}
-        style={{ paddingRight: 18 }}
-        accessibilityRole="button"
-        accessibilityLabel="Nazad"
-      >
-        <Ionicons name="chevron-back" size={26} color={colors.textOnPrimary} />
-      </Pressable>
-    ),
-  };
+// Ekrani van tabova nemaju tab traku, pa je strelica u zaglavlju jedini izlaz.
+//
+// Podrazumevanu strelicu crta sam navigator, ali je to gola bela strelica na
+// banneru punom belih sara - stapa se sa podlogom i roditelji je ne vide, pa
+// deluje kao da se sa ekrana ne moze nazad. Zato ovde stoji svoje dugme sa
+// istom tamnom koprenom koju vec nose zvono na pocetnoj i odjava u paketu:
+// isti jezik kroz celu aplikaciju i jasno se cita preko sare.
+//
+// Dugme radi i kada istorije nema (ekran otvoren direktno, obnovljeno stanje) -
+// tada vraca na tabove, da korisnik ne ostane zarobljen.
+// Izvezeno zbog testa: ponasanje (nazad vs. povratak na tabove) je ono sto
+// je pucalo, a kroz ceo navigator bi se do njega stizalo tek posle navigacije.
+export function BackButton({ navigation }) {
+  return (
+    <Pressable
+      onPress={() =>
+        navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Tabs')
+      }
+      hitSlop={12}
+      style={styles.back}
+      accessibilityRole="button"
+      accessibilityLabel="Nazad"
+    >
+      <Ionicons name="chevron-back" size={22} color={colors.textOnPrimary} />
+    </Pressable>
+  );
 }
 
 function MainStack() {
@@ -110,7 +119,7 @@ function MainStack() {
         headerTintColor: colors.textOnPrimary,
         headerTitleStyle: { fontFamily: font.bold },
         headerBackTitle: 'Nazad',
-        ...escapeHatch(navigation),
+        headerLeft: () => <BackButton navigation={navigation} />,
       })}
     >
       <Stack.Screen
@@ -156,12 +165,15 @@ function MainStack() {
 export default function AppNavigator() {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+  // Ista podloga kao ekran za prijavu: kad provera zavrsi, forma se samo
+  // pojavi preko nje umesto da beli spiner odskoci u amber ekran.
+  //
+  // Obe kapije (font u App.js i ova) broje od istog trenutka pokretanja, pa se
+  // cekanja ne sabiraju.
+  const bootProsao = useMinimalniBoot();
+
+  if (loading || !bootProsao) {
+    return <LoadingScreen />;
   }
 
   return (
@@ -172,10 +184,17 @@ export default function AppNavigator() {
 }
 
 const styles = {
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
+  // Isti kvadrat sa koprenom kao zvono na pocetnoj, samo manji jer zaglavlje
+  // native-stack-a ima nizu traku od banera.
+  back: {
+    width: 34,
+    height: 34,
+    // Nativno zaglavlje samo uvlaci headerLeft od ivice; na webu ne, pa bi
+    // dugme stajalo zalepljeno za levu ivicu ekrana.
+    marginLeft: Platform.OS === 'web' ? spacing.lg : 0,
+    borderRadius: radius.md,
     alignItems: 'center',
-    backgroundColor: colors.bg,
+    justifyContent: 'center',
+    backgroundColor: colors.onPrimaryVeil,
   },
 };

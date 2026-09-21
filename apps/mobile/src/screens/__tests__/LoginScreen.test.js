@@ -2,9 +2,19 @@ import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoginScreen from '../LoginScreen';
+import * as storage from '../../utils/storage';
 
 const mockLogin = jest.fn();
-jest.mock('../../context/AuthContext', () => ({ useAuth: () => ({ login: mockLogin }) }));
+jest.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ login: mockLogin }),
+  ZAPAMCEN_EMAIL: 'zapamcen_email',
+}));
+
+jest.mock('../../utils/storage', () => ({
+  getItem: jest.fn(async () => null),
+  setItem: jest.fn(async () => {}),
+  deleteItem: jest.fn(async () => {}),
+}));
 
 let mockPodesavanja = {};
 jest.mock('../../context/SettingsContext', () => ({
@@ -33,6 +43,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockPodesavanja = {};
   mockLogin.mockResolvedValue(undefined);
+  storage.getItem.mockResolvedValue(null);
   Alert.alert = jest.fn();
 });
 
@@ -95,7 +106,7 @@ describe('LoginScreen - prijava', () => {
       fireEvent.press(screen.getByText('Prijavi se'));
     });
 
-    expect(mockLogin).toHaveBeenCalledWith('ana@primer.rs', 'tajna123');
+    expect(mockLogin).toHaveBeenCalledWith('ana@primer.rs', 'tajna123', true);
   });
 
   test('prazna polja ne salju zahtev', async () => {
@@ -170,5 +181,102 @@ describe('LoginScreen - prijava', () => {
     });
 
     expect(mockLogin).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('LoginScreen - "Zapamti me"', () => {
+  const kvacica = () => screen.getByLabelText('Zapamti me');
+  const stiklirana = () => kvacica().props.accessibilityState.checked;
+
+  async function popuni() {
+    await act(async () => {
+      fireEvent.changeText(screen.getByPlaceholderText('Email'), 'ana@primer.rs');
+    });
+    await act(async () => {
+      fireEvent.changeText(screen.getByPlaceholderText('Lozinka'), 'tajna123');
+    });
+  }
+
+  async function posalji() {
+    await act(async () => {
+      fireEvent.press(screen.getByText('Prijavi se'));
+    });
+  }
+
+  async function prebaci() {
+    await act(async () => {
+      fireEvent.press(kvacica());
+    });
+  }
+
+  // Telefon je licni uredjaj - ocekivanje je da prijava traje.
+  test('kvacica je podrazumevano ukljucena', async () => {
+    await prikazi();
+    expect(stiklirana()).toBe(true);
+  });
+
+  test('iskljucena kvacica stize do prijave', async () => {
+    await prikazi();
+    await prebaci();
+    await popuni();
+    await posalji();
+
+    expect(mockLogin).toHaveBeenCalledWith('ana@primer.rs', 'tajna123', false);
+  });
+
+  test('ukljucena kvacica stize do prijave', async () => {
+    await prikazi();
+    await popuni();
+    await posalji();
+
+    expect(mockLogin).toHaveBeenCalledWith('ana@primer.rs', 'tajna123', true);
+  });
+
+  test('kvacica se moze vratiti nazad', async () => {
+    await prikazi();
+
+    await prebaci();
+    expect(stiklirana()).toBe(false);
+
+    await prebaci();
+    expect(stiklirana()).toBe(true);
+  });
+
+  test('zapamcen email popunjava polje', async () => {
+    storage.getItem.mockResolvedValue('vicko@primer.rs');
+    await prikazi();
+
+    await screen.findByDisplayValue('vicko@primer.rs');
+    expect(storage.getItem).toHaveBeenCalledWith('zapamcen_email');
+  });
+
+  // Polje za lozinku uvek krece prazno: pamti se samo email.
+  test('lozinka se ne popunjava unapred', async () => {
+    storage.getItem.mockResolvedValue('vicko@primer.rs');
+    await prikazi();
+
+    await screen.findByDisplayValue('vicko@primer.rs');
+    expect(screen.getByPlaceholderText('Lozinka').props.value).toBe('');
+  });
+
+  // Ako odgovor iz Keychain-a stigne kasno, ne sme da pregazi ono sto je
+  // korisnik u medjuvremenu ukucao.
+  test('zapamcen email ne gazi vec ukucan tekst', async () => {
+    let odblokiraj;
+    storage.getItem.mockReturnValue(
+      new Promise((r) => {
+        odblokiraj = r;
+      })
+    );
+
+    await prikazi();
+    await act(async () => {
+      fireEvent.changeText(screen.getByPlaceholderText('Email'), 'drugi@primer.rs');
+    });
+    await act(async () => {
+      odblokiraj('vicko@primer.rs');
+    });
+
+    expect(screen.getByPlaceholderText('Email').props.value).toBe('drugi@primer.rs');
   });
 });

@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { apiRequest } from '../utils/api';
+import * as kes from '../utils/kes';
 import { dayIndex, fromKey, monthDates, toKey } from '../utils/date';
 import { useDaySelection } from '../hooks/useDay';
 import Banner from '../components/Banner';
@@ -70,6 +71,9 @@ export default function ScheduleScreen() {
 
   async function onRefresh() {
     setRefreshing(true);
+    // Povlacenje nadole je izricit zahtev za svezim podatkom, pa kes ovde
+    // ne sme da odgovori umesto servera.
+    kes.ponisti();
     await load(selectedDay);
     setRefreshing(false);
   }

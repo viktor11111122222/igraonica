@@ -7,6 +7,7 @@ import { useSettings } from '../context/SettingsContext';
 import Announcement from '../components/Announcement';
 import Banner from '../components/Banner';
 import { apiRequest } from '../utils/api';
+import * as kes from '../utils/kes';
 import PressableScale from '../components/PressableScale';
 import BrisanjeNaloga from '../components/BrisanjeNaloga';
 import HoursRing from '../components/HoursRing';
@@ -55,6 +56,9 @@ export default function PackageScreen({ navigation }) {
 
   async function onRefresh() {
     setRefreshing(true);
+    // Povlacenje nadole je izricit zahtev za svezim podatkom, pa kes ovde
+    // ne sme da odgovori umesto servera.
+    kes.ponisti();
     await loadData();
     setRefreshing(false);
   }

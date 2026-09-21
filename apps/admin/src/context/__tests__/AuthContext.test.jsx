@@ -2,7 +2,14 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from '../AuthContext';
-import { get, post, setToken, getToken, onSessionExpired } from '../../lib/api';
+import {
+  get,
+  post,
+  setToken,
+  getToken,
+  setRememberedEmail,
+  onSessionExpired,
+} from '../../lib/api';
 
 // ApiError mora da ostane prava klasa - AuthContext je poziva sa `new`.
 vi.mock('../../lib/api', async () => {
@@ -18,6 +25,8 @@ vi.mock('../../lib/api', async () => {
     post: vi.fn(),
     setToken: vi.fn(),
     getToken: vi.fn(),
+    setRememberedEmail: vi.fn(),
+    getRememberedEmail: vi.fn(() => ''),
     onSessionExpired: vi.fn(() => () => {}),
   };
 });
@@ -35,6 +44,9 @@ function Ekran() {
       <button onClick={() => login('a@b.c', 'tajna').catch((e) => {
         document.getElementById('greska').textContent = e.message;
       })}>Prijavi</button>
+      <button onClick={() => login('a@b.c', 'tajna', true).catch(() => {})}>
+        Prijavi sa pamcenjem
+      </button>
       <button onClick={logout}>Odjavi</button>
       <div id="greska" />
     </div>
@@ -48,6 +60,7 @@ beforeEach(() => {
   get.mockReset();
   post.mockReset();
   setToken.mockReset();
+  setRememberedEmail.mockReset();
   getToken.mockReset().mockReturnValue(null);
   onSessionExpired.mockReset().mockReturnValue(() => {});
 });
@@ -101,7 +114,8 @@ describe('AuthContext - prijava', () => {
     await user.click(screen.getByRole('button', { name: 'Prijavi' }));
 
     await waitFor(() => expect(stanje()).toBe('prijavljen:ADMIN'));
-    expect(setToken).toHaveBeenCalledWith('nov-token');
+    // Bez kvacice token ide u sesiju kartice, ne u localStorage.
+    expect(setToken).toHaveBeenCalledWith('nov-token', { trajno: false });
   });
 
   // Backend bi ga odbio na svakoj ruti sa 403; ovde se odbija odmah i jasno.
@@ -156,5 +170,44 @@ describe('AuthContext - odjava', () => {
     act(() => javiIstek());
 
     expect(stanje()).toBe('odjavljen');
+  });
+});
+
+describe('AuthContext - "Zapamti me"', () => {
+  test('kvacica produzava token i cuva ga trajno, uz zapamcen email', async () => {
+    const user = userEvent.setup();
+    post.mockResolvedValue({ token: 'dugi-token', user: ADMIN });
+    prikazi();
+    await waitFor(() => expect(stanje()).toBe('odjavljen'));
+
+    await user.click(screen.getByRole('button', { name: 'Prijavi sa pamcenjem' }));
+
+    await waitFor(() => expect(stanje()).toBe('prijavljen:ADMIN'));
+    // Backend po ovome bira rok tokena...
+    expect(post).toHaveBeenCalledWith('/auth/login', {
+      email: 'a@b.c',
+      password: 'tajna',
+      rememberMe: true,
+    });
+    // ...a pretrazivac po istoj vrednosti bira skladiste.
+    expect(setToken).toHaveBeenCalledWith('dugi-token', { trajno: true });
+    expect(setRememberedEmail).toHaveBeenCalledWith('a@b.c');
+  });
+
+  test('bez kvacice se email ne pamti', async () => {
+    const user = userEvent.setup();
+    post.mockResolvedValue({ token: 'kratki-token', user: ADMIN });
+    prikazi();
+    await waitFor(() => expect(stanje()).toBe('odjavljen'));
+
+    await user.click(screen.getByRole('button', { name: 'Prijavi' }));
+
+    await waitFor(() => expect(stanje()).toBe('prijavljen:ADMIN'));
+    expect(post).toHaveBeenCalledWith('/auth/login', {
+      email: 'a@b.c',
+      password: 'tajna',
+      rememberMe: false,
+    });
+    expect(setRememberedEmail).toHaveBeenCalledWith('');
   });
 });

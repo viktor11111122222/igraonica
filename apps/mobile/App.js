@@ -1,4 +1,3 @@
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import {
@@ -10,7 +9,8 @@ import { AuthProvider } from './src/context/AuthContext';
 import { SettingsProvider } from './src/context/SettingsContext';
 import { ClosedDaysProvider } from './src/context/ClosedDaysContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import { colors } from './src/theme';
+import LoadingScreen from './src/components/LoadingScreen';
+import { useMinimalniBoot } from './src/hooks/useUcitavanje';
 
 export default function App() {
   const [loaded, error] = useFonts({
@@ -19,13 +19,12 @@ export default function App() {
     Montserrat_700Bold,
   });
 
-  // Ceka se font da se ne bi videla promena tipografije posle prvog rendera.
-  if (!loaded && !error) {
-    return (
-      <View style={styles.splash}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+  // Font se ceka da se ne bi videla promena tipografije posle prvog rendera,
+  // a `bootProsao` drzi ekran ucitavanja dovoljno dugo da se uopste vidi.
+  const bootProsao = useMinimalniBoot();
+
+  if ((!loaded && !error) || !bootProsao) {
+    return <LoadingScreen />;
   }
 
   return (
@@ -39,12 +38,3 @@ export default function App() {
     </SettingsProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  splash: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bg,
-  },
-});

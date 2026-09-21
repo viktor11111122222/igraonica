@@ -3,6 +3,7 @@ import { Text, Pressable } from 'react-native';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { apiRequest, onSessionExpired } from '../../utils/api';
 import * as storage from '../../utils/storage';
+import * as kes from '../../utils/kes';
 
 jest.mock('../../utils/api', () => ({
   apiRequest: jest.fn(),
@@ -29,6 +30,12 @@ function Ekran() {
       </Pressable>
       <Pressable testID="registracija" onPress={() => register({ email: 'a@b.c' }).catch(() => {})}>
         <Text>Registracija</Text>
+      </Pressable>
+      <Pressable
+        testID="prijava-pamti"
+        onPress={() => login('a@b.c', 'tajna', true).catch(() => {})}
+      >
+        <Text>Prijava sa pamcenjem</Text>
       </Pressable>
       <Pressable testID="odjava" onPress={logout}>
         <Text>Odjava</Text>
@@ -88,7 +95,8 @@ describe('AuthContext - prijava i registracija', () => {
     });
 
     await waitFor(() => expect(stanje()).toBe('prijavljen:Ana'));
-    expect(storage.setItem).toHaveBeenCalledWith('token', 'nov');
+    // Bez kvacice token zivi samo do gasenja aplikacije.
+    expect(storage.setItem).toHaveBeenCalledWith('token', 'nov', { trajno: false });
   });
 
   test('neuspela prijava ne menja stanje', async () => {
@@ -175,5 +183,83 @@ describe('AuthContext - odjava i profil', () => {
     });
 
     expect(stanje()).toBe('odjavljen');
+  });
+});
+
+describe('AuthContext - "Zapamti me"', () => {
+  test('kvacica trajno cuva token i pamti email', async () => {
+    apiRequest.mockResolvedValue({ token: 'dugi', user: KORISNIK });
+    prikazi();
+    await waitFor(() => expect(stanje()).toBe('odjavljen'));
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('prijava-pamti'));
+    });
+
+    await waitFor(() => expect(stanje()).toBe('prijavljen:Ana'));
+    // Backend po ovome bira rok tokena...
+    expect(apiRequest).toHaveBeenCalledWith('/auth/login', {
+      method: 'POST',
+      body: { email: 'a@b.c', password: 'tajna', rememberMe: true },
+    });
+    // ...a telefon po istoj vrednosti bira da li token prezivi gasenje.
+    expect(storage.setItem).toHaveBeenCalledWith('token', 'dugi', { trajno: true });
+    expect(storage.setItem).toHaveBeenCalledWith('zapamcen_email', 'a@b.c');
+  });
+
+  test('bez kvacice se zapamcen email brise', async () => {
+    apiRequest.mockResolvedValue({ token: 'kratki', user: KORISNIK });
+    prikazi();
+    await waitFor(() => expect(stanje()).toBe('odjavljen'));
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('prijava'));
+    });
+
+    await waitFor(() => expect(stanje()).toBe('prijavljen:Ana'));
+    expect(storage.deleteItem).toHaveBeenCalledWith('zapamcen_email');
+    expect(storage.setItem).not.toHaveBeenCalledWith('zapamcen_email', 'a@b.c');
+  });
+});
+
+// Kes zivi na nivou modula i prezivljava promenu naloga, pa mora da se prazni
+// na svakoj - inace bi novi korisnik u prvim sekundama video tudje podatke.
+describe('AuthContext - kes se prazni uz nalog', () => {
+  async function napuniKes() {
+    await kes.kesiraj('/packages/my', async () => ({ tajna: 'prethodni nalog' }));
+    expect(kes.stanje().zapisa).toBe(1);
+  }
+
+  test('prijava prazni kes prethodnog naloga', async () => {
+    await napuniKes();
+    apiRequest.mockResolvedValue({ token: 'nov', user: KORISNIK });
+    prikazi();
+    await waitFor(() => expect(stanje()).toBe('odjavljen'));
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('prijava'));
+    });
+
+    await waitFor(() => expect(stanje()).toBe('prijavljen:Ana'));
+    expect(kes.stanje().zapisa).toBe(0);
+  });
+
+  test('odjava prazni kes', async () => {
+    apiRequest.mockResolvedValue({ token: 'nov', user: KORISNIK });
+    prikazi();
+    await waitFor(() => expect(stanje()).toBe('odjavljen'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('prijava'));
+    });
+    await waitFor(() => expect(stanje()).toBe('prijavljen:Ana'));
+
+    await napuniKes();
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('odjava'));
+    });
+
+    await waitFor(() => expect(stanje()).toBe('odjavljen'));
+    expect(kes.stanje().zapisa).toBe(0);
   });
 });

@@ -58,6 +58,27 @@ async function createTestUser(data) {
   });
 }
 
+// Prijava u pripremi testa mora da se proveri. Ranije se pisalo
+// `token = res.body.token` bez provere, pa bi jedan neuspeo login ostavio
+// `undefined`, a svaki sledeci zahtev vratio 401 - testovi koji ocekuju 403 ili
+// 200 padali bi redom, a prava greska (status i poruka servera) nigde se ne bi
+// videla. Ovako pada odmah i kaze zasto.
+async function prijaviSe(app, nalog) {
+  const request = require('supertest');
+  const res = await request(app)
+    .post('/api/auth/login')
+    .send({ email: nalog.email, password: nalog.password });
+
+  if (res.status !== 200 || !res.body.token) {
+    throw new Error(
+      `Prijava u pripremi testa nije uspela za ${nalog.email}: ` +
+        `status ${res.status}, tip ${res.headers['content-type']}, ` +
+        `telo ${JSON.stringify(res.body)}, tekst ${JSON.stringify((res.text || '').slice(0, 300))}`
+    );
+  }
+  return res.body.token;
+}
+
 async function disconnectDB() {
   await prisma.$disconnect();
   await prisma._pool.end();
@@ -67,6 +88,7 @@ module.exports = {
   prisma,
   cleanDB,
   createTestUser,
+  prijaviSe,
   disconnectDB,
   TEST_ADMIN,
   TEST_PARENT,

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, ActivityIndicator, ScrollView, useAnimatedValue } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, ActivityIndicator, ScrollView } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';

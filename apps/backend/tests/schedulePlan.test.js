@@ -7,6 +7,7 @@ const {
   disconnectDB,
   TEST_ADMIN,
   TEST_PARENT,
+  prijaviSe,
 } = require('./setup');
 
 let adminToken;
@@ -59,15 +60,9 @@ beforeAll(async () => {
   await createTestUser(TEST_ADMIN);
   await createTestUser(TEST_PARENT);
 
-  const adminRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_ADMIN.email, password: TEST_ADMIN.password });
-  adminToken = adminRes.body.token;
+  adminToken = await prijaviSe(app, TEST_ADMIN);
 
-  const parentRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_PARENT.email, password: TEST_PARENT.password });
-  parentToken = parentRes.body.token;
+  parentToken = await prijaviSe(app, TEST_PARENT);
 });
 
 afterEach(async () => {

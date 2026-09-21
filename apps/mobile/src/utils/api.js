@@ -1,5 +1,6 @@
 import { NativeModules } from 'react-native';
 import * as storage from './storage';
+import * as kes from './kes';
 
 // Na pravom telefonu 'localhost' je sam telefon, pa server mora da se adresira
 // preko mreze. Upisivanje IP adrese u .env.local radi samo dok se racunar ne
@@ -56,8 +57,35 @@ export function onSessionExpired(fn) {
 // istekla" - backend vraca isti status za oba.
 const RUTE_PRIJAVE = ['/auth/login', '/auth/register'];
 
+// GET ide kroz kes (spajanje zahteva u letu + kratko pamcenje), sve ostalo ide
+// pravo na mrezu i pritom cisti kes, jer je podatak upravo promenjen.
+//
+// `svez: true` zaobilazi kes kada pozivalac mora da vidi stanje sa servera.
 export async function apiRequest(endpoint, options = {}) {
+  const metod = (options.method || 'GET').toUpperCase();
+
+  if (metod === 'GET' && !options.svez) {
+    return kes.kesiraj(endpoint, () => posalji(endpoint, options));
+  }
+
+  const odgovor = await posalji(endpoint, options);
+
+  // Tek posle uspesne izmene: ako je pukla, nista se nije promenilo pa nema
+  // razloga da se baca vec dohvaceno.
+  //
+  // Brise se sve, a ne samo "srodni" kljucevi: jedna prijava deteta menja i
+  // pakete i posete i obavestenja, pa bi spisak izuzetaka bio duzi od koristi
+  // i lako bi zastareo pri svakoj novoj ruti.
+  if (metod !== 'GET') kes.ponisti();
+
+  return odgovor;
+}
+
+async function posalji(endpoint, options = {}) {
   const token = await storage.getItem('token');
+
+  // `svez` je oznaka za nas kes, ne deo fetch konfiguracije - zato ispada ovde.
+  const { svez: _svez, ...fetchOpcije } = options;
 
   const config = {
     headers: {
@@ -65,7 +93,7 @@ export async function apiRequest(endpoint, options = {}) {
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     },
-    ...options,
+    ...fetchOpcije,
   };
 
   if (config.body && typeof config.body === 'object') {
@@ -109,6 +137,9 @@ export async function apiRequest(endpoint, options = {}) {
     // nikakav izlaz: token je u Keychain-u i nema dugmeta koje ga brise.
     if (response.status === 401 && !RUTE_PRIJAVE.includes(endpoint)) {
       await storage.deleteItem('token');
+      // Kes se prazni uz token: ono sto je dohvaceno pod starom sesijom ne sme
+      // da ostane i bude posluzeno sledecem korisniku.
+      kes.ponisti();
       naIstekluSesiju?.();
     }
 

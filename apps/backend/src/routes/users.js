@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
         omit: { password: true },

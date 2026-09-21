@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
   try {
     const rows = await prisma.promoBanner.findMany({
       where: { isActive: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
 
     res.json({ promoBanners: rows.map(izlaz) });
@@ -50,7 +50,7 @@ router.get('/', async (req, res) => {
 // GET /api/promo-banners/all - admin vidi i istekle i iskljucene.
 router.get('/all', protect, authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
   try {
-    const rows = await prisma.promoBanner.findMany({ orderBy: { createdAt: 'desc' } });
+    const rows = await prisma.promoBanner.findMany({ orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
     res.json({ promoBanners: rows.map(izlaz) });
   } catch (err) {
     console.error(err);

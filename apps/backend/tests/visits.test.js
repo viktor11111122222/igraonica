@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT, prijaviSe } = require('./setup');
 
 let adminToken;
 let parentToken;
@@ -20,15 +20,9 @@ beforeAll(async () => {
   const parent = await createTestUser(TEST_PARENT);
   parentId = parent.id;
 
-  const adminRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_ADMIN.email, password: TEST_ADMIN.password });
-  adminToken = adminRes.body.token;
+  adminToken = await prijaviSe(app, TEST_ADMIN);
 
-  const parentRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_PARENT.email, password: TEST_PARENT.password });
-  parentToken = parentRes.body.token;
+  parentToken = await prijaviSe(app, TEST_PARENT);
 
   // Kreiraj decu
   const child1Res = await request(app)

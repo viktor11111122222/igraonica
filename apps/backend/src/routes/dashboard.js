@@ -62,7 +62,7 @@ router.get('/recent-activity', async (req, res) => {
         checkedInBy: { omit: { password: true } },
         checkedOutBy: { omit: { password: true } },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: limit,
     });
 

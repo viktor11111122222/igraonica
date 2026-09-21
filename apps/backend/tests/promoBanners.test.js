@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { prisma, cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT, prijaviSe } = require('./setup');
 
 let adminToken;
 let parentToken;
@@ -15,15 +15,9 @@ beforeAll(async () => {
   await createTestUser(TEST_ADMIN);
   await createTestUser(TEST_PARENT);
 
-  const a = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_ADMIN.email, password: TEST_ADMIN.password });
-  adminToken = a.body.token;
+  adminToken = await prijaviSe(app, TEST_ADMIN);
 
-  const r = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_PARENT.email, password: TEST_PARENT.password });
-  parentToken = r.body.token;
+  parentToken = await prijaviSe(app, TEST_PARENT);
 });
 
 afterEach(async () => {
@@ -98,9 +92,17 @@ describe('GET /api/promo-banners (javno)', () => {
 
 
   test('vise promocija vazi istovremeno, najnovija prva', async () => {
-    await napravi({ title: 'Prva' });
-    await napravi({ title: 'Druga' });
-    await napravi({ title: 'Treca' });
+    // Tri poziva zaredom ume da padnu u istu milisekundu; tada `createdAt`
+    // vise ne razlikuje redosled i "najnovija" nije odredjena ni u bazi ni u
+    // kodu. Zato test sam razmice vremena umesto da se oslanja na brzinu
+    // masine - inace pada nasumicno, bez greske u aplikaciji.
+    for (const [i, title] of ['Prva', 'Druga', 'Treca'].entries()) {
+      const { body } = await napravi({ title });
+      await prisma.promoBanner.update({
+        where: { id: body.promoBanner.id },
+        data: { createdAt: new Date(Date.now() + i * 1000) },
+      });
+    }
 
     const res = await javno();
     expect(res.body.promoBanners).toHaveLength(3);

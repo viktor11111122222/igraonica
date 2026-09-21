@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import { apiRequest } from '../utils/api';
+import * as kes from '../utils/kes';
 import { font } from '../theme';
 
 export default function ChildDetailScreen({ route, navigation }) {
@@ -43,6 +44,9 @@ export default function ChildDetailScreen({ route, navigation }) {
 
   async function onRefresh() {
     setRefreshing(true);
+    // Povlacenje nadole je izricit zahtev za svezim podatkom, pa kes ovde
+    // ne sme da odgovori umesto servera.
+    kes.ponisti();
     await loadData();
     setRefreshing(false);
   }

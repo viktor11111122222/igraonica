@@ -27,5 +27,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  // Oba skladista: token ide u sessionStorage kada "Zapamti me" nije stiklirano,
+  // pa bi inace curio u naredni test.
   localStorage.clear();
+  sessionStorage.clear();
 });

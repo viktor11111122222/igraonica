@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
         date: { gte: today },
         status: 'CONFIRMED',
       },
-      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+      orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }],
       select: {
         id: true,
         type: true,
@@ -68,7 +68,7 @@ router.get(
         prisma.reservation.findMany({
           where,
           include: { user: { omit: { password: true } } },
-          orderBy: { date: 'desc' },
+          orderBy: [{ date: 'desc' }, { id: 'desc' }],
           skip,
           take: limit,
         }),

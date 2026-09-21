@@ -2,14 +2,44 @@
 // pa ovde nema hardkodovanog hosta.
 
 const TOKEN_KEY = 'igraonica_admin_token';
+const EMAIL_KEY = 'igraonica_admin_email';
 
+// Gde token zivi zavisi od "Zapamti me":
+//
+//   localStorage   - prezivi zatvaranje pretrazivaca (kvacica je ukljucena)
+//   sessionStorage - nestane cim se kartica zatvori (podrazumevano)
+//
+// Racunar na recepciji deli vise ljudi, pa je kratka sesija podrazumevano
+// ponasanje: ko ustane od stola, ne ostavlja otvoren panel sledecem. Duzina
+// samog tokena je posebna prica i nju odredjuje backend - brisanje iz
+// pretrazivaca ne ponistava token, pa bi trajan token u kratkoj sesiji i dalje
+// vazio da ga neko prepise.
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  // Sesija kartice ima prednost: ako se neko prijavio "samo za sada" dok je u
+  // localStorage ostao tudji stariji token, vazi onaj noviji.
+  return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
 }
 
-export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+export function setToken(token, { trajno = false } = {}) {
+  // Uvek se cisti i jedno i drugo: inace bi posle odjave ostao token u onom
+  // skladistu koje ovaj poziv ne dodiruje.
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+
+  if (!token) return;
+  (trajno ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
+}
+
+// Email se pamti odvojeno od tokena, da bi polje bilo popunjeno i kada sesija
+// istekne. Lozinka se NE pamti nigde - OWASP to izricito navodi kao propust
+// ("Testing for Vulnerable Remember Password").
+export function getRememberedEmail() {
+  return localStorage.getItem(EMAIL_KEY) || '';
+}
+
+export function setRememberedEmail(email) {
+  if (email) localStorage.setItem(EMAIL_KEY, email);
+  else localStorage.removeItem(EMAIL_KEY);
 }
 
 // Baca ApiError sa porukom sa backenda. Backend vraca ili { message } ili

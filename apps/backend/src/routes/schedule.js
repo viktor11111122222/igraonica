@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   try {
     const activities = await prisma.activity.findMany({
       where: { isActive: true, isRecurring: true },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }, { id: 'asc' }],
     });
 
     // Grupisanje po danu
@@ -38,7 +38,7 @@ router.get('/day/:dayOfWeek', async (req, res) => {
 
     const activities = await prisma.activity.findMany({
       where: { isActive: true, isRecurring: true, dayOfWeek },
-      orderBy: { startTime: 'asc' },
+      orderBy: [{ startTime: 'asc' }, { id: 'asc' }],
     });
 
     res.json({ dayOfWeek, activities });
@@ -67,7 +67,7 @@ router.get('/events', async (req, res) => {
 
     const events = await prisma.activity.findMany({
       where,
-      orderBy: [{ specificDate: 'asc' }, { startTime: 'asc' }],
+      orderBy: [{ specificDate: 'asc' }, { startTime: 'asc' }, { id: 'asc' }],
     });
 
     res.json({ events });
@@ -111,15 +111,15 @@ router.get('/plan', async (req, res) => {
     const [nedeljne, jednokratne, rezervacije] = await Promise.all([
       prisma.activity.findMany({
         where: { isActive: true, isRecurring: true, dayOfWeek },
-        orderBy: { startTime: 'asc' },
+        orderBy: [{ startTime: 'asc' }, { id: 'asc' }],
       }),
       prisma.activity.findMany({
         where: { isActive: true, isRecurring: false, specificDate: dan },
-        orderBy: { startTime: 'asc' },
+        orderBy: [{ startTime: 'asc' }, { id: 'asc' }],
       }),
       prisma.reservation.findMany({
         where: { date: dan, status: 'CONFIRMED' },
-        orderBy: { startTime: 'asc' },
+        orderBy: [{ startTime: 'asc' }, { id: 'asc' }],
         // Ime deteta se namerno ne salje - spisak vidi svaki roditelj.
         select: {
           id: true,
@@ -193,7 +193,7 @@ router.get(
   async (req, res) => {
     try {
       const activities = await prisma.activity.findMany({
-        orderBy: [{ isRecurring: 'desc' }, { dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        orderBy: [{ isRecurring: 'desc' }, { dayOfWeek: 'asc' }, { startTime: 'asc' }, { id: 'asc' }],
       });
 
       res.json({ activities });

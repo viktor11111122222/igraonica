@@ -1,4 +1,5 @@
-import { Animated, Pressable, StyleSheet, useAnimatedValue } from 'react-native';
+import { Animated, Pressable, StyleSheet } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, motion, shadow } from '../theme';
 

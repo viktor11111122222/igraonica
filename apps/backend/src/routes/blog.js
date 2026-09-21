@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
       prisma.blogPost.findMany({
         where,
         include: { author: { omit: { password: true } } },
-        orderBy: { publishedAt: 'desc' },
+        orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
       }),
@@ -53,7 +53,7 @@ router.get('/featured', async (req, res) => {
     const posts = await prisma.blogPost.findMany({
       where: { isPublished: true, isFeatured: true },
       include: { author: { omit: { password: true } } },
-      orderBy: { publishedAt: 'desc' },
+      orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
       take: 5,
     });
 
@@ -76,7 +76,7 @@ router.get(
       const [posts, total] = await Promise.all([
         prisma.blogPost.findMany({
           include: { author: { omit: { password: true } } },
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           skip,
           take: limit,
         }),

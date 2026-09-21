@@ -2,7 +2,7 @@ const request = require('supertest');
 const path = require('path');
 const fs = require('fs');
 const app = require('../src/app');
-const { cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT } = require('./setup');
+const { cleanDB, createTestUser, disconnectDB, TEST_ADMIN, TEST_PARENT, prijaviSe } = require('./setup');
 
 let adminToken;
 let parentToken;
@@ -19,15 +19,9 @@ beforeAll(async () => {
   await createTestUser(TEST_ADMIN);
   await createTestUser(TEST_PARENT);
 
-  const adminRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_ADMIN.email, password: TEST_ADMIN.password });
-  adminToken = adminRes.body.token;
+  adminToken = await prijaviSe(app, TEST_ADMIN);
 
-  const parentRes = await request(app)
-    .post('/api/auth/login')
-    .send({ email: TEST_PARENT.email, password: TEST_PARENT.password });
-  parentToken = parentRes.body.token;
+  parentToken = await prijaviSe(app, TEST_PARENT);
 
   // Kreiraj mali test PNG (1x1 pixel)
   const pngHeader = Buffer.from([
@@ -174,5 +168,55 @@ describe('DELETE /api/upload/:filename', () => {
       .set('Authorization', `Bearer ${parentToken}`);
 
     expect(res.status).toBe(403);
+  });
+});
+
+// Slike sa servera povlaci i mobilna aplikacija, a ona u razvoju stoji na
+// Metru (8081) dok backend slusa na 3001 - dakle druga adresa. Helmet
+// podrazumevano salje Cross-Origin-Resource-Policy: same-origin, sto je
+// pretrazivacu dovoljno da sliku odbije, pa su promocije ostajale prazne.
+describe('Slike se mogu povuci sa druge adrese', () => {
+  test('okacena slika nosi cross-origin zaglavlje', async () => {
+    const upload = await request(app)
+      .post('/api/upload/image')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('image', testImagePath);
+
+    expect(upload.status).toBe(201);
+
+    const res = await request(app).get(upload.body.url);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cross-origin-resource-policy']).toBe('cross-origin');
+
+    await request(app)
+      .delete(`/api/upload/${path.basename(upload.body.url)}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+  });
+
+  // Popustanje vazi samo za staticne slike; API i dalje stoji pod punom
+  // zastitom koju postavlja helmet.
+  test('API ostaje na same-origin', async () => {
+    const res = await request(app).get('/api/settings/public');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cross-origin-resource-policy']).toBe('same-origin');
+  });
+
+  test('ostala zastita iz helmeta ostaje i na slikama', async () => {
+    const upload = await request(app)
+      .post('/api/upload/image')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('image', testImagePath);
+
+    const res = await request(app).get(upload.body.url);
+
+    // Bez ovoga bi pretrazivac mogao da pogodi tip sadrzaja umesto da veruje
+    // zaglavlju - stara rupa kod okacenih fajlova.
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+
+    await request(app)
+      .delete(`/api/upload/${path.basename(upload.body.url)}`)
+      .set('Authorization', `Bearer ${adminToken}`);
   });
 });

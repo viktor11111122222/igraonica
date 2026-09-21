@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { apiRequest } from '../utils/api';
+import * as kes from '../utils/kes';
 import { font } from '../theme';
 
 export default function ChildrenListScreen({ navigation }) {
@@ -35,6 +36,9 @@ export default function ChildrenListScreen({ navigation }) {
 
   async function onRefresh() {
     setRefreshing(true);
+    // Povlacenje nadole je izricit zahtev za svezim podatkom, pa kes ovde
+    // ne sme da odgovori umesto servera.
+    kes.ponisti();
     await loadChildren();
     setRefreshing(false);
   }

@@ -37,7 +37,7 @@ router.get(
         prisma.event.findMany({
           where,
           include: { user: { omit: { password: true } } },
-          orderBy: { date: 'desc' },
+          orderBy: [{ date: 'desc' }, { id: 'desc' }],
           skip,
           take: limit,
         }),

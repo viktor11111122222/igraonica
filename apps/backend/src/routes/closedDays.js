@@ -68,12 +68,12 @@ router.get('/', async (req, res) => {
     if (to) where.date.lte = toUtcDate(to);
 
     const [rows, rezervacije] = await Promise.all([
-      prisma.closedDay.findMany({ where, orderBy: { date: 'asc' } }),
+      prisma.closedDay.findMany({ where, orderBy: [{ date: 'asc' }, { id: 'asc' }] }),
       prisma.reservation.findMany({
         // Samo potvrdjene: dan se roditelju zatvara tek kada je celodnevna
         // rezervacija dogovorena, ne dok je zahtev jos na cekanju.
         where: { isFullDay: true, status: 'CONFIRMED', date: where.date },
-        orderBy: { date: 'asc' },
+        orderBy: [{ date: 'asc' }, { id: 'asc' }],
         select: { id: true, date: true, type: true, customType: true },
       }),
     ]);
@@ -88,7 +88,7 @@ router.get('/', async (req, res) => {
 // GET /api/closed-days/all - admin vidi i prosle datume.
 router.get('/all', protect, authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
   try {
-    const rows = await prisma.closedDay.findMany({ orderBy: { date: 'desc' } });
+    const rows = await prisma.closedDay.findMany({ orderBy: [{ date: 'desc' }, { id: 'desc' }] });
     res.json({ closedDays: rows.map(izlaz) });
   } catch (err) {
     console.error(err);

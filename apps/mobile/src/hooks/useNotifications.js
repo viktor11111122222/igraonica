@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { apiRequest } from '../utils/api';
+import * as kes from '../utils/kes';
 import { useAutoRefresh } from './useAutoRefresh';
 
 // Obavestenja roditelju: kada dete udje u igraonicu, kada izadje, kada dobije
@@ -62,7 +63,14 @@ export function useNotifications({ samoBroj = false } = {}) {
     }
   }, [load]);
 
-  return { notifications, unreadCount, loading, reload: load, oznaciProcitano, oznaciSve };
+  // Povlacenje nadole na ekranu obavestenja: izricit zahtev za svezim
+  // podatkom, pa kes prvo ide u stranu.
+  const reload = useCallback(() => {
+    kes.ponisti();
+    return load();
+  }, [load]);
+
+  return { notifications, unreadCount, loading, reload, oznaciProcitano, oznaciSve };
 }
 
 export default useNotifications;
