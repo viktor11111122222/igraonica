@@ -9,9 +9,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vica.kidsclub",
-      "infoPlist": {
-        "NSLocalNetworkUsageDescription": "Pristup lokalnoj mrezi je potreban samo kada se aplikacija povezuje na server igraonice unutar iste mreze."
-      },
       "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
