@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Kids club",
-    "slug": "mobile",
+    "slug": "kidsclub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -59,6 +59,12 @@
       "expo-notifications"
     ],
     "primaryColor": "#7c9fc9",
-    "description": "Aplikacija za roditelje: QR kod za dolazak i odlazak deteta, stanje paketa sati, jelovnik i raspored igraonice."
+    "description": "Aplikacija za roditelje: QR kod za dolazak i odlazak deteta, stanje paketa sati, jelovnik i raspored igraonice.",
+    "owner": "uros994",
+    "extra": {
+      "eas": {
+        "projectId": "e5e9f3e3-f348-4dc4-a0d3-d34c6078f775"
+      }
+    }
   }
 }
