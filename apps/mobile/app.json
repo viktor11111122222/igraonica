@@ -33,7 +33,7 @@
       },
       "package": "kidsclub.rs",
       "userInterfaceStyle": "light",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.INTERNET",
