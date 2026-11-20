@@ -15,6 +15,14 @@ import {
 
 // Ista racunica kao u mobilnoj aplikaciji (apps/mobile/src/utils/packages.js):
 // zbir ide preko svih paketa koji jos vaze, a ne preko jednog.
+// Saglasnosti roditelja: null znaci da roditelj jos nije odgovorio, sto
+// osoblje mora da razlikuje od "ne".
+function daNe(v) {
+  if (v === true) return 'Da';
+  if (v === false) return 'Ne';
+  return <span className="muted">?</span>;
+}
+
 function summarize(userPackages = []) {
   const now = new Date();
   const valid = userPackages.filter((p) => p.isActive && new Date(p.expiresAt) > now);
@@ -177,6 +185,9 @@ export default function UserDetail() {
                     <th>QR kod</th>
                     <th>Alergije</th>
                     <th>Napomene</th>
+                    <th>Slikanje</th>
+                    <th>Rucak / uzina</th>
+                    <th>Preuzima</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,6 +208,11 @@ export default function UserDetail() {
                       <td className="mono" data-label="QR kod">{c.qrCode}</td>
                       <td className="muted" data-label="Alergije">{c.allergies || '—'}</td>
                       <td className="muted" data-label="Napomene">{c.notes || '—'}</td>
+                      <td data-label="Slikanje">{daNe(c.photoConsent)}</td>
+                      <td data-label="Rucak / uzina">
+                        {daNe(c.eatsLunch)} / {daNe(c.eatsSnack)}
+                      </td>
+                      <td className="muted" data-label="Preuzima">{c.pickupPersons || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

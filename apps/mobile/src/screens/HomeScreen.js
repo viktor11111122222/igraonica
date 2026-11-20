@@ -23,6 +23,7 @@ import PromoPopup from '../components/PromoPopup';
 import PressableScale from '../components/PressableScale';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
+import PodsetnikSaglasnosti from '../components/PodsetnikSaglasnosti';
 import { todayKey } from '../utils/date';
 import { mailUrl, mapsUrl, open, parseCoords, telUrl } from '../utils/contact';
 import { summarize } from '../utils/packages';
@@ -55,19 +56,23 @@ export default function HomeScreen({ navigation }) {
   // Promocije sa slikom: prvi put idu preko celog ekrana, posle stoje iznad
   // galerije.
   const [promoBanners, setPromoBanners] = useState([]);
+  // Deca roditelja - samo za podsetnik na saglasnosti.
+  const [deca, setDeca] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
     const today = todayKey();
     // Plan dana, a ne nedeljni raspored: samo on zna za rodjendane i za to da
     // ih rodjendan gasi, pa se pocetna slaze sa tabom "Raspored".
-    const [pkgs, todayMenu, schedule, akcije, baneri] = await Promise.all([
+    const [pkgs, todayMenu, schedule, akcije, baneri, mojaDeca] = await Promise.all([
       apiRequest('/packages/my').catch(() => null),
       apiRequest(`/menu?date=${today}`).catch(() => null),
       apiRequest(`/schedule/plan?date=${today}`).catch(() => null),
       apiRequest('/promotions').catch(() => null),
       apiRequest('/promo-banners').catch(() => null),
+      apiRequest('/children').catch(() => null),
     ]);
+    if (mojaDeca) setDeca(mojaDeca.children || []);
     if (pkgs) {
       setPackages(pkgs.userPackages || []);
       setDebtHours(Number(pkgs.debtHours) || 0);
@@ -219,6 +224,10 @@ export default function HomeScreen({ navigation }) {
         </View>
         <Ionicons name="chevron-forward" size={22} color={colors.textFaint} />
       </PressableScale>
+
+      {/* Odmah ispod sati: ovo je jedino na pocetnoj sto roditelj treba da
+          uradi, a ne samo da procita. */}
+      <PodsetnikSaglasnosti deca={deca} navigation={navigation} />
 
       {/* Akcije traju ogranicen broj dana, pa stoje visoko - ispod sati, a
           iznad onoga sto se ionako ponavlja svaki dan. */}

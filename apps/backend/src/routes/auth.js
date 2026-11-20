@@ -10,6 +10,10 @@ const { prijavaLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
+// Domaci i medjunarodni zapis: cifre uz razmake, crtice, kose crte i
+// zagrade, opciono + na pocetku, najmanje 6 cifara.
+const TELEFON = /^\+?[\d\s\-/()]{6,20}$/;
+
 // POST /api/auth/register
 router.post(
   '/register',
@@ -18,6 +22,15 @@ router.post(
     body('password').isLength({ min: 6 }).withMessage('Lozinka mora imati najmanje 6 karaktera.'),
     body('firstName').notEmpty().withMessage('Ime je obavezno.'),
     body('lastName').notEmpty().withMessage('Prezime je obavezno.'),
+    // Aplikacija od verzije sa ovim poljem trazi telefon pri registraciji, ali
+    // server ga jos ne sme traziti: build koji je vec u prodavnici (i na App
+    // Review-u) ga ne salje, pa bi mu registracija pukla. Kad svi predju na novu
+    // verziju, ovde ide notEmpty().
+    body('phone')
+      .optional({ values: 'falsy' })
+      .trim()
+      .matches(TELEFON)
+      .withMessage('Unesite ispravan broj telefona.'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -26,7 +39,8 @@ router.post(
     }
 
     try {
-      const { password, firstName, lastName, phone } = req.body;
+      const { password, firstName, lastName } = req.body;
+      const phone = req.body.phone || null;
       const email = normalizujEmail(req.body.email);
 
       const existingUser = await prisma.user.findFirst({ where: poEmailu(email) });
@@ -122,6 +136,9 @@ router.patch(
   [
     body('firstName').optional().notEmpty().withMessage('Ime ne moze biti prazno.'),
     body('lastName').optional().notEmpty().withMessage('Prezime ne moze biti prazno.'),
+    // Telefon se ne brise preko profila - osoblju je to jedini kontakt sa
+    // roditeljem dok je dete u igraonici.
+    body('phone').optional().trim().matches(TELEFON).withMessage('Unesite ispravan broj telefona.'),
   ],
   async (req, res) => {
     const errors = validationResult(req);

@@ -17,8 +17,14 @@ import * as kes from './kes';
 // (Emulator nema taj problem: kod njega je racunar 10.0.2.2.)
 const PORT = 3001;
 
+// Build za prodavnicu nema Metro, pa bi izvedena adresa bila localhost - sam
+// telefon - i aplikacija bi na prvom ekranu stala. Zato produkcija uvek ide
+// na pravi server.
+const PRODUKCIJA = 'https://api.kids-club.rs/api';
+
 function adresaServera() {
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  if (!__DEV__) return PRODUKCIJA;
 
   // U produkcijskom build-u scriptURL je file:// putanja i nema hosta.
   const scriptURL = NativeModules?.SourceCode?.getConstants?.().scriptURL;
@@ -143,7 +149,10 @@ async function posalji(endpoint, options = {}) {
       naIstekluSesiju?.();
     }
 
-    const error = new Error(data.message || 'Greska na serveru.');
+    // Validacija (express-validator) vraca `errors: [{ msg }]` bez `message` -
+    // ta poruka kaze roditelju sta da ispravi, a "Greska na serveru" ne kaze nista.
+    const poruka = data.message || data.errors?.[0]?.msg;
+    const error = new Error(poruka || 'Greska na serveru.');
     error.status = response.status;
     error.data = data;
     throw error;

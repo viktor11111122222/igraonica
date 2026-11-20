@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
 import BirthDatePicker from '../components/BirthDatePicker';
+import PitanjaODetetu from '../components/PitanjaODetetu';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
 // Najcesce alergije kod dece - da roditelj ne mora da kuca.
@@ -27,14 +28,45 @@ const COMMON_ALLERGIES = [
   'Cokolada',
 ];
 
-export default function AddChildScreen({ navigation }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState(null);
-  const [picked, setPicked] = useState([]);
-  const [otherAllergies, setOtherAllergies] = useState('');
-  const [notes, setNotes] = useState('');
+// Alergije su na serveru jedan tekst ("Mleko, Jaja, kivi"). Za izmenu ga
+// vracamo u cipove koje znamo i slobodan unos za ostatak.
+function razdvojiAlergije(tekst) {
+  const delovi = (tekst || '').split(',').map((d) => d.trim()).filter(Boolean);
+  return {
+    picked: delovi.filter((d) => COMMON_ALLERGIES.includes(d)),
+    other: delovi.filter((d) => !COMMON_ALLERGIES.includes(d)).join(', '),
+  };
+}
+
+export default function AddChildScreen({ navigation, route }) {
+  // Sa detetom u parametrima ekran menja postojece dete umesto da dodaje novo.
+  const postojece = route?.params?.child;
+  // Podsetnik na pocetnoj otvara obrazac zbog saglasnosti, a one su na dnu -
+  // ekran tada sam skroluje do njih, jednom, cim zna gde su.
+  const naSaglasnosti = Boolean(route?.params?.naSaglasnosti);
+  const skrol = useRef(null);
+  const vecSkrolovano = useRef(false);
+
+  function saglasnostiPostavljene(e) {
+    if (!naSaglasnosti || vecSkrolovano.current) return;
+    vecSkrolovano.current = true;
+    skrol.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - spacing.lg), animated: true });
+  }
+  const pocetneAlergije = razdvojiAlergije(postojece?.allergies);
+
+  const [firstName, setFirstName] = useState(postojece?.firstName ?? '');
+  const [lastName, setLastName] = useState(postojece?.lastName ?? '');
+  const [dateOfBirth, setDateOfBirth] = useState(postojece?.dateOfBirth?.slice(0, 10) ?? '');
+  const [gender, setGender] = useState(postojece?.gender ?? null);
+  const [picked, setPicked] = useState(pocetneAlergije.picked);
+  const [otherAllergies, setOtherAllergies] = useState(pocetneAlergije.other);
+  const [notes, setNotes] = useState(postojece?.notes ?? '');
+  const [odgovori, setOdgovori] = useState({
+    photoConsent: postojece?.photoConsent ?? null,
+    eatsLunch: postojece?.eatsLunch ?? null,
+    eatsSnack: postojece?.eatsSnack ?? null,
+    pickupPersons: postojece?.pickupPersons ?? '',
+  });
   const [loading, setLoading] = useState(false);
 
   function toggleAllergy(name) {
@@ -62,17 +94,48 @@ export default function AddChildScreen({ navigation }) {
 
     const allergies = buildAllergies();
 
+    const saglasnosti = {
+      photoConsent: odgovori.photoConsent,
+      eatsLunch: odgovori.eatsLunch,
+      eatsSnack: odgovori.eatsSnack,
+      pickupPersons: odgovori.pickupPersons.trim() || null,
+    };
+
     setLoading(true);
     try {
+      if (postojece) {
+        // Pri izmeni prazno polje znaci "obrisano", pa ide null - inace bi
+        // server zadrzao staru vrednost.
+        await apiRequest(`/children/${postojece.id}`, {
+          method: 'PATCH',
+          body: {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            dateOfBirth,
+            gender,
+            allergies: allergies || null,
+            notes: notes.trim() || null,
+            ...saglasnosti,
+          },
+        });
+        // Ekran deteta pri povratku sam ucitava sveze podatke (izmena je
+        // vec ocistila kes).
+        navigation.goBack();
+        return;
+      }
+
       await apiRequest('/children', {
         method: 'POST',
         body: {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           dateOfBirth,
-          gender,
+          // Pol nije obavezan. Server prihvata da polja nema, ali `null` odbija
+          // kao nevazeci pol - pa bi dete bez izabranog pola puklo pri cuvanju.
+          gender: gender || undefined,
           allergies: allergies || undefined,
           notes: notes.trim() || undefined,
+          ...saglasnosti,
         },
       });
 
@@ -88,6 +151,7 @@ export default function AddChildScreen({ navigation }) {
 
   return (
     <ScrollView
+      ref={skrol}
       style={styles.container}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
@@ -190,8 +254,7 @@ export default function AddChildScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Napomene</Text>
         </View>
         <Text style={styles.sectionHint}>
-          Sve sto osoblje treba da zna - lekovi, strahovi, ko sme da preuzme
-          dete.
+          Sve sto osoblje treba da zna - lekovi, strahovi, navike.
         </Text>
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -203,6 +266,10 @@ export default function AddChildScreen({ navigation }) {
         />
       </View>
 
+      <View onLayout={saglasnostiPostavljene} testID="saglasnosti">
+        <PitanjaODetetu odgovori={odgovori} onChange={setOdgovori} />
+      </View>
+
       <PressableScale
         style={[styles.submit, loading && styles.submitDisabled]}
         onPress={handleSubmit}
@@ -211,7 +278,7 @@ export default function AddChildScreen({ navigation }) {
         {loading ? (
           <ActivityIndicator color={colors.textOnPrimary} />
         ) : (
-          <Text style={styles.submitText}>Dodaj dete</Text>
+          <Text style={styles.submitText}>{postojece ? 'Sacuvaj izmene' : 'Dodaj dete'}</Text>
         )}
       </PressableScale>
     </ScrollView>

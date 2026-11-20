@@ -21,6 +21,7 @@ const ISPRAVNO = {
   Ime: 'Ana',
   Prezime: 'Petrovic',
   Email: 'ana@primer.rs',
+  'Broj telefona': '064 123 4567',
   Lozinka: 'tajna123',
   'Ponovite lozinku': 'tajna123',
 };
@@ -104,6 +105,31 @@ describe('RegisterScreen - provera unosa', () => {
       'Lozinka mora imati najmanje 6 karaktera.'
     );
   });
+
+  // Osoblje zove roditelja dok je dete u igraonici - bez broja nema naloga.
+  test('telefon je obavezan', async () => {
+    await prikazi();
+    await popuni({ ...ISPRAVNO, 'Broj telefona': '' });
+
+    await act(async () => {
+      fireEvent.press(screen.getByText('Otvori nalog'));
+    });
+
+    expect(mockRegister).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith('Greska', 'Sva polja su obavezna.');
+  });
+
+  test('telefon koji nije broj se odbija', async () => {
+    await prikazi();
+    await popuni({ ...ISPRAVNO, 'Broj telefona': 'nemam' });
+
+    await act(async () => {
+      fireEvent.press(screen.getByText('Otvori nalog'));
+    });
+
+    expect(mockRegister).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith('Greska', 'Unesite ispravan broj telefona.');
+  });
 });
 
 describe('RegisterScreen - slanje', () => {
@@ -119,6 +145,7 @@ describe('RegisterScreen - slanje', () => {
       firstName: 'Ana',
       lastName: 'Petrovic',
       email: 'ana@primer.rs',
+      phone: '064 123 4567',
       password: 'tajna123',
     });
   });

@@ -13,6 +13,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
 import PressableScale from '../components/PressableScale';
+import { jeTelefon } from '../utils/telefon';
 import { colors, radius, spacing, type, font } from '../theme';
 
 export default function RegisterScreen({ navigation }) {
@@ -20,13 +21,27 @@ export default function RegisterScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleRegister() {
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !email.trim() ||
+      !phone.trim() ||
+      !password.trim()
+    ) {
       Alert.alert('Greska', 'Sva polja su obavezna.');
+      return;
+    }
+
+    // Osoblje zove roditelja dok je dete u igraonici, pa broj mora da bude
+    // stvaran - bar 6 cifara.
+    if (!jeTelefon(phone)) {
+      Alert.alert('Greska', 'Unesite ispravan broj telefona.');
       return;
     }
 
@@ -46,6 +61,7 @@ export default function RegisterScreen({ navigation }) {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         password,
       });
     } catch (err) {
@@ -105,6 +121,17 @@ export default function RegisterScreen({ navigation }) {
             autoCorrect={false}
             autoComplete="email"
             textContentType="emailAddress"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Broj telefona"
+            placeholderTextColor={colors.textFaint}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
           />
 
           <TextInput

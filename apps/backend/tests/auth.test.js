@@ -69,6 +69,51 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(400);
     expect(res.body.errors).toBeDefined();
   });
+
+  test('cuva telefon roditelja', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'telefon@test.com',
+        password: 'test123',
+        firstName: 'Sa',
+        lastName: 'Telefonom',
+        phone: '+381 64 123 4567',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.phone).toBe('+381 64 123 4567');
+  });
+
+  test('odbija telefon koji nije broj', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'losbroj@test.com',
+        password: 'test123',
+        firstName: 'Los',
+        lastName: 'Broj',
+        phone: 'nemam',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors[0].path).toBe('phone');
+  });
+
+  // Build koji je vec objavljen ne salje telefon - registracija mu ne sme pasti.
+  test('stara verzija aplikacije se i dalje registruje bez telefona', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({
+        email: 'starabuild@test.com',
+        password: 'test123',
+        firstName: 'Stara',
+        lastName: 'Verzija',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.phone).toBeNull();
+  });
 });
 
 describe('POST /api/auth/login', () => {
@@ -298,6 +343,15 @@ describe('PATCH /api/auth/profile', () => {
       .patch('/api/auth/profile')
       .set('Authorization', `Bearer ${token}`)
       .send({ firstName: '' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('ne dozvoljava brisanje telefona', async () => {
+    const res = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ phone: '' });
 
     expect(res.status).toBe(400);
   });

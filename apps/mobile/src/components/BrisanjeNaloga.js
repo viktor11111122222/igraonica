@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import PressableScale from './PressableScale';
@@ -84,7 +93,13 @@ export default function BrisanjeNaloga({ navigation }) {
       </View>
 
       <Modal visible={otvoren} transparent animationType="fade" onRequestClose={zatvori}>
-        <View style={styles.zastor}>
+        {/* Prozor stoji na sredini, a tastatura za lozinku zauzima donji deo
+            ekrana - bez pomeranja bi prekrila dugme "Obrisi nalog". Android
+            sam skuplja prozor (adjustResize). */}
+        <KeyboardAvoidingView
+          style={styles.zastor}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={styles.prozor}>
             <Text style={styles.naslov}>Brisanje naloga</Text>
             <Text style={styles.opis}>
@@ -106,25 +121,37 @@ export default function BrisanjeNaloga({ navigation }) {
 
             {!!greska && <Text style={styles.greska}>{greska}</Text>}
 
+            {/* PressableScale stil daje unutrasnjem View-u, a red deli sirinu
+                spoljnim elementima - zato `flex: 1` mora na omotac. Na samom
+                dugmetu je skupljao visinu na nulu i natpisi su nestajali. */}
             <View style={styles.dugmad}>
-              <PressableScale style={[styles.dugme, styles.odustani]} onPress={zatvori} disabled={radi}>
-                <Text style={styles.odustaniTekst}>Odustani</Text>
-              </PressableScale>
-              <PressableScale
-                style={[styles.dugme, styles.potvrdi]}
-                onPress={obrisi}
-                disabled={radi}
-                accessibilityRole="button"
-              >
-                {radi ? (
-                  <ActivityIndicator color={colors.textOnPrimary} />
-                ) : (
-                  <Text style={styles.potvrdiTekst}>Obrisi nalog</Text>
-                )}
-              </PressableScale>
+              <View style={styles.celija}>
+                <PressableScale
+                  style={[styles.dugme, styles.odustani]}
+                  onPress={zatvori}
+                  disabled={radi}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.odustaniTekst}>Odustani</Text>
+                </PressableScale>
+              </View>
+              <View style={styles.celija}>
+                <PressableScale
+                  style={[styles.dugme, styles.potvrdi]}
+                  onPress={obrisi}
+                  disabled={radi}
+                  accessibilityRole="button"
+                >
+                  {radi ? (
+                    <ActivityIndicator color={colors.textOnPrimary} />
+                  ) : (
+                    <Text style={styles.potvrdiTekst}>Obrisi nalog</Text>
+                  )}
+                </PressableScale>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -174,8 +201,8 @@ const styles = StyleSheet.create({
   },
   greska: { ...type.body, color: colors.danger },
   dugmad: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  celija: { flex: 1 },
   dugme: {
-    flex: 1,
     paddingVertical: spacing.md,
     borderRadius: radius.pill,
     alignItems: 'center',

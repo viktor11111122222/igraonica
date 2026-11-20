@@ -167,3 +167,23 @@ describe('PackageScreen - odjava', () => {
     upit.mockRestore();
   });
 });
+
+describe('PackageScreen - saglasnosti', () => {
+  const popunjeno = {
+    ...dete,
+    id: 'c2',
+    firstName: 'Ana',
+    photoConsent: false,
+    eatsLunch: true,
+    eatsSnack: true,
+    pickupPersons: 'Baka',
+  };
+
+  test('oznacava samo decu kojoj fale odgovori', async () => {
+    odgovori({ children: [dete, popunjeno] });
+    await prikazi();
+
+    await waitFor(() => expect(screen.getByText('Lena Petrovic')).toBeTruthy());
+    expect(screen.getAllByText('Popunite saglasnosti')).toHaveLength(1);
+  });
+});

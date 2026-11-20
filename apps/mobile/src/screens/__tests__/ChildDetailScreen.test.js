@@ -33,7 +33,7 @@ const poseta = {
   child: { id: 'c1' },
 };
 
-const navigation = { goBack: jest.fn() };
+const navigation = { goBack: jest.fn(), navigate: jest.fn() };
 const route = { params: { child: dete } };
 const prikazi = () => render(<ChildDetailScreen navigation={navigation} route={route} />);
 
@@ -132,5 +132,43 @@ describe('ChildDetailScreen - uklanjanje', () => {
 
     expect(Alert.alert).toHaveBeenLastCalledWith('Greska', 'Dete ima otvorenu posetu.');
     expect(navigation.goBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChildDetailScreen - saglasnosti', () => {
+  test('preskocena pitanja se vide kao neodgovorena i nude dopunu', async () => {
+    await prikazi();
+
+    expect(screen.getAllByText('Nije odgovoreno')).toHaveLength(3);
+    expect(screen.getByText('Nije upisano')).toBeTruthy();
+    expect(screen.getByText('Dopuni podatke')).toBeTruthy();
+  });
+
+  test('prikazuje odgovore i nudi izmenu kad je sve popunjeno', async () => {
+    const popunjeno = {
+      ...dete,
+      photoConsent: false,
+      eatsLunch: true,
+      eatsSnack: true,
+      pickupPersons: 'Baka Mira',
+    };
+    odgovori({ child: popunjeno });
+    await render(<ChildDetailScreen navigation={navigation} route={{ params: { child: popunjeno } }} />);
+
+    expect(screen.getByText('Ne')).toBeTruthy();
+    expect(screen.getAllByText('Da')).toHaveLength(2);
+    expect(screen.getByText('Baka Mira')).toBeTruthy();
+    expect(screen.getByText('Izmeni podatke')).toBeTruthy();
+  });
+
+  test('dugme vodi na izmenu sa istim detetom', async () => {
+    await prikazi();
+
+    fireEvent.press(screen.getByText('Dopuni podatke'));
+
+    expect(navigation.navigate).toHaveBeenCalledWith(
+      'AddChild',
+      expect.objectContaining({ child: expect.objectContaining({ id: 'c1' }) })
+    );
   });
 });

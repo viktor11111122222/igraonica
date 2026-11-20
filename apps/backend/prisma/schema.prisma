@@ -129,6 +129,14 @@ model Child {
   gender      Gender?
   allergies   String?
   notes       String?
+  // Saglasnosti roditelja. `null` znaci "jos nije odgovoreno" - roditelj
+  // pitanja moze da preskoci pri dodavanju deteta i dopuni ih kasnije, pa
+  // osoblje mora da razlikuje "ne" od "nije reklo".
+  photoConsent  Boolean? @map("photo_consent")
+  eatsLunch     Boolean? @map("eats_lunch")
+  eatsSnack     Boolean? @map("eats_snack")
+  // Ko sme da preuzme dete osim roditelja - imena i telefoni, slobodan tekst.
+  pickupPersons String?  @map("pickup_persons")
   qrCode      String   @unique @map("qr_code")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")

@@ -90,6 +90,59 @@ describe('POST /api/children', () => {
     expect(res.body.child.parentId).toBe(parent2Id);
   });
 
+  test('pol nije obavezan - prazan pol (null) ne obara dodavanje', async () => {
+    const res = await request(app)
+      .post('/api/children')
+      .set('Authorization', `Bearer ${parent2Token}`)
+      .send({
+        firstName: 'Bez',
+        lastName: 'Pola',
+        dateOfBirth: '2021-04-04',
+        gender: null,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.child.gender).toBeNull();
+
+    // Ostali testovi broje decu, pa ovo ne sme da ostane.
+    await prisma.child.delete({ where: { id: res.body.child.id } });
+  });
+
+  test('preskocena pitanja ostaju "nije odgovoreno", a ne "ne"', async () => {
+    const res = await request(app)
+      .post('/api/children')
+      .set('Authorization', `Bearer ${parent2Token}`)
+      .send({
+        firstName: 'Bez',
+        lastName: 'Odgovora',
+        dateOfBirth: '2021-04-04',
+        photoConsent: true,
+        eatsLunch: null,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.child.photoConsent).toBe(true);
+    expect(res.body.child.eatsLunch).toBeNull();
+    expect(res.body.child.eatsSnack).toBeNull();
+    expect(res.body.child.pickupPersons).toBeNull();
+
+    await prisma.child.delete({ where: { id: res.body.child.id } });
+  });
+
+  test('nepostojeci pol se i dalje odbija', async () => {
+    const res = await request(app)
+      .post('/api/children')
+      .set('Authorization', `Bearer ${parent2Token}`)
+      .send({
+        firstName: 'Los',
+        lastName: 'Pol',
+        dateOfBirth: '2021-04-04',
+        gender: 'X',
+      });
+
+    expect(res.status).toBe(400);
+  });
+
   test('svako dete dobija unikatan QR kod', async () => {
     const children = await prisma.child.findMany();
     const qrCodes = children.map((c) => c.qrCode);
@@ -272,6 +325,33 @@ describe('PATCH /api/children/:id', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.child.notes).toBe('Admin beleska');
+  });
+
+  test('roditelj naknadno dopunjuje saglasnosti i ko preuzima dete', async () => {
+    const res = await request(app)
+      .patch(`/api/children/${childId}`)
+      .set('Authorization', `Bearer ${parentToken}`)
+      .send({
+        photoConsent: false,
+        eatsLunch: true,
+        eatsSnack: true,
+        pickupPersons: 'Baka Mira 0641112222',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.child.photoConsent).toBe(false);
+    expect(res.body.child.eatsLunch).toBe(true);
+    expect(res.body.child.eatsSnack).toBe(true);
+    expect(res.body.child.pickupPersons).toBe('Baka Mira 0641112222');
+  });
+
+  test('saglasnost mora biti da ili ne', async () => {
+    const res = await request(app)
+      .patch(`/api/children/${childId}`)
+      .set('Authorization', `Bearer ${parentToken}`)
+      .send({ photoConsent: 'mozda' });
+
+    expect(res.status).toBe(400);
   });
 
   test('vraca 404 za nepostojece dete', async () => {

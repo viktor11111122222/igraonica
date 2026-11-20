@@ -12,11 +12,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import { apiRequest } from '../utils/api';
 import * as kes from '../utils/kes';
+import { PITANJA, opisOdgovora } from '../components/PitanjaODetetu';
+import { nedostajuSaglasnosti } from '../components/PodsetnikSaglasnosti';
 import { font } from '../theme';
 
 export default function ChildDetailScreen({ route, navigation }) {
   const { child: initialChild } = route.params;
   const [child, setChild] = useState(initialChild);
+  // Roditelj je pitanja mozda preskocio pri dodavanju - tada ga dugme zove da
+  // ih dopuni.
+  const nedostajeOdgovor = nedostajuSaglasnosti(child);
   const [visits, setVisits] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -117,6 +122,38 @@ export default function ChildDetailScreen({ route, navigation }) {
             <Text style={styles.notesText}>{child.notes}</Text>
           </View>
         )}
+      </View>
+
+      <View style={styles.consentSection}>
+        <Text style={styles.sectionTitle}>Saglasnosti</Text>
+        {PITANJA.map(({ kljuc, pitanje }) => (
+          <View key={kljuc} style={styles.consentRow}>
+            <Text style={styles.consentQuestion}>{pitanje}</Text>
+            <Text
+              style={[styles.consentAnswer, child[kljuc] == null && styles.consentMissing]}
+            >
+              {opisOdgovora(child[kljuc])}
+            </Text>
+          </View>
+        ))}
+        <View style={styles.consentRow}>
+          <Text style={styles.consentQuestion}>Ko sme da preuzme dete</Text>
+          <Text style={[styles.consentAnswer, !child.pickupPersons && styles.consentMissing]}>
+            {child.pickupPersons || 'Nije upisano'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.editButton}
+          // "Dopuni" vodi pravo na pitanja; "Izmeni" otvara ceo obrazac od vrha.
+          onPress={() =>
+            navigation.navigate('AddChild', { child, naSaglasnosti: nedostajeOdgovor })
+          }
+          accessibilityRole="button"
+        >
+          <Text style={styles.editButtonText}>
+            {nedostajeOdgovor ? 'Dopuni podatke' : 'Izmeni podatke'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.qrSection}>
@@ -235,6 +272,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: font.medium,
     textAlign: 'center',
+  },
+  consentSection: {
+    backgroundColor: '#fff',
+    marginTop: 12,
+    paddingVertical: 20,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  consentQuestion: {
+    flex: 1,
+    fontSize: 14,
+    color: '#555',
+  },
+  consentAnswer: {
+    flexShrink: 1,
+    maxWidth: '50%',
+    fontSize: 14,
+    fontFamily: font.semibold,
+    color: '#333',
+    textAlign: 'right',
+  },
+  consentMissing: {
+    color: '#E67E22',
+    fontFamily: font.medium,
+  },
+  editButton: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#7c9fc9',
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: font.semibold,
   },
   qrSection: {
     alignItems: 'center',

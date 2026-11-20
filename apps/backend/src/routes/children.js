@@ -10,6 +10,19 @@ const router = express.Router();
 
 router.use(protect);
 
+// Saglasnosti su da/ne ili `null` ("nije odgovoreno") - roditelj ih moze
+// preskociti i dopuniti kasnije, a vratiti na "nije odgovoreno" ne mora.
+const validacijaSaglasnosti = [
+  ...['photoConsent', 'eatsLunch', 'eatsSnack'].map((polje) =>
+    body(polje).optional({ values: 'null' }).isBoolean({ strict: true }).withMessage('Odgovor mora biti da ili ne.')
+  ),
+  body('pickupPersons')
+    .optional({ values: 'null' })
+    .isString()
+    .isLength({ max: 500 })
+    .withMessage('Spisak osoba koje preuzimaju dete je predugacak.'),
+];
+
 function generateQRCode() {
   const random = crypto.randomBytes(4).toString('hex').toUpperCase();
   return `IGR-${random}`;
@@ -136,7 +149,8 @@ router.post(
     body('firstName').notEmpty().withMessage('Ime je obavezno.'),
     body('lastName').notEmpty().withMessage('Prezime je obavezno.'),
     body('dateOfBirth').isISO8601().withMessage('Datum rodjenja nije validan.'),
-    body('gender').optional().isIn(['MALE', 'FEMALE']).withMessage('Nevazeci pol.'),
+    body('gender').optional({ values: 'null' }).isIn(['MALE', 'FEMALE']).withMessage('Nevazeci pol.'),
+    ...validacijaSaglasnosti,
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -146,6 +160,7 @@ router.post(
 
     try {
       const { firstName, lastName, dateOfBirth, gender, allergies, notes } = req.body;
+      const { photoConsent, eatsLunch, eatsSnack, pickupPersons } = req.body;
 
       let parentId = req.user.id;
 
@@ -173,6 +188,10 @@ router.post(
           gender: gender || null,
           allergies: allergies || null,
           notes: notes || null,
+          photoConsent: photoConsent ?? null,
+          eatsLunch: eatsLunch ?? null,
+          eatsSnack: eatsSnack ?? null,
+          pickupPersons: pickupPersons || null,
           qrCode,
           parentId,
         },
@@ -197,7 +216,8 @@ router.patch(
     body('firstName').optional().notEmpty().withMessage('Ime ne moze biti prazno.'),
     body('lastName').optional().notEmpty().withMessage('Prezime ne moze biti prazno.'),
     body('dateOfBirth').optional().isISO8601().withMessage('Datum rodjenja nije validan.'),
-    body('gender').optional().isIn(['MALE', 'FEMALE']).withMessage('Nevazeci pol.'),
+    body('gender').optional({ values: 'null' }).isIn(['MALE', 'FEMALE']).withMessage('Nevazeci pol.'),
+    ...validacijaSaglasnosti,
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -216,7 +236,18 @@ router.patch(
         return res.status(403).json({ message: 'Nemate dozvolu za ovu akciju.' });
       }
 
-      const allowedFields = ['firstName', 'lastName', 'dateOfBirth', 'gender', 'allergies', 'notes'];
+      const allowedFields = [
+        'firstName',
+        'lastName',
+        'dateOfBirth',
+        'gender',
+        'allergies',
+        'notes',
+        'photoConsent',
+        'eatsLunch',
+        'eatsSnack',
+        'pickupPersons',
+      ];
       const data = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {

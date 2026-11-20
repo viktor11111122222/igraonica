@@ -90,14 +90,19 @@ Isti podaci, Appleovim rečnikom. Sve stavke: **Data Linked to You**, i za sve
 
 | Kategorija | Stavka |
 |---|---|
-| Contact Info | Name, Email Address, Phone Number |
+| Contact Info | Name, Email Address |
 | Health & Fitness | Health *(alergije deteta)* |
-| User Content | Photos *(slika profila)*, Other User Content *(napomene o detetu)* |
+| User Content | Other User Content *(napomene o detetu)* |
 | Identifiers | User ID |
 | Usage Data | Product Interaction *(evidencija dolazaka)* |
+| Other Data | Other Data Types *(datum rođenja i pol deteta)* |
 
-Ostalo (Location, Financial Info, Contacts, Browsing History, Search History,
-Sensitive Info, Diagnostics) — **ne prikuplja se**.
+Ostalo (Phone Number, Photos, Location, Financial Info, Contacts, Browsing
+History, Search History, Sensitive Info, Diagnostics) — **ne prikuplja se**:
+mobilna aplikacija nema polje za telefon ni izbor fotografije. Ako se dodaju,
+dopuniti i ovu tabelu i label u Connect-u.
+
+Ovako je objavljeno u Connect-u 20. okt 2026.
 
 U `app.json` je već postavljeno:
 

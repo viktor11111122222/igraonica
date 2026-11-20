@@ -10,6 +10,8 @@ import { apiRequest } from '../utils/api';
 import * as kes from '../utils/kes';
 import PressableScale from '../components/PressableScale';
 import BrisanjeNaloga from '../components/BrisanjeNaloga';
+import TelefonNaloga from '../components/TelefonNaloga';
+import { nedostajuSaglasnosti } from '../components/PodsetnikSaglasnosti';
 import HoursRing from '../components/HoursRing';
 import { ageInYears, yearsLabel } from '../utils/date';
 import { summarize } from '../utils/packages';
@@ -273,6 +275,14 @@ export default function PackageScreen({ navigation }) {
               <Text style={styles.childAge}>
                 {yearsLabel(ageInYears(child.dateOfBirth))}
               </Text>
+              {/* Podsetnik na pocetnoj za vise dece vodi ovamo - roditelj mora
+                  da vidi kome od njih fale odgovori. */}
+              {nedostajuSaglasnosti(child) && (
+                <View style={styles.childConsent}>
+                  <Ionicons name="alert-circle" size={13} color={colors.primaryDarker} />
+                  <Text style={styles.childConsentText}>Popunite saglasnosti</Text>
+                </View>
+              )}
             </View>
             {/* Precica do istog QR koda koji otvara dugme u tab baru. */}
             <PressableScale
@@ -310,6 +320,7 @@ export default function PackageScreen({ navigation }) {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Nalog</Text>
       </View>
+      <TelefonNaloga />
       <BrisanjeNaloga navigation={navigation} />
     </ScrollView>
   );
@@ -507,6 +518,8 @@ const styles = StyleSheet.create({
   childBody: { flex: 1, marginLeft: spacing.lg },
   childName: { ...type.heading, color: colors.text },
   childAge: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+  childConsent: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  childConsentText: { ...type.caption, color: colors.primaryDarker },
   qrBtn: {
     width: 44,
     height: 44,

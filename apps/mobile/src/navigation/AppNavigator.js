@@ -145,7 +145,8 @@ function MainStack() {
       <Stack.Screen
         name="AddChild"
         component={AddChildScreen}
-        options={{ title: 'Dodaj dete' }}
+        // Isti ekran sluzi i za izmenu: tada dobija dete kroz parametre.
+        options={({ route }) => ({ title: route.params?.child ? 'Izmeni podatke' : 'Dodaj dete' })}
       />
       {/* Uslovi i politika privatnosti su ekran u aplikaciji, ne adresa u
           pregledacu: citaju se i bez mreze, a roditelj ne ispada iz

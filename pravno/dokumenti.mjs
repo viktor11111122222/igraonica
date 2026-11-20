@@ -925,4 +925,106 @@ export const DOKUMENTI = {
       ],
     },
   },
+
+  // Adresa ove stranice ide u "Support URL" na App Store-u. Apple trazi da
+  // korisnik sa nje moze da stupi u kontakt, pa pravni tekst tu ne vazi.
+  podrska: {
+    datoteka: { sr: 'podrska', en: 'support' },
+    putanja: 'podrska',
+    naslov: { sr: 'Podrška', en: 'Support' },
+    sr: {
+      azurirano: AZURIRANO.sr,
+      uvod:
+        'Imate pitanje o aplikaciji **Kids club**, paketu sati ili prijavi deteta? Javite nam se — odgovaramo radnim danima, najkasnije za dva radna dana.',
+      sekcije: [
+        {
+          naslov: 'Kontakt',
+          blokovi: [
+            {
+              t: 'karta',
+              x: [
+                { t: 'p', x: `E-pošta: **${EPOSTA}**` },
+                { t: 'p', x: `Telefon: **${TELEFON}**` },
+                { t: 'p', x: `Adresa igraonice: ${ADRESA}` },
+              ],
+            },
+          ],
+        },
+        {
+          naslov: 'Česta pitanja',
+          blokovi: [
+            { t: 'h3', x: 'Kako da otvorim nalog?' },
+            {
+              t: 'p',
+              x: 'Preuzmite aplikaciju, dodirnite **Registrujte se** i unesite ime, prezime, e-poštu i lozinku. Zatim dodajte dete na kartici **Moj paket**.',
+            },
+            { t: 'h3', x: 'Gde je QR kod mog deteta?' },
+            {
+              t: 'p',
+              x: 'Dodirnite okruglo dugme **QR** na sredini donje trake i izaberite dete. Kod pokažite na recepciji pri dolasku i pri odlasku.',
+            },
+            { t: 'h3', x: 'Stanje sati nije tačno.' },
+            {
+              t: 'p',
+              x: 'Stanje se osvežava čim osoblje očita QR kod. Ako se i dalje ne slaže, javite se osoblju u igraonici ili nam pišite — merodavna je evidencija igraonice.',
+            },
+            { t: 'h3', x: 'Zaboravio/la sam lozinku.' },
+            { t: 'p', x: `Pišite nam na ${EPOSTA} sa adrese kojom je nalog otvoren i pomoći ćemo vam da vratite pristup.` },
+            { t: 'h3', x: 'Kako da obrišem nalog?' },
+            {
+              t: 'p',
+              x: 'U aplikaciji: **Moj paket → Nalog → Obriši nalog**. Detaljno uputstvo je u dokumentu Brisanje naloga.',
+            },
+          ],
+        },
+      ],
+    },
+    en: {
+      azurirano: AZURIRANO.en,
+      uvod:
+        'Have a question about the **Kids club** app, your hour package or checking in your child? Get in touch — we reply on working days, within two working days at the latest.',
+      sekcije: [
+        {
+          naslov: 'Contact',
+          blokovi: [
+            {
+              t: 'karta',
+              x: [
+                { t: 'p', x: `Email: **${EPOSTA_EN}**` },
+                { t: 'p', x: `Phone: **${TELEFON}**` },
+                { t: 'p', x: `Playroom address: ${ADRESA_EN}` },
+              ],
+            },
+          ],
+        },
+        {
+          naslov: 'Frequently asked questions',
+          blokovi: [
+            { t: 'h3', x: 'How do I create an account?' },
+            {
+              t: 'p',
+              x: 'Download the app, tap **Registrujte se** (Sign up) and enter your first name, last name, email and password. Then add your child on the **Moj paket** (My package) tab.',
+            },
+            { t: 'h3', x: "Where is my child's QR code?" },
+            {
+              t: 'p',
+              x: 'Tap the round **QR** button in the middle of the bottom bar and choose your child. Show the code at reception on arrival and on departure.',
+            },
+            { t: 'h3', x: 'My remaining hours look wrong.' },
+            {
+              t: 'p',
+              x: "The balance updates as soon as staff scan the QR code. If it still doesn't match, ask the playroom staff or email us — the playroom's records are authoritative.",
+            },
+            { t: 'h3', x: 'I forgot my password.' },
+            { t: 'p', x: `Email us at ${EPOSTA_EN} from the address the account was opened with and we will help you regain access.` },
+            { t: 'h3', x: 'How do I delete my account?' },
+            {
+              t: 'p',
+              x: 'In the app: **Moj paket → Nalog → Obriši nalog** (My package → Account → Delete account). Step-by-step instructions are in the Account deletion document.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 };

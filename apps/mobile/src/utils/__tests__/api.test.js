@@ -67,6 +67,17 @@ describe('apiRequest - greske', () => {
     await expect(apiRequest('/children', { method: 'POST' })).rejects.toThrow('Ime je obavezno.');
   });
 
+  test('greska validacije javlja prvu poruku umesto "Greska na serveru"', async () => {
+    fetch.mockResolvedValue(
+      odgovor({
+        ok: false,
+        status: 400,
+        body: { errors: [{ msg: 'Nevazeci pol.', path: 'gender' }, { msg: 'Druga.' }] },
+      })
+    );
+    await expect(apiRequest('/children', { method: 'POST' })).rejects.toThrow('Nevazeci pol.');
+  });
+
   test('bez poruke sa servera ide opsta', async () => {
     fetch.mockResolvedValue(odgovor({ ok: false, status: 500, body: {} }));
     await expect(apiRequest('/children')).rejects.toThrow('Greska na serveru.');
