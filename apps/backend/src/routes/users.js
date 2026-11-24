@@ -153,6 +153,14 @@ router.patch(
     body('firstName').optional().notEmpty().withMessage('Ime ne moze biti prazno.'),
     body('lastName').optional().notEmpty().withMessage('Prezime ne moze biti prazno.'),
     body('role').optional().isIn(['PARENT', 'ADMIN']).withMessage('Nevazeca uloga.'),
+    body('consentReminder')
+      .optional()
+      .isBoolean({ strict: true })
+      .withMessage('Nevazeca vrednost za podsetnik.'),
+    body('contactReminderHidden')
+      .optional()
+      .isBoolean({ strict: true })
+      .withMessage('Nevazeca vrednost za podsetnik.'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -171,12 +179,17 @@ router.patch(
         return res.status(403).json({ message: zabrana });
       }
 
-      const allowedFields = ['firstName', 'lastName', 'phone', 'role', 'isActive'];
+      const allowedFields = ['firstName', 'lastName', 'phone', 'role', 'isActive', 'consentReminder'];
       const data = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
           data[field] = req.body[field];
         }
+      }
+      // Osoblje vraca podsetnik koji je roditelj sklonio (false), ili ga samo
+      // sklanja umesto roditelja (true).
+      if (req.body.contactReminderHidden !== undefined) {
+        data.contactReminderHiddenAt = req.body.contactReminderHidden ? new Date() : null;
       }
 
       const user = await prisma.user.update({

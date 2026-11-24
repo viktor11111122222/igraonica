@@ -71,13 +71,10 @@ export default function AddChildScreen({ navigation, route }) {
     pickupPersons: postojece?.pickupPersons ?? '',
     extraContactPhone: postojece?.extraContactPhone ?? '',
   });
-  // Stavka 4 je telefon roditelja - stoji na nalogu, ne na detetu, pa se
-  // ovde samo pokazuje i po potrebi menja na nalogu.
-  const { user, updateProfile, novNalog } = useAuth();
+  const { novNalog } = useAuth();
   // Prvi ekran posle registracije - ispod njega nema nicega.
   const prviEkran = navigation.getState?.()?.index === 0;
   const posleRegistracije = !postojece && novNalog && prviEkran;
-  const [telefonRoditelja, setTelefonRoditelja] = useState(user?.phone ?? '');
   // Istaknuta polja se pune tek posle pokusaja cuvanja.
   const [greske, setGreske] = useState([]);
   const saglasnostiY = useRef(0);
@@ -113,23 +110,19 @@ export default function AddChildScreen({ navigation, route }) {
       return;
     }
 
-    // Saglasnosti su obavezne: bez odgovora na svako da/ne pitanje i bez
-    // telefona roditelja dete se ne cuva. Ekran se spusti do njih i istakne
-    // sta fali.
-    const fali = nepotpuno(odgovori, telefonRoditelja);
+    // Saglasnosti su obavezne: bez odgovora na svako da/ne pitanje dete se ne
+    // cuva. Ekran se spusti do njih i istakne sta fali.
+    const fali = nepotpuno(odgovori);
     setGreske(fali);
     if (fali.length > 0) {
       // Poruka navodi samo ono sto stvarno fali, da roditelj ne trazi gresku
       // u polju koje je vec dobro popunio.
       const nedostaje = [];
-      if (fali.some((k) => !['telefonRoditelja', 'extraContactPhone'].includes(k))) {
+      if (fali.some((k) => k !== 'extraContactPhone')) {
         nedostaje.push('odgovorite sa Da ili Ne na sve stavke oznacene sa *');
       }
-      if (fali.includes('telefonRoditelja')) {
-        nedostaje.push('upisite ispravan kontakt telefon roditelja/staratelja (stavka 4)');
-      }
       if (fali.includes('extraContactPhone')) {
-        nedostaje.push('ispravite dodatni kontakt telefon ili ostavite polje prazno (stavka 5)');
+        nedostaje.push('ispravite dodatni kontakt telefon ili ostavite polje prazno (stavka 4)');
       }
       const tekst = nedostaje.join(' i ');
       Alert.alert('Nedostaju saglasnosti', `Pre cuvanja ${tekst}.`);
@@ -150,12 +143,6 @@ export default function AddChildScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      // Telefon roditelja se cuva na nalogu, i to pre deteta - ako ne prodje,
-      // ne sme da ostane dete sacuvano a broj nepromenjen bez znanja roditelja.
-      if (telefonRoditelja.trim() !== (user?.phone ?? '')) {
-        await updateProfile({ phone: telefonRoditelja.trim() });
-      }
-
       if (postojece) {
         // Pri izmeni prazno polje znaci "obrisano", pa ide null - inace bi
         // server zadrzao staru vrednost.
@@ -333,8 +320,6 @@ export default function AddChildScreen({ navigation, route }) {
         <PitanjaODetetu
           odgovori={odgovori}
           onChange={setOdgovori}
-          telefonRoditelja={telefonRoditelja}
-          onTelefonRoditelja={setTelefonRoditelja}
           greske={greske}
         />
       </View>

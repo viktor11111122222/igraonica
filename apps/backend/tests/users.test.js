@@ -392,3 +392,61 @@ describe('Stranicenje ima gornju granicu', () => {
     expect(res.body.pagination.page).toBe(1);
   });
 });
+
+describe('Podsetnik za saglasnosti - osoblje', () => {
+  let roditelj;
+
+  beforeAll(async () => {
+    roditelj = await createTestUser({ ...TEST_PARENT, email: 'podsetnik-admin@test.local' });
+  });
+
+  test('admin gasi i pali ceo podsetnik roditelju', async () => {
+    const ugasen = await request(app)
+      .patch(`/api/users/${roditelj.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ consentReminder: false });
+
+    expect(ugasen.status).toBe(200);
+    expect(ugasen.body.user.consentReminder).toBe(false);
+
+    const upaljen = await request(app)
+      .patch(`/api/users/${roditelj.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ consentReminder: true });
+
+    expect(upaljen.body.user.consentReminder).toBe(true);
+  });
+
+  test('admin vraca podsetnik koji je roditelj sklonio', async () => {
+    await prisma.user.update({
+      where: { id: roditelj.id },
+      data: { contactReminderHiddenAt: new Date() },
+    });
+
+    const res = await request(app)
+      .patch(`/api/users/${roditelj.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ contactReminderHidden: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.contactReminderHiddenAt).toBeNull();
+  });
+
+  test('odbija vrednost koja nije boolean', async () => {
+    const res = await request(app)
+      .patch(`/api/users/${roditelj.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ consentReminder: 'ne' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('roditelj ne moze da menja podsetnik drugima', async () => {
+    const res = await request(app)
+      .patch(`/api/users/${roditelj.id}`)
+      .set('Authorization', `Bearer ${parentToken}`)
+      .send({ consentReminder: false });
+
+    expect(res.status).toBe(403);
+  });
+});

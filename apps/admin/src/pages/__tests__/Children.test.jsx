@@ -59,7 +59,8 @@ describe('Children', () => {
     prikazi();
 
     await screen.findByText('Lena Petrovic');
-    expect(screen.getByText('—')).toBeInTheDocument();
+    const celija = document.querySelector('td[data-label="Alergije"]');
+    expect(celija).toHaveTextContent('—');
   });
 
   // Osoblje pri prijavi mora odmah da vidi da roditelj nema sati.
@@ -123,5 +124,44 @@ describe('Children', () => {
     prikazi();
 
     expect(await screen.findByText('Nema veze sa serverom.')).toBeInTheDocument();
+  });
+
+  // Osoblje mora na prvi pogled da vidi sta dete ne sme.
+  test('prikazuje saglasnosti: Da, Ne i neodgovoreno', async () => {
+    get.mockResolvedValue(
+      odgovor([
+        {
+          ...dete,
+          photoConsent: false,
+          eatsLunch: true,
+          eatsSnack: null,
+          walksConsent: true,
+          extraContactPhone: '065 222 3333',
+          pickupPersons: 'Baka Mira, 064 111 2222',
+        },
+      ])
+    );
+    prikazi();
+
+    expect(await screen.findByText('Slikanje: Ne')).toHaveClass('red');
+    expect(screen.getByText('Rucak: Da')).toHaveClass('green');
+    expect(screen.getByText('Uzina: ?')).toHaveClass('amber');
+    expect(screen.getByText('065 222 3333')).toBeInTheDocument();
+    expect(screen.getByText('Baka Mira, 064 111 2222')).toBeInTheDocument();
+  });
+
+  test('filter trazi decu koja nesto ne smeju', async () => {
+    prikazi();
+    await screen.findByText('Lena Petrovic');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ne sme slikanje' }));
+
+    await waitFor(() =>
+      expect(get).toHaveBeenLastCalledWith(expect.stringContaining('saglasnost=bez_slikanja'))
+    );
+    expect(screen.getByRole('button', { name: 'Ne sme slikanje' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 });

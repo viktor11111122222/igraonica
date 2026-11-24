@@ -9,8 +9,15 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback) => require('react').useEffect(callback, [callback]),
 }));
 
+const mockAuth = {
+  user: { firstName: 'Test' },
+  refreshUser: () => Promise.resolve(),
+  updateProfile: () => Promise.resolve(),
+};
 jest.mock('../../context/AuthContext', () => ({
-  useAuth: () => ({ user: { firstName: 'Test' } }),
+  // Isti objekat na svakom renderu, kao u pravom kontekstu - nova funkcija
+  // svaki put bi pocetnu terala da stalno iznova ucitava podatke.
+  useAuth: () => mockAuth,
 }));
 
 jest.mock('../../context/ClosedDaysContext', () => ({

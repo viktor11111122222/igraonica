@@ -465,3 +465,53 @@ describe('Stanje deteta u listi roditelja', () => {
     expect(posle.body.children.find((c) => c.id === dete.id).activeVisit).toBeNull();
   });
 });
+
+describe('GET /api/children/all - filter po saglasnostima', () => {
+  let saglasna;
+  let bezSlikanja;
+  let nepotpuna;
+
+  beforeAll(async () => {
+    const osnovno = { parentId, dateOfBirth: new Date('2021-05-05'), eatsLunch: true, eatsSnack: true };
+    saglasna = await prisma.child.create({
+      data: { ...osnovno, firstName: 'Filter', lastName: 'Sve', qrCode: 'FLT-SVE', photoConsent: true, walksConsent: true },
+    });
+    bezSlikanja = await prisma.child.create({
+      data: { ...osnovno, firstName: 'Filter', lastName: 'BezSlika', qrCode: 'FLT-FOTO', photoConsent: false, walksConsent: true },
+    });
+    nepotpuna = await prisma.child.create({
+      data: { ...osnovno, firstName: 'Filter', lastName: 'Fali', qrCode: 'FLT-FALI', photoConsent: true, walksConsent: null },
+    });
+  });
+
+  const ids = (res) => res.body.children.map((c) => c.id);
+  const trazi = (filter) =>
+    request(app)
+      .get(`/api/children/all?search=Filter&saglasnost=${filter}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+  test('dete kome je roditelj rekao "ne" za slikanje', async () => {
+    const res = await trazi('bez_slikanja');
+
+    expect(res.status).toBe(200);
+    expect(ids(res)).toEqual([bezSlikanja.id]);
+  });
+
+  test('deca bez odgovora na neku obaveznu saglasnost', async () => {
+    const res = await trazi('nepotpuno');
+
+    expect(ids(res)).toEqual([nepotpuna.id]);
+  });
+
+  test('nepoznat filter vraca sve', async () => {
+    const res = await trazi('nesto');
+
+    expect(ids(res)).toEqual(expect.arrayContaining([saglasna.id, bezSlikanja.id, nepotpuna.id]));
+  });
+
+  test('uz dete stizu i odgovori na saglasnosti', async () => {
+    const res = await trazi('bez_slikanja');
+
+    expect(res.body.children[0]).toMatchObject({ photoConsent: false, eatsLunch: true, walksConsent: true });
+  });
+});

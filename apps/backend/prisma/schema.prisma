@@ -104,6 +104,12 @@ model User {
   // Sati odigrani bez pokrica u paketu - "minus sati". Raste pri odjavi kad
   // paket ne pokriva boravak, a pada kad roditelj plati ili dobije nov paket.
   debtHours Decimal  @default(0) @map("debt_hours") @db.Decimal(10, 2)
+  // Podsetnik za saglasnosti na pocetnoj aplikacije. `consentReminder` gasi
+  // ceo podsetnik za ovog roditelja (odlucuje osoblje u panelu), a
+  // `contactReminderHiddenAt` je trenutak kad je roditelj sam sklonio blazi
+  // podsetnik za neobavezne stavke 4 i 5 - osoblje ga moze vratiti.
+  consentReminder         Boolean   @default(true) @map("consent_reminder")
+  contactReminderHiddenAt DateTime? @map("contact_reminder_hidden_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

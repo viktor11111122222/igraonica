@@ -397,3 +397,12 @@ describe('GET /api/settings/public', () => {
     expect(Object.keys(res.body.settings).sort()).toEqual([...PUBLIC_KEYS].sort());
   });
 });
+
+describe('Podsetnik za saglasnosti - globalno', () => {
+  test('javna podesavanja nose prekidac, podrazumevano ukljucen', async () => {
+    await prisma.setting.deleteMany({ where: { key: 'mobile_consent_reminder' } });
+    const res = await request(app).get('/api/settings/public');
+
+    expect(res.body.settings.mobile_consent_reminder).toBe('true');
+  });
+});

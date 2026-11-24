@@ -307,6 +307,16 @@ export default function Settings() {
               />
             </SettingRow>
             <SettingRow
+              label="Podsetnik za saglasnosti"
+              hint="Baner na pocetnoj koji trazi da roditelj popuni saglasnosti i kontakte za dete. Iskljuceno: ne vidi ga niko. Pojedinacnom roditelju se gasi na njegovoj stranici."
+              status={status.mobile_consent_reminder}
+            >
+              <Switch
+                checked={on('mobile_consent_reminder')}
+                onChange={(v) => save('mobile_consent_reminder', String(v))}
+              />
+            </SettingRow>
+            <SettingRow
               label="Pocetna, Moj paket i QR kod"
               hint="Ne mogu da se iskljuce - to je sustina aplikacije."
             >

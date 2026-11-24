@@ -10,24 +10,35 @@ const prazno = {
   extraContactPhone: '',
 };
 
+describe('PitanjaODetetu - stavke', () => {
+  test('sest stavki, bez telefona roditelja', async () => {
+    await render(<PitanjaODetetu odgovori={prazno} onChange={() => {}} />);
+
+    expect(screen.getByText(/^4\. Dodatni kontakt telefon/)).toBeTruthy();
+    expect(screen.getByText(/^5\. Ovlascene osobe/)).toBeTruthy();
+    expect(screen.getByText(/^6\. Saglasnost za odlazak u setnju/)).toBeTruthy();
+    expect(screen.queryByText(/Kontakt telefon roditelja/)).toBeNull();
+  });
+});
+
 describe('PitanjaODetetu - greske', () => {
   test('greska nestaje cim je na stavku odgovoreno', async () => {
-    const greske = ['photoConsent', 'eatsLunch', 'telefonRoditelja'];
+    const greske = ['photoConsent', 'eatsLunch', 'extraContactPhone'];
+    const losBroj = { ...prazno, extraContactPhone: '12' };
     const { rerender } = await render(
-      <PitanjaODetetu odgovori={prazno} onChange={() => {}} telefonRoditelja="" greske={greske} />
+      <PitanjaODetetu odgovori={losBroj} onChange={() => {}} greske={greske} />
     );
     expect(screen.getAllByText('Izaberite Da ili Ne.')).toHaveLength(2);
-    expect(screen.getByText('Unesite ispravan broj telefona.')).toBeTruthy();
+    expect(screen.getByText('Broj telefona nije ispravan.')).toBeTruthy();
 
     await rerender(
       <PitanjaODetetu
-        odgovori={{ ...prazno, photoConsent: false }}
+        odgovori={{ ...prazno, photoConsent: false, extraContactPhone: '065 222 3333' }}
         onChange={() => {}}
-        telefonRoditelja="064 123 4567"
         greske={greske}
       />
     );
     expect(screen.getAllByText('Izaberite Da ili Ne.')).toHaveLength(1);
-    expect(screen.queryByText('Unesite ispravan broj telefona.')).toBeNull();
+    expect(screen.queryByText('Broj telefona nije ispravan.')).toBeNull();
   });
 });

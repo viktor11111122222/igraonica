@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { PageHeader } from '../components/Layout';
-import { Alert, Badge, Confirm, Empty, Field, Modal, Spinner } from '../components/ui';
+import { Alert, Badge, Confirm, Empty, Field, Modal, SettingRow, Spinner, Switch } from '../components/ui';
 import { useFetch } from '../hooks/useFetch';
-import { get, post } from '../lib/api';
+import { get, patch, post } from '../lib/api';
 import AssignPackage from '../components/AssignPackage';
 import {
   ageInYears,
@@ -53,10 +53,22 @@ export default function UserDetail() {
   const [history, setHistory] = useState(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
+  const [reminderError, setReminderError] = useState('');
 
   const user = data?.user;
   const sum = summarize(user?.userPackages);
   const dug = Number(user?.debtHours || 0);
+
+  // Podsetnik za saglasnosti u aplikaciji ovog roditelja.
+  async function setReminder(fields) {
+    setReminderError('');
+    try {
+      await patch(`/users/${id}`, fields);
+      reload();
+    } catch (err) {
+      setReminderError(err.message || 'Podesavanje nije sacuvano.');
+    }
+  }
 
   async function adjust(e) {
     e.preventDefault();
@@ -225,6 +237,38 @@ export default function UserDetail() {
               </table>
             </div>
           )}
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <h2>Podsetnik u aplikaciji</h2>
+          </div>
+          <div className="card-body" style={{ paddingTop: 0, paddingBottom: 0 }}>
+            {reminderError && <Alert>{reminderError}</Alert>}
+            <SettingRow
+              label="Podsetnik za saglasnosti"
+              hint="Baner na pocetnoj aplikacije koji trazi da roditelj popuni saglasnosti i kontakte za dete. Iskljuceno: ovaj roditelj ga ne vidi uopste."
+            >
+              <Switch
+                checked={user.consentReminder !== false}
+                onChange={(v) => setReminder({ consentReminder: v })}
+              />
+            </SettingRow>
+            <SettingRow
+              label="Podsetnik za dodatni kontakt i ovlascene osobe"
+              hint={
+                user.contactReminderHiddenAt
+                  ? `Sklonjen ${formatDateTime(user.contactReminderHiddenAt)}. Ukljucite ga da ga roditelj ponovo vidi.`
+                  : 'Blazi podsetnik za stavke 4 i 5 (dodatni kontakt i ovlascene osobe). Roditelj moze sam da ga skloni u aplikaciji.'
+              }
+            >
+              <Switch
+                checked={!user.contactReminderHiddenAt}
+                disabled={user.consentReminder === false}
+                onChange={(v) => setReminder({ contactReminderHidden: !v })}
+              />
+            </SettingRow>
+          </div>
         </div>
 
         <div className="card">

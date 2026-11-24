@@ -11,7 +11,7 @@ import * as kes from '../utils/kes';
 import PressableScale from '../components/PressableScale';
 import BrisanjeNaloga from '../components/BrisanjeNaloga';
 import TelefonNaloga from '../components/TelefonNaloga';
-import { nedostajuSaglasnosti, nedostajuObavezne } from '../components/PodsetnikSaglasnosti';
+import { nedostajuObavezne, podsetnikDozvoljen, treba } from '../components/PodsetnikSaglasnosti';
 import HoursRing from '../components/HoursRing';
 import { ageInYears, yearsLabel } from '../utils/date';
 import { summarize } from '../utils/packages';
@@ -277,7 +277,7 @@ export default function PackageScreen({ navigation }) {
               </Text>
               {/* Podsetnik na pocetnoj za vise dece vodi ovamo - roditelj mora
                   da vidi kome od njih fale odgovori. */}
-              {nedostajuSaglasnosti(child) && (
+              {treba(child, podsetnikDozvoljen(user, settings)) && (
                 <View style={styles.childConsent}>
                   <Ionicons name="alert-circle" size={13} color={colors.primaryDarker} />
                   <Text style={styles.childConsentText}>

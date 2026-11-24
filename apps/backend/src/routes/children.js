@@ -63,7 +63,20 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Filteri po saglasnostima za spisak dece u panelu. "Ne" je izricit odgovor
+// roditelja (false), a "nije odgovoreno" je null - to su dve razlicite stvari.
+const FILTERI_SAGLASNOSTI = {
+  nepotpuno: {
+    OR: [{ photoConsent: null }, { eatsLunch: null }, { eatsSnack: null }, { walksConsent: null }],
+  },
+  bez_slikanja: { photoConsent: false },
+  bez_rucka: { eatsLunch: false },
+  bez_uzine: { eatsSnack: false },
+  bez_setnje: { walksConsent: false },
+};
+
 // GET /api/children/all - admin vidi svu decu
+// ?saglasnost=nepotpuno|bez_slikanja|bez_rucka|bez_uzine|bez_setnje
 router.get('/all', authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
   try {
     const { page, limit, skip } = stranicenje(req.query, 20);
@@ -77,6 +90,10 @@ router.get('/all', authorize('ADMIN', 'SUPERADMIN'), async (req, res) => {
         { qrCode: { contains: search, mode: 'insensitive' } },
       ];
     }
+    // Filter po saglasnostima: osoblje trazi decu koja nesto ne smeju, ili
+    // ciji roditelj jos nije odgovorio. Nepoznat filter se ignorise.
+    const filter = FILTERI_SAGLASNOSTI[req.query.saglasnost];
+    if (filter) where.AND = [filter];
 
     const [children, total] = await Promise.all([
       prisma.child.findMany({

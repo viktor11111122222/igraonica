@@ -249,15 +249,17 @@ describe('AddChildScreen - saglasnosti', () => {
     expect(screen.getAllByText('Izaberite Da ili Ne.')).toHaveLength(4);
   });
 
-  test('bez telefona roditelja dete se ne cuva', async () => {
+  // Telefon roditelja je podatak naloga, ne deteta - forma ga ne trazi.
+  test('forma za dete ne trazi telefon roditelja', async () => {
     mockUser = { phone: null };
     await prikazi();
     await popuniObavezno();
 
+    expect(screen.queryByText('Kontakt telefon roditelja/staratelja')).toBeNull();
     await pritisni('Dodaj dete');
 
-    expect(apiRequest).not.toHaveBeenCalled();
-    expect(screen.getByText('Unesite ispravan broj telefona.')).toBeTruthy();
+    await waitFor(() => expect(apiRequest).toHaveBeenCalled());
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
   });
 
   test('salje sve stavke; neobavezne prazne idu kao null', async () => {
@@ -319,17 +321,6 @@ describe('AddChildScreen - saglasnosti', () => {
     expect(screen.getByText('Broj telefona nije ispravan.')).toBeTruthy();
   });
 
-  test('promenjen telefon roditelja se cuva na nalogu', async () => {
-    mockUser = { phone: null };
-    await prikazi();
-    await popuniObavezno();
-    await upisi('npr. 064 123 4567', '064 999 8888');
-
-    await pritisni('Dodaj dete');
-
-    await waitFor(() => expect(apiRequest).toHaveBeenCalled());
-    expect(mockUpdateProfile).toHaveBeenCalledWith({ phone: '064 999 8888' });
-  });
 });
 
 describe('AddChildScreen - posle registracije', () => {

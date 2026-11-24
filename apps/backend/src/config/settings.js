@@ -75,6 +75,13 @@ const CATALOG = [
     description: 'Prikazi galeriju fotografija na pocetnom ekranu aplikacije.',
     public: true,
   },
+  {
+    key: 'mobile_consent_reminder',
+    value: 'true',
+    description:
+      'Podsetnik na pocetnoj da roditelj popuni saglasnosti i kontakte za dete. Iskljuceno ga gasi svima.',
+    public: true,
+  },
 ];
 
 // Ekrani na kojima obavestenje moze da se pojavi. Mora da se poklapa sa

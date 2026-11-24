@@ -4,10 +4,11 @@ import PressableScale from './PressableScale';
 import { jeTelefon } from '../utils/telefon';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
-// "Saglasnosti i informacije o detetu" - sedam stavki koje igraonica trazi za
-// svako dete. Da/ne stavke i telefon roditelja su obavezni pri dodavanju
-// deteta; dodatni kontakt i ovlascene osobe nisu, ali ih podsetnik na
-// pocetnoj trazi dok nisu upisani.
+// "Saglasnosti i informacije o detetu" - sest stavki koje igraonica trazi za
+// svako dete. Da/ne stavke su obavezne pri dodavanju deteta; dodatni kontakt i
+// ovlascene osobe nisu, ali ih podsetnik na pocetnoj trazi dok nisu upisani.
+// Telefon roditelja ovde ne stoji - to je podatak roditelja, ne deteta, i
+// upisuje se pri registraciji i na tabu Moj paket.
 //
 // Na serveru odgovor moze biti i `null` ("nije odgovoreno") - deca dodata pre
 // ove forme ili iz starije verzije aplikacije - pa se "ne" i "nije
@@ -38,20 +39,20 @@ export const PITANJA = [
   },
   {
     kljuc: 'walksConsent',
-    broj: 7,
+    broj: 6,
     naslov: 'Saglasnost za odlazak u setnju',
     pitanje:
       'Da li ste saglasni da Vase dete, uz pratnju i nadzor zaposlenih Kids Club-a, ide u organizovane setnje van prostora igraonice?',
   },
 ];
 
-// Neobavezne stavke (5 i 6): ne traze se pri cuvanju, ali ih podsetnik trazi.
+// Neobavezne stavke (4 i 5): ne traze se pri cuvanju, ali ih podsetnik trazi.
 export const DOPUNSKE = ['extraContactPhone', 'pickupPersons'];
 
-// Sta fali za cuvanje: obavezni odgovori i ispravni telefoni. Vraca kljuceve.
-export function nepotpuno(odgovori, telefonRoditelja) {
+// Sta fali za cuvanje: obavezni odgovori i ispravan dodatni telefon, ako je
+// upisan. Vraca kljuceve.
+export function nepotpuno(odgovori) {
   const fali = PITANJA.filter(({ kljuc }) => odgovori[kljuc] == null).map((p) => p.kljuc);
-  if (!jeTelefon(telefonRoditelja)) fali.push('telefonRoditelja');
   const dodatni = (odgovori.extraContactPhone || '').trim();
   if (dodatni && !jeTelefon(dodatni)) fali.push('extraContactPhone');
   return fali;
@@ -101,17 +102,11 @@ function Stavka({ broj, naslov, opis, obavezno, greska, children }) {
 // `onChange` prima funkciju nad prethodnim stanjem (kao setState), da dva brza
 // dodira ne pregaze jedan drugog. `greske` je spisak kljuceva koje treba
 // istaci - puni se tek posle pokusaja cuvanja.
-export default function PitanjaODetetu({
-  odgovori,
-  onChange,
-  telefonRoditelja,
-  onTelefonRoditelja,
-  greske = [],
-}) {
+export default function PitanjaODetetu({ odgovori, onChange, greske = [] }) {
   const postavi = (kljuc) => (v) => onChange((pre) => ({ ...pre, [kljuc]: v }));
   // Greska se pokazuje samo dok stavka i dalje nije ispravna - cim roditelj
   // odgovori ili ispravi broj, crveni tekst nestaje bez novog pokusaja cuvanja.
-  const jos = nepotpuno(odgovori, telefonRoditelja);
+  const jos = nepotpuno(odgovori);
   const imaGresku = (kljuc) => greske.includes(kljuc) && jos.includes(kljuc);
   const daNe = (p) => (
     <Stavka
@@ -133,7 +128,7 @@ export default function PitanjaODetetu({
         <Text style={styles.sectionTitle}>Saglasnosti i informacije o detetu</Text>
       </View>
       <Text style={styles.sectionHint}>
-        Stavke oznacene sa * su obavezne. Stavke 5 i 6 nisu obavezne, ali vam
+        Stavke oznacene sa * su obavezne. Stavke 4 i 5 nisu obavezne, ali vam
         preporucujemo da ih popunite. Odgovore mozete promeniti u svakom
         trenutku na stranici deteta.
       </Text>
@@ -142,26 +137,6 @@ export default function PitanjaODetetu({
 
       <Stavka
         broj={4}
-        naslov="Kontakt telefon roditelja/staratelja"
-        opis="Broj na koji osoblje zove roditelja/staratelja. Cuva se na Vasem nalogu i vazi za svu Vasu decu."
-        obavezno
-        greska={imaGresku('telefonRoditelja') ? 'Unesite ispravan broj telefona.' : null}
-      >
-        <TextInput
-          style={styles.input}
-          placeholder="npr. 064 123 4567"
-          placeholderTextColor={colors.textFaint}
-          value={telefonRoditelja}
-          onChangeText={onTelefonRoditelja}
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-          accessibilityLabel="Kontakt telefon roditelja/staratelja"
-        />
-      </Stavka>
-
-      <Stavka
-        broj={5}
         naslov="Dodatni kontakt telefon"
         opis="Broj osobe koju osoblje zove ako Vi niste dostupni (npr. drugi roditelj, baka, deka)."
         greska={imaGresku('extraContactPhone') ? 'Broj telefona nije ispravan.' : null}
@@ -178,7 +153,7 @@ export default function PitanjaODetetu({
       </Stavka>
 
       <Stavka
-        broj={6}
+        broj={5}
         naslov="Ovlascene osobe za preuzimanje deteta"
         opis="Osobe koje, osim roditelja/staratelja, smeju da preuzmu Vase dete iz Kids Club-a. Za svaku osobu upisite ime, prezime i broj telefona, svaku u novi red. Ako polje ostavite prazno, dete preuzima samo roditelj/staratelj."
       >

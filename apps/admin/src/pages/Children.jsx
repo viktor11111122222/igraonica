@@ -6,14 +6,41 @@ import { useFetch } from '../hooks/useFetch';
 import AssignPackage from '../components/AssignPackage';
 import { ageInYears, formatDate, formatHours, initials } from '../lib/format';
 
+// Filteri po saglasnostima - isti kljucevi kao na serveru (?saglasnost=).
+const FILTERI = [
+  { key: '', label: 'Sva deca' },
+  { key: 'nepotpuno', label: 'Nisu popunjene' },
+  { key: 'bez_slikanja', label: 'Ne sme slikanje' },
+  { key: 'bez_rucka', label: 'Ne jede rucak' },
+  { key: 'bez_uzine', label: 'Ne jede uzinu' },
+  { key: 'bez_setnje', label: 'Ne ide u setnju' },
+];
+
+const SAGLASNOSTI = [
+  { key: 'photoConsent', label: 'Slikanje' },
+  { key: 'eatsLunch', label: 'Rucak' },
+  { key: 'eatsSnack', label: 'Uzina' },
+  { key: 'walksConsent', label: 'Setnja' },
+];
+
+// "Ne" je izricita zabrana roditelja i mora da upadne u oci; "?" znaci da
+// roditelj jos nije odgovorio, sto osoblje tretira kao "ne" dok ne odgovori.
+function Saglasnost({ label, value }) {
+  if (value === true) return <span className="badge green">{label}: Da</span>;
+  if (value === false) return <span className="badge red">{label}: Ne</span>;
+  return <span className="badge amber">{label}: ?</span>;
+}
+
 export default function Children() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [assignFor, setAssignFor] = useState(null);
+  const [filter, setFilter] = useState('');
 
   const params = new URLSearchParams({ page, limit: 20 });
   if (query) params.set('search', query);
+  if (filter) params.set('saglasnost', filter);
   const { data, loading, error, reload } = useFetch(`/children/all?${params}`);
 
   // Pretraga radi dok se kuca.
@@ -27,7 +54,10 @@ export default function Children() {
 
   return (
     <>
-      <PageHeader title="Deca" subtitle="Sva registrovana deca i njihovi QR kodovi" />
+      <PageHeader
+        title="Deca"
+        subtitle="Sva registrovana deca, njihovi QR kodovi i saglasnosti roditelja"
+      />
 
       <div className="page">
         <Alert>{error}</Alert>
@@ -50,11 +80,36 @@ export default function Children() {
           )}
         </div>
 
+        <div
+          className="chips"
+          role="group"
+          aria-label="Filter po saglasnostima"
+          style={{ marginBottom: 14 }}
+        >
+          {FILTERI.map((f) => (
+            <button
+              key={f.key || 'sve'}
+              type="button"
+              className={`chip ${filter === f.key ? 'on' : ''}`}
+              aria-pressed={filter === f.key}
+              onClick={() => {
+                setPage(1);
+                setFilter(f.key);
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <div className="card">
           {loading ? (
             <Spinner />
           ) : !data?.children?.length ? (
-            <Empty title="Nema dece" text="Nijedno dete ne odgovara pretrazi." />
+            <Empty
+              title="Nema dece"
+              text={filter ? 'Nijedno dete ne odgovara ovom filteru.' : 'Nijedno dete ne odgovara pretrazi.'}
+            />
           ) : (
             <>
               <div className="table-wrap">
@@ -66,6 +121,9 @@ export default function Children() {
                       <th>QR kod</th>
                       <th>Roditelj</th>
                       <th>Alergije</th>
+                      <th>Saglasnosti</th>
+                      <th>Dodatni kontakt</th>
+                      <th>Preuzima</th>
                       <th>Paket roditelja</th>
                       <th></th>
                     </tr>
@@ -92,6 +150,19 @@ export default function Children() {
                           </Link>
                         </td>
                         <td className="muted" data-label="Alergije">{c.allergies || '—'}</td>
+                        <td data-label="Saglasnosti">
+                          <div className="consent-badges">
+                            {SAGLASNOSTI.map((sg) => (
+                              <Saglasnost key={sg.key} label={sg.label} value={c[sg.key]} />
+                            ))}
+                          </div>
+                        </td>
+                        <td className="muted" data-label="Dodatni kontakt">
+                          {c.extraContactPhone || '—'}
+                        </td>
+                        <td className="muted pre-line" data-label="Preuzima">
+                          {c.pickupPersons || '—'}
+                        </td>
                         <td data-label="Paket roditelja">
                           {c.parentRemainingHours > 0 ? (
                             <span className="badge green">

@@ -674,3 +674,56 @@ describe('DELETE /api/auth/me', () => {
     expect(await prisma.visit.findUnique({ where: { id: poseta.id } })).toBeNull();
   });
 });
+
+describe('Podsetnik za saglasnosti - roditelj', () => {
+  let token;
+
+  beforeAll(async () => {
+    await createTestUser({ ...TEST_PARENT, email: 'podsetnik@test.local' });
+    token = await prijaviSe(app, { ...TEST_PARENT, email: 'podsetnik@test.local' });
+  });
+
+  test('nov nalog ima ukljucen podsetnik i nista sklonjeno', async () => {
+    const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.user.consentReminder).toBe(true);
+    expect(res.body.user.contactReminderHiddenAt).toBeNull();
+  });
+
+  test('roditelj sklanja podsetnik za kontakte i moze da ga vrati', async () => {
+    const sklonjen = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contactReminderHidden: true });
+
+    expect(sklonjen.status).toBe(200);
+    expect(sklonjen.body.user.contactReminderHiddenAt).not.toBeNull();
+
+    const vracen = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contactReminderHidden: false });
+
+    expect(vracen.body.user.contactReminderHiddenAt).toBeNull();
+  });
+
+  // Ukljucivanje celog podsetnika je odluka osoblja, ne roditelja.
+  test('roditelj ne moze sam da ugasi ceo podsetnik', async () => {
+    const res = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ consentReminder: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.consentReminder).toBe(true);
+  });
+
+  test('odbija vrednost koja nije boolean', async () => {
+    const res = await request(app)
+      .patch('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contactReminderHidden: 'da' });
+
+    expect(res.status).toBe(400);
+  });
+});

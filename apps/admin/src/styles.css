@@ -1931,3 +1931,15 @@ textarea.setting-input {
     animation: none;
   }
 }
+
+/* Saglasnosti deteta u spisku dece: znacke se prelamaju u uskoj koloni. */
+.consent-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 220px;
+}
+/* Ovlascene osobe roditelj upisuje svaku u svoj red. */
+.pre-line {
+  white-space: pre-line;
+}

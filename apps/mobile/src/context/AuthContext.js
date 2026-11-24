@@ -98,6 +98,19 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  // Sveze stanje naloga sa servera - osoblje u panelu menja stvari koje
+  // aplikacija prikazuje (npr. podsetnik za saglasnosti). Stanje se menja samo
+  // kad se nesto stvarno promenilo, da cela aplikacija ne crta ponovo na
+  // svakom osvezavanju pocetne.
+  const refreshUser = useCallback(async () => {
+    try {
+      const data = await apiRequest('/auth/me');
+      setUser((pre) => (JSON.stringify(pre) === JSON.stringify(data.user) ? pre : data.user));
+    } catch {
+      // Istekla sesija ide kroz onSessionExpired; ostalo je prolazno.
+    }
+  }, []);
+
   async function updateProfile(fields) {
     const data = await apiRequest('/auth/profile', {
       method: 'PATCH',
@@ -109,7 +122,17 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, novNalog, login, register, logout, updateProfile, deleteAccount }}
+      value={{
+        user,
+        loading,
+        novNalog,
+        login,
+        register,
+        logout,
+        updateProfile,
+        refreshUser,
+        deleteAccount,
+      }}
     >
       {children}
     </AuthContext.Provider>

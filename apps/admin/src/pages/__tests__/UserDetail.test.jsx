@@ -3,9 +3,9 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import UserDetail from '../UserDetail';
-import { get, post } from '../../lib/api';
+import { get, patch, post } from '../../lib/api';
 
-vi.mock('../../lib/api', () => ({ get: vi.fn(), post: vi.fn() }));
+vi.mock('../../lib/api', () => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn() }));
 vi.mock('../../components/Layout', () => ({
   PageHeader: ({ title, subtitle, children }) => (
     <div><h1>{title}</h1><p>{subtitle}</p>{children}</div>
@@ -308,5 +308,36 @@ describe('UserDetail - minus sati', () => {
     await user.click(within(dijalog).getByRole('button', { name: 'Naplaceno' }));
 
     expect(await within(dijalog).findByText(/promenili u medjuvremenu/)).toBeInTheDocument();
+  });
+});
+
+describe('UserDetail - podsetnik u aplikaciji', () => {
+  const prekidac = (naziv) =>
+    within(screen.getByRole('group', { name: naziv })).getByRole('switch');
+
+  test('osoblje gasi ceo podsetnik ovom roditelju', async () => {
+    odgovori({ ...roditelj, consentReminder: true, contactReminderHiddenAt: null });
+    patch.mockResolvedValue({});
+    prikazi();
+    await screen.findByText('Podsetnik u aplikaciji');
+
+    expect(prekidac('Podsetnik za saglasnosti')).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(prekidac('Podsetnik za saglasnosti'));
+
+    expect(patch).toHaveBeenCalledWith('/users/u1', { consentReminder: false });
+  });
+
+  test('vidi da je roditelj sklonio podsetnik i vraca ga', async () => {
+    odgovori({ ...roditelj, consentReminder: true, contactReminderHiddenAt: '2026-11-20T10:00:00.000Z' });
+    patch.mockResolvedValue({});
+    prikazi();
+    await screen.findByText('Podsetnik u aplikaciji');
+
+    const naziv = 'Podsetnik za dodatni kontakt i ovlascene osobe';
+    expect(prekidac(naziv)).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByText(/^Sklonjen /)).toBeInTheDocument();
+    await userEvent.click(prekidac(naziv));
+
+    expect(patch).toHaveBeenCalledWith('/users/u1', { contactReminderHidden: false });
   });
 });

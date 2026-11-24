@@ -23,7 +23,7 @@ import PromoPopup from '../components/PromoPopup';
 import PressableScale from '../components/PressableScale';
 import Announcement from '../components/Announcement';
 import ClosedNotice from '../components/ClosedNotice';
-import PodsetnikSaglasnosti from '../components/PodsetnikSaglasnosti';
+import PodsetnikSaglasnosti, { podsetnikDozvoljen } from '../components/PodsetnikSaglasnosti';
 import { todayKey } from '../utils/date';
 import { mailUrl, mapsUrl, open, parseCoords, telUrl } from '../utils/contact';
 import { summarize } from '../utils/packages';
@@ -38,7 +38,7 @@ const num = (value) =>
 // Pocetni ekran je pregled dana: koliko sati ima, sta se danas jede, sta se
 // danas radi i nekoliko slika. Detalji su na svojim tabovima.
 export default function HomeScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, refreshUser, updateProfile } = useAuth();
   // Zaglavlje krece ispod sistemske trake; njena visina se razlikuje po
   // uredjaju (iPhone ~59, Android 24-49), pa se ne sme upisati kao broj.
   const insets = useSafeAreaInsets();
@@ -71,6 +71,9 @@ export default function HomeScreen({ navigation }) {
       apiRequest('/promotions').catch(() => null),
       apiRequest('/promo-banners').catch(() => null),
       apiRequest('/children').catch(() => null),
+      // Osoblje moze da ugasi ili vrati podsetnik za saglasnosti - nalog se
+      // osvezava zajedno sa ostatkom pocetne.
+      refreshUser(),
     ]);
     if (mojaDeca) setDeca(mojaDeca.children || []);
     if (pkgs) {
@@ -81,7 +84,7 @@ export default function HomeScreen({ navigation }) {
     if (schedule) setActivities(schedule.items || []);
     if (akcije) setPromotions(akcije.promotions || []);
     if (baneri) setPromoBanners(baneri.promoBanners || []);
-  }, []);
+  }, [refreshUser]);
 
   useAutoRefresh(loadData);
 
@@ -227,7 +230,12 @@ export default function HomeScreen({ navigation }) {
 
       {/* Odmah ispod sati: ovo je jedino na pocetnoj sto roditelj treba da
           uradi, a ne samo da procita. */}
-      <PodsetnikSaglasnosti deca={deca} navigation={navigation} />
+      <PodsetnikSaglasnosti
+        deca={deca}
+        navigation={navigation}
+        dozvola={podsetnikDozvoljen(user, settings)}
+        onSakrij={() => updateProfile({ contactReminderHidden: true }).catch(() => {})}
+      />
 
       {/* Akcije traju ogranicen broj dana, pa stoje visoko - ispod sati, a
           iznad onoga sto se ionako ponavlja svaki dan. */}

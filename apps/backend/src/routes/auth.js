@@ -139,6 +139,10 @@ router.patch(
     // Telefon se ne brise preko profila - osoblju je to jedini kontakt sa
     // roditeljem dok je dete u igraonici.
     body('phone').optional().trim().matches(TELEFON).withMessage('Unesite ispravan broj telefona.'),
+    body('contactReminderHidden')
+      .optional()
+      .isBoolean({ strict: true })
+      .withMessage('Nevazeca vrednost za podsetnik.'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -153,6 +157,11 @@ router.patch(
         if (req.body[field] !== undefined) {
           data[field] = req.body[field];
         }
+      }
+      // Roditelj sklanja podsetnik za neobavezne kontakte; cuva se trenutak,
+      // da osoblje u panelu vidi kad je to uradio.
+      if (req.body.contactReminderHidden !== undefined) {
+        data.contactReminderHiddenAt = req.body.contactReminderHidden ? new Date() : null;
       }
 
       const user = await prisma.user.update({

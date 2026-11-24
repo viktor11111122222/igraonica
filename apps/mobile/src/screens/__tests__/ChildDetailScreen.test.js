@@ -144,7 +144,8 @@ describe('ChildDetailScreen - saglasnosti', () => {
 
     expect(screen.getAllByText('Nije odgovoreno')).toHaveLength(4);
     expect(screen.getAllByText('Nije upisano')).toHaveLength(2);
-    expect(screen.getByText('064 123 4567')).toBeTruthy();
+    // Telefon roditelja nije podatak deteta.
+    expect(screen.queryByText('Kontakt telefon roditelja/staratelja')).toBeNull();
     expect(screen.getByText('Dopuni podatke')).toBeTruthy();
   });
 
