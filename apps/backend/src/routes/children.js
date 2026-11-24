@@ -13,7 +13,7 @@ router.use(protect);
 // Saglasnosti su da/ne ili `null` ("nije odgovoreno") - roditelj ih moze
 // preskociti i dopuniti kasnije, a vratiti na "nije odgovoreno" ne mora.
 const validacijaSaglasnosti = [
-  ...['photoConsent', 'eatsLunch', 'eatsSnack'].map((polje) =>
+  ...['photoConsent', 'eatsLunch', 'eatsSnack', 'walksConsent'].map((polje) =>
     body(polje).optional({ values: 'null' }).isBoolean({ strict: true }).withMessage('Odgovor mora biti da ili ne.')
   ),
   body('pickupPersons')
@@ -21,6 +21,11 @@ const validacijaSaglasnosti = [
     .isString()
     .isLength({ max: 500 })
     .withMessage('Spisak osoba koje preuzimaju dete je predugacak.'),
+  body('extraContactPhone')
+    .optional({ values: 'falsy' })
+    .trim()
+    .matches(/^\+?[\d\s\-/()]{6,20}$/)
+    .withMessage('Dodatni kontakt telefon nije ispravan.'),
 ];
 
 function generateQRCode() {
@@ -160,7 +165,8 @@ router.post(
 
     try {
       const { firstName, lastName, dateOfBirth, gender, allergies, notes } = req.body;
-      const { photoConsent, eatsLunch, eatsSnack, pickupPersons } = req.body;
+      const { photoConsent, eatsLunch, eatsSnack, walksConsent, pickupPersons, extraContactPhone } =
+        req.body;
 
       let parentId = req.user.id;
 
@@ -191,7 +197,9 @@ router.post(
           photoConsent: photoConsent ?? null,
           eatsLunch: eatsLunch ?? null,
           eatsSnack: eatsSnack ?? null,
+          walksConsent: walksConsent ?? null,
           pickupPersons: pickupPersons || null,
+          extraContactPhone: extraContactPhone || null,
           qrCode,
           parentId,
         },
@@ -246,7 +254,9 @@ router.patch(
         'photoConsent',
         'eatsLunch',
         'eatsSnack',
+        'walksConsent',
         'pickupPersons',
+        'extraContactPhone',
       ];
       const data = {};
       for (const field of allowedFields) {

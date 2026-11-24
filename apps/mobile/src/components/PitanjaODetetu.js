@@ -1,16 +1,61 @@
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PressableScale from './PressableScale';
+import { jeTelefon } from '../utils/telefon';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
-// Pitanja na koja osoblje treba odgovor pre nego sto dete ostane u igraonici.
-// Svako moze da ostane bez odgovora (`null`) - roditelj ga preskace sada i
-// dopunjuje kasnije sa ekrana deteta - pa se "ne" i "nije odgovoreno" razlikuju.
+// "Saglasnosti i informacije o detetu" - sedam stavki koje igraonica trazi za
+// svako dete. Da/ne stavke i telefon roditelja su obavezni pri dodavanju
+// deteta; dodatni kontakt i ovlascene osobe nisu, ali ih podsetnik na
+// pocetnoj trazi dok nisu upisani.
+//
+// Na serveru odgovor moze biti i `null` ("nije odgovoreno") - deca dodata pre
+// ove forme ili iz starije verzije aplikacije - pa se "ne" i "nije
+// odgovoreno" razlikuju.
+
+// Obavezne da/ne stavke, sa brojem pod kojim stoje u formi.
 export const PITANJA = [
-  { kljuc: 'photoConsent', pitanje: 'Da li dete sme da se slika?' },
-  { kljuc: 'eatsLunch', pitanje: 'Da li dete jede rucak u igraonici?' },
-  { kljuc: 'eatsSnack', pitanje: 'Da li dete jede uzinu u igraonici?' },
+  {
+    kljuc: 'photoConsent',
+    broj: 1,
+    naslov: 'Saglasnost za fotografisanje i snimanje deteta',
+    pitanje:
+      'Da li ste saglasni da osoblje Kids Club-a fotografise i snima Vase dete tokom boravka i aktivnosti u igraonici, i da te fotografije i snimke objavi na sajtu i drustvenim mrezama Kids Club-a?',
+  },
+  {
+    kljuc: 'eatsLunch',
+    broj: 2,
+    naslov: 'Saglasnost za konzumiranje rucka',
+    pitanje:
+      'Da li Vase dete sme da jede rucak koji obezbedjuje Kids Club? Alergije i posebnu ishranu upisite iznad, u delovima Alergije i Napomene.',
+  },
+  {
+    kljuc: 'eatsSnack',
+    broj: 3,
+    naslov: 'Saglasnost za konzumiranje uzine',
+    pitanje:
+      'Da li Vase dete sme da jede uzinu koju obezbedjuje Kids Club? Alergije i posebnu ishranu upisite iznad, u delovima Alergije i Napomene.',
+  },
+  {
+    kljuc: 'walksConsent',
+    broj: 7,
+    naslov: 'Saglasnost za odlazak u setnju',
+    pitanje:
+      'Da li ste saglasni da Vase dete, uz pratnju i nadzor zaposlenih Kids Club-a, ide u organizovane setnje van prostora igraonice?',
+  },
 ];
+
+// Neobavezne stavke (5 i 6): ne traze se pri cuvanju, ali ih podsetnik trazi.
+export const DOPUNSKE = ['extraContactPhone', 'pickupPersons'];
+
+// Sta fali za cuvanje: obavezni odgovori i ispravni telefoni. Vraca kljuceve.
+export function nepotpuno(odgovori, telefonRoditelja) {
+  const fali = PITANJA.filter(({ kljuc }) => odgovori[kljuc] == null).map((p) => p.kljuc);
+  if (!jeTelefon(telefonRoditelja)) fali.push('telefonRoditelja');
+  const dodatni = (odgovori.extraContactPhone || '').trim();
+  if (dodatni && !jeTelefon(dodatni)) fali.push('extraContactPhone');
+  return fali;
+}
 
 function DaNe({ vrednost, onChange, oznaka }) {
   return (
@@ -21,12 +66,11 @@ function DaNe({ vrednost, onChange, oznaka }) {
       ].map(({ v, tekst }) => {
         const aktivno = vrednost === v;
         return (
-          // Ponovni dodir vraca na "nije odgovoreno" - roditelj koji se
-          // predomisli ne mora da izmisli odgovor.
+          // Flex mora na omotac jer PressableScale stil daje unutrasnjem View-u.
           <View key={tekst} style={styles.daNeCelija}>
             <PressableScale
               style={[styles.daNeDugme, aktivno && styles.daNeAktivno]}
-              onPress={() => onChange(aktivno ? null : v)}
+              onPress={() => onChange(v)}
               accessibilityRole="button"
               accessibilityLabel={`${oznaka}: ${tekst}`}
               accessibilityState={{ selected: aktivno }}
@@ -40,48 +84,121 @@ function DaNe({ vrednost, onChange, oznaka }) {
   );
 }
 
-// `onChange` prima funkciju nad prethodnim stanjem (kao setState), da dva
-// brza dodira ne pregaze jedan drugog.
-export default function PitanjaODetetu({ odgovori, onChange }) {
+function Stavka({ broj, naslov, opis, obavezno, greska, children }) {
   return (
-    <View style={styles.card}>
-      <View style={styles.sectionHead}>
-        <Ionicons name="shield-checkmark-outline" size={18} color={colors.primaryDarker} />
-        <Text style={styles.sectionTitle}>Saglasnosti</Text>
-      </View>
-      <Text style={styles.sectionHint}>
-        Mozete preskociti i odgovoriti kasnije, sa ekrana deteta.
+    <View style={[styles.stavka, greska && styles.stavkaGreska]}>
+      <Text style={styles.naslov}>
+        {broj}. {naslov}
+        {obavezno ? <Text style={styles.zvezdica}> *</Text> : null}
       </Text>
-
-      {PITANJA.map(({ kljuc, pitanje }) => (
-        <View key={kljuc} style={styles.red}>
-          <Text style={styles.pitanje}>{pitanje}</Text>
-          <DaNe
-            vrednost={odgovori[kljuc]}
-            oznaka={pitanje}
-            onChange={(v) => onChange((pre) => ({ ...pre, [kljuc]: v }))}
-          />
-        </View>
-      ))}
-
-      <Text style={styles.pitanje}>Ko sme da preuzme dete?</Text>
-      <Text style={styles.sectionHint}>
-        Osim vas - ime i broj telefona svake osobe.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="npr. baka Mira, 064 111 2222"
-        placeholderTextColor={colors.textFaint}
-        value={odgovori.pickupPersons}
-        onChangeText={(t) => onChange((pre) => ({ ...pre, pickupPersons: t }))}
-        multiline
-        accessibilityLabel="Ko sme da preuzme dete"
-      />
+      {opis ? <Text style={styles.opis}>{opis}</Text> : null}
+      {children}
+      {greska ? <Text style={styles.greskaTekst}>{greska}</Text> : null}
     </View>
   );
 }
 
-// Tekstovi za prikaz odgovora (ekran deteta, admin).
+// `onChange` prima funkciju nad prethodnim stanjem (kao setState), da dva brza
+// dodira ne pregaze jedan drugog. `greske` je spisak kljuceva koje treba
+// istaci - puni se tek posle pokusaja cuvanja.
+export default function PitanjaODetetu({
+  odgovori,
+  onChange,
+  telefonRoditelja,
+  onTelefonRoditelja,
+  greske = [],
+}) {
+  const postavi = (kljuc) => (v) => onChange((pre) => ({ ...pre, [kljuc]: v }));
+  // Greska se pokazuje samo dok stavka i dalje nije ispravna - cim roditelj
+  // odgovori ili ispravi broj, crveni tekst nestaje bez novog pokusaja cuvanja.
+  const jos = nepotpuno(odgovori, telefonRoditelja);
+  const imaGresku = (kljuc) => greske.includes(kljuc) && jos.includes(kljuc);
+  const daNe = (p) => (
+    <Stavka
+      key={p.kljuc}
+      broj={p.broj}
+      naslov={p.naslov}
+      opis={p.pitanje}
+      obavezno
+      greska={imaGresku(p.kljuc) ? 'Izaberite Da ili Ne.' : null}
+    >
+      <DaNe vrednost={odgovori[p.kljuc]} onChange={postavi(p.kljuc)} oznaka={p.naslov} />
+    </Stavka>
+  );
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.sectionHead}>
+        <Ionicons name="shield-checkmark-outline" size={18} color={colors.primaryDarker} />
+        <Text style={styles.sectionTitle}>Saglasnosti i informacije o detetu</Text>
+      </View>
+      <Text style={styles.sectionHint}>
+        Stavke oznacene sa * su obavezne. Stavke 5 i 6 nisu obavezne, ali vam
+        preporucujemo da ih popunite. Odgovore mozete promeniti u svakom
+        trenutku na stranici deteta.
+      </Text>
+
+      {PITANJA.slice(0, 3).map(daNe)}
+
+      <Stavka
+        broj={4}
+        naslov="Kontakt telefon roditelja/staratelja"
+        opis="Broj na koji osoblje zove roditelja/staratelja. Cuva se na Vasem nalogu i vazi za svu Vasu decu."
+        obavezno
+        greska={imaGresku('telefonRoditelja') ? 'Unesite ispravan broj telefona.' : null}
+      >
+        <TextInput
+          style={styles.input}
+          placeholder="npr. 064 123 4567"
+          placeholderTextColor={colors.textFaint}
+          value={telefonRoditelja}
+          onChangeText={onTelefonRoditelja}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          textContentType="telephoneNumber"
+          accessibilityLabel="Kontakt telefon roditelja/staratelja"
+        />
+      </Stavka>
+
+      <Stavka
+        broj={5}
+        naslov="Dodatni kontakt telefon"
+        opis="Broj osobe koju osoblje zove ako Vi niste dostupni (npr. drugi roditelj, baka, deka)."
+        greska={imaGresku('extraContactPhone') ? 'Broj telefona nije ispravan.' : null}
+      >
+        <TextInput
+          style={styles.input}
+          placeholder="npr. 065 222 3333"
+          placeholderTextColor={colors.textFaint}
+          value={odgovori.extraContactPhone}
+          onChangeText={postavi('extraContactPhone')}
+          keyboardType="phone-pad"
+          accessibilityLabel="Dodatni kontakt telefon"
+        />
+      </Stavka>
+
+      <Stavka
+        broj={6}
+        naslov="Ovlascene osobe za preuzimanje deteta"
+        opis="Osobe koje, osim roditelja/staratelja, smeju da preuzmu Vase dete iz Kids Club-a. Za svaku osobu upisite ime, prezime i broj telefona, svaku u novi red. Ako polje ostavite prazno, dete preuzima samo roditelj/staratelj."
+      >
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder={'npr. Mira Petrovic, 064 111 2222\nJovan Petrovic, 065 333 4444'}
+          placeholderTextColor={colors.textFaint}
+          value={odgovori.pickupPersons}
+          onChangeText={postavi('pickupPersons')}
+          multiline
+          accessibilityLabel="Ovlascene osobe za preuzimanje deteta"
+        />
+      </Stavka>
+
+      {PITANJA.slice(3).map(daNe)}
+    </View>
+  );
+}
+
+// Tekstovi za prikaz odgovora (ekran deteta).
 export function opisOdgovora(v) {
   if (v === true) return 'Da';
   if (v === false) return 'Ne';
@@ -97,16 +214,25 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  sectionTitle: { ...type.heading, color: colors.text },
+  sectionTitle: { ...type.heading, color: colors.text, flex: 1 },
   sectionHint: {
     ...type.caption,
     color: colors.textMuted,
     marginTop: spacing.xs,
     lineHeight: 17,
   },
-  red: {},
-  pitanje: { ...type.label, color: colors.text, marginTop: spacing.lg },
-  daNe: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
+  stavka: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  stavkaGreska: {},
+  naslov: { ...type.label, color: colors.text },
+  zvezdica: { color: colors.danger },
+  opis: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 17 },
+  greskaTekst: { ...type.caption, color: colors.danger, marginTop: spacing.xs },
+  daNe: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   daNeCelija: { flex: 1 },
   daNeDugme: {
     paddingVertical: spacing.md,
@@ -129,7 +255,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     marginTop: spacing.md,
-    minHeight: 70,
-    textAlignVertical: 'top',
   },
+  textArea: { minHeight: 70, textAlignVertical: 'top' },
 });

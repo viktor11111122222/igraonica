@@ -176,7 +176,9 @@ describe('PackageScreen - saglasnosti', () => {
     photoConsent: false,
     eatsLunch: true,
     eatsSnack: true,
+    walksConsent: false,
     pickupPersons: 'Baka',
+    extraContactPhone: '065 222 3333',
   };
 
   test('oznacava samo decu kojoj fale odgovori', async () => {

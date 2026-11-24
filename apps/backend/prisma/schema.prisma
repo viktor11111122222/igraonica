@@ -135,6 +135,10 @@ model Child {
   photoConsent  Boolean? @map("photo_consent")
   eatsLunch     Boolean? @map("eats_lunch")
   eatsSnack     Boolean? @map("eats_snack")
+  // Organizovane setnje i aktivnosti van igraonice, uz osoblje.
+  walksConsent  Boolean? @map("walks_consent")
+  // Broj druge osobe za kontakt, kad se roditelj ne javlja. Nije obavezan.
+  extraContactPhone String? @map("extra_contact_phone")
   // Ko sme da preuzme dete osim roditelja - imena i telefoni, slobodan tekst.
   pickupPersons String?  @map("pickup_persons")
   qrCode      String   @unique @map("qr_code")

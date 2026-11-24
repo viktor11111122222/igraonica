@@ -187,6 +187,8 @@ export default function UserDetail() {
                     <th>Napomene</th>
                     <th>Slikanje</th>
                     <th>Rucak / uzina</th>
+                    <th>Setnja</th>
+                    <th>Dodatni kontakt</th>
                     <th>Preuzima</th>
                   </tr>
                 </thead>
@@ -211,6 +213,10 @@ export default function UserDetail() {
                       <td data-label="Slikanje">{daNe(c.photoConsent)}</td>
                       <td data-label="Rucak / uzina">
                         {daNe(c.eatsLunch)} / {daNe(c.eatsSnack)}
+                      </td>
+                      <td data-label="Setnja">{daNe(c.walksConsent)}</td>
+                      <td className="muted" data-label="Dodatni kontakt">
+                        {c.extraContactPhone || '—'}
                       </td>
                       <td className="muted" data-label="Preuzima">{c.pickupPersons || '—'}</td>
                     </tr>

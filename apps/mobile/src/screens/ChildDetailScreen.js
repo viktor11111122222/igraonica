@@ -14,11 +14,14 @@ import { apiRequest } from '../utils/api';
 import * as kes from '../utils/kes';
 import { PITANJA, opisOdgovora } from '../components/PitanjaODetetu';
 import { nedostajuSaglasnosti } from '../components/PodsetnikSaglasnosti';
+import { useAuth } from '../context/AuthContext';
 import { font } from '../theme';
 
 export default function ChildDetailScreen({ route, navigation }) {
   const { child: initialChild } = route.params;
   const [child, setChild] = useState(initialChild);
+  // Stavka 4 (telefon roditelja) stoji na nalogu, ne na detetu.
+  const { user } = useAuth();
   // Roditelj je pitanja mozda preskocio pri dodavanju - tada ga dugme zove da
   // ih dopuni.
   const nedostajeOdgovor = nedostajuSaglasnosti(child);
@@ -125,23 +128,36 @@ export default function ChildDetailScreen({ route, navigation }) {
       </View>
 
       <View style={styles.consentSection}>
-        <Text style={styles.sectionTitle}>Saglasnosti</Text>
-        {PITANJA.map(({ kljuc, pitanje }) => (
-          <View key={kljuc} style={styles.consentRow}>
-            <Text style={styles.consentQuestion}>{pitanje}</Text>
-            <Text
-              style={[styles.consentAnswer, child[kljuc] == null && styles.consentMissing]}
-            >
-              {opisOdgovora(child[kljuc])}
+        <Text style={styles.sectionTitle}>Saglasnosti i informacije o detetu</Text>
+        {[
+          ...PITANJA.slice(0, 3).map((p) => ({ ...p, odgovor: opisOdgovora(child[p.kljuc]), fali: child[p.kljuc] == null })),
+          {
+            broj: 4,
+            naslov: 'Kontakt telefon roditelja/staratelja',
+            odgovor: user?.phone || 'Nije upisano',
+            fali: !user?.phone,
+          },
+          {
+            broj: 5,
+            naslov: 'Dodatni kontakt telefon',
+            odgovor: child.extraContactPhone || 'Nije upisano',
+            fali: !child.extraContactPhone,
+          },
+          {
+            broj: 6,
+            naslov: 'Ovlascene osobe za preuzimanje deteta',
+            odgovor: child.pickupPersons || 'Nije upisano',
+            fali: !child.pickupPersons,
+          },
+          ...PITANJA.slice(3).map((p) => ({ ...p, odgovor: opisOdgovora(child[p.kljuc]), fali: child[p.kljuc] == null })),
+        ].map((r) => (
+          <View key={r.broj} style={styles.consentRow}>
+            <Text style={styles.consentQuestion}>
+              {r.broj}. {r.naslov}
             </Text>
+            <Text style={[styles.consentAnswer, r.fali && styles.consentMissing]}>{r.odgovor}</Text>
           </View>
         ))}
-        <View style={styles.consentRow}>
-          <Text style={styles.consentQuestion}>Ko sme da preuzme dete</Text>
-          <Text style={[styles.consentAnswer, !child.pickupPersons && styles.consentMissing]}>
-            {child.pickupPersons || 'Nije upisano'}
-          </Text>
-        </View>
         <TouchableOpacity
           style={styles.editButton}
           // "Dopuni" vodi pravo na pitanja; "Izmeni" otvara ceo obrazac od vrha.

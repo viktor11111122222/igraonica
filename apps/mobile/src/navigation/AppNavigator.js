@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { isOn, useSettings } from '../context/SettingsContext';
-import { colors, font, radius, spacing } from '../theme';
+import { colors, font, shadow, spacing } from '../theme';
 import TabBar from '../components/TabBar';
 import LoadingScreen from '../components/LoadingScreen';
 import { useMinimalniBoot } from '../hooks/useUcitavanje';
@@ -89,6 +89,8 @@ function MainTabs() {
 // tada vraca na tabove, da korisnik ne ostane zarobljen.
 // Izvezeno zbog testa: ponasanje (nazad vs. povratak na tabove) je ono sto
 // je pucalo, a kroz ceo navigator bi se do njega stizalo tek posle navigacije.
+// Izgled: beo krug sa tamnom strelicom i blagom senkom - jasno se vidi preko
+// zute sare, na svakom ekranu i platformi isto.
 export function BackButton({ navigation }) {
   return (
     <Pressable
@@ -100,14 +102,25 @@ export function BackButton({ navigation }) {
       accessibilityRole="button"
       accessibilityLabel="Nazad"
     >
-      <Ionicons name="chevron-back" size={22} color={colors.textOnPrimary} />
+      <Ionicons
+        name="chevron-back"
+        size={24}
+        color={colors.primaryDarker}
+        // Strelica "<" vizuelno stoji desno od centra kruga; pomak je vraca.
+        style={styles.backStrelica}
+      />
     </Pressable>
   );
 }
 
 function MainStack() {
+  // Odmah posle registracije prvi ekran je dodavanje deteta sa saglasnostima;
+  // inace pocetna. Vazi samo pri prvom prikazu - posle toga navigacija ide
+  // normalno.
+  const { novNalog } = useAuth();
   return (
     <Stack.Navigator
+      initialRouteName={novNalog ? 'AddChild' : 'Tabs'}
       screenOptions={({ navigation }) => ({
         // Zaglavlja ekrana van tabova nose istu podlogu kao baneri u tabovima,
         // pa sara ne prestaje cim se otvori Galerija ili Obavestenja.
@@ -120,6 +133,17 @@ function MainStack() {
         headerTitleStyle: { fontFamily: font.bold },
         headerBackTitle: 'Nazad',
         headerLeft: () => <BackButton navigation={navigation} />,
+        // Od iOS 26 sistem pod svako dugme u traci stavlja svoju staklenu
+        // kapsulu, koja se slabo vidi preko sare i mutila bi nas beli krug.
+        // Ista strelica kao stavka kojoj je to staklo iskljuceno (na starijim
+        // iOS-ima opcija nema efekta; Android i web koriste headerLeft).
+        unstable_headerLeftItems: () => [
+          {
+            type: 'custom',
+            element: <BackButton navigation={navigation} />,
+            hidesSharedBackground: true,
+          },
+        ],
       })}
     >
       <Stack.Screen
@@ -185,17 +209,17 @@ export default function AppNavigator() {
 }
 
 const styles = {
-  // Isti kvadrat sa koprenom kao zvono na pocetnoj, samo manji jer zaglavlje
-  // native-stack-a ima nizu traku od banera.
   back: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     // Nativno zaglavlje samo uvlaci headerLeft od ivice; na webu ne, pa bi
     // dugme stajalo zalepljeno za levu ivicu ekrana.
     marginLeft: Platform.OS === 'web' ? spacing.lg : 0,
-    borderRadius: radius.md,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.onPrimaryVeil,
+    backgroundColor: colors.surface,
+    ...shadow.raised,
   },
+  backStrelica: { marginLeft: -2 },
 };

@@ -7,7 +7,9 @@ const popunjeno = {
   photoConsent: true,
   eatsLunch: false,
   eatsSnack: true,
+  walksConsent: true,
   pickupPersons: 'Baka Mira',
+  extraContactPhone: '065 222 3333',
 };
 const prazno = {
   id: 'm',
@@ -15,7 +17,9 @@ const prazno = {
   photoConsent: null,
   eatsLunch: null,
   eatsSnack: null,
+  walksConsent: null,
   pickupPersons: null,
+  extraContactPhone: null,
 };
 
 const navigation = { navigate: jest.fn() };
@@ -62,5 +66,30 @@ describe('PodsetnikSaglasnosti', () => {
     fireEvent.press(screen.getByLabelText('Popunite saglasnosti za Marko, Lena'));
 
     expect(navigation.navigate).toHaveBeenCalledWith('Package');
+  });
+});
+
+describe('PodsetnikSaglasnosti - neobavezne stavke', () => {
+  test('podseca i kad fale samo dodatni kontakt i ovlascene osobe, blazim tekstom', async () => {
+    await render(
+      <PodsetnikSaglasnosti
+        deca={[{ ...popunjeno, extraContactPhone: null }]}
+        navigation={navigation}
+      />
+    );
+
+    expect(screen.queryByText('Popunite saglasnosti')).toBeNull();
+    expect(screen.getByText('Dopunite kontakte')).toBeTruthy();
+  });
+
+  test('obavezne imaju prednost u naslovu', async () => {
+    await render(
+      <PodsetnikSaglasnosti
+        deca={[{ ...popunjeno, extraContactPhone: null }, prazno]}
+        navigation={navigation}
+      />
+    );
+
+    expect(screen.getByText('Popunite saglasnosti')).toBeTruthy();
   });
 });

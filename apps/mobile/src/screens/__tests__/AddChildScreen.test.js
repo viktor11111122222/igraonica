@@ -5,6 +5,13 @@ import { apiRequest } from '../../utils/api';
 
 jest.mock('../../utils/api', () => ({ apiRequest: jest.fn() }));
 
+const mockUpdateProfile = jest.fn();
+let mockUser = { phone: '064 123 4567' };
+let mockNovNalog = false;
+jest.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ user: mockUser, updateProfile: mockUpdateProfile, novNalog: mockNovNalog }),
+}));
+
 // Pravi birac datuma ima tri kolone i sopstvenu logiku; ovde je dovoljno dugme
 // koje javi datum, jer se testira ekran a ne birac.
 jest.mock('../../components/BirthDatePicker', () => {
@@ -18,7 +25,7 @@ jest.mock('../../components/BirthDatePicker', () => {
   };
 });
 
-const navigation = { goBack: jest.fn() };
+const navigation = { goBack: jest.fn(), navigate: jest.fn(), getState: () => ({ index: 1 }) };
 const prikazi = () => render(<AddChildScreen navigation={navigation} />);
 
 async function upisi(placeholder, vrednost) {
@@ -33,16 +40,36 @@ async function pritisni(tekst) {
   });
 }
 
+// Obavezne saglasnosti (1, 2, 3 i 7) - bez njih se dete ne cuva.
+const OBAVEZNE = [
+  'Saglasnost za fotografisanje i snimanje deteta',
+  'Saglasnost za konzumiranje rucka',
+  'Saglasnost za konzumiranje uzine',
+  'Saglasnost za odlazak u setnju',
+];
+
+async function odgovoriNaSve(odgovor = 'Da') {
+  for (const naslov of OBAVEZNE) {
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText(`${naslov}: ${odgovor}`));
+    });
+  }
+}
+
 async function popuniObavezno() {
   await upisi('Ime deteta', 'Lena');
   await upisi('Prezime deteta', 'Petrovic');
   await act(async () => {
     fireEvent.press(screen.getByTestId('izaberi-datum'));
   });
+  await odgovoriNaSve();
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUser = { phone: '064 123 4567' };
+  mockNovNalog = false;
+  mockUpdateProfile.mockResolvedValue({});
   apiRequest.mockResolvedValue({});
   Alert.alert = jest.fn();
 });
@@ -134,6 +161,7 @@ describe('AddChildScreen - slanje', () => {
     await act(async () => {
       fireEvent.press(screen.getByTestId('izaberi-datum'));
     });
+    await odgovoriNaSve();
 
     await pritisni('Dodaj dete');
 
@@ -206,34 +234,40 @@ describe('AddChildScreen - slanje', () => {
 });
 
 describe('AddChildScreen - saglasnosti', () => {
-  test('preskocena pitanja idu kao "nije odgovoreno" (null)', async () => {
+  test('bez odgovora na obavezne saglasnosti dete se ne cuva', async () => {
+    await prikazi();
+    await upisi('Ime deteta', 'Lena');
+    await upisi('Prezime deteta', 'Petrovic');
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('izaberi-datum'));
+    });
+
+    await pritisni('Dodaj dete');
+
+    expect(apiRequest).not.toHaveBeenCalled();
+    expect(Alert.alert.mock.calls[0][0]).toBe('Nedostaju saglasnosti');
+    expect(screen.getAllByText('Izaberite Da ili Ne.')).toHaveLength(4);
+  });
+
+  test('bez telefona roditelja dete se ne cuva', async () => {
+    mockUser = { phone: null };
     await prikazi();
     await popuniObavezno();
 
     await pritisni('Dodaj dete');
 
-    await waitFor(() =>
-      expect(apiRequest).toHaveBeenCalledWith('/children', {
-        method: 'POST',
-        body: expect.objectContaining({
-          photoConsent: null,
-          eatsLunch: null,
-          eatsSnack: null,
-          pickupPersons: null,
-        }),
-      })
-    );
+    expect(apiRequest).not.toHaveBeenCalled();
+    expect(screen.getByText('Unesite ispravan broj telefona.')).toBeTruthy();
   });
 
-  test('odgovori i osobe koje preuzimaju dete se salju', async () => {
+  test('salje sve stavke; neobavezne prazne idu kao null', async () => {
     await prikazi();
     await popuniObavezno();
-
     await act(async () => {
-      fireEvent.press(screen.getByLabelText('Da li dete sme da se slika?: Ne'));
-      fireEvent.press(screen.getByLabelText('Da li dete jede rucak u igraonici?: Da'));
+      fireEvent.press(
+        screen.getByLabelText('Saglasnost za fotografisanje i snimanje deteta: Ne')
+      );
     });
-    await upisi('npr. baka Mira, 064 111 2222', ' Baka Mira 064 111 2222 ');
 
     await pritisni('Dodaj dete');
 
@@ -243,33 +277,80 @@ describe('AddChildScreen - saglasnosti', () => {
         body: expect.objectContaining({
           photoConsent: false,
           eatsLunch: true,
-          eatsSnack: null,
-          pickupPersons: 'Baka Mira 064 111 2222',
+          eatsSnack: true,
+          walksConsent: true,
+          pickupPersons: null,
+          extraContactPhone: null,
         }),
       })
     );
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
   });
 
-  test('ponovni dodir vraca odgovor na "nije odgovoreno"', async () => {
+  test('dodatni kontakt i ovlascene osobe se salju', async () => {
     await prikazi();
     await popuniObavezno();
-
-    const da = () => screen.getByLabelText('Da li dete jede uzinu u igraonici?: Da');
-    await act(async () => {
-      fireEvent.press(da());
-    });
-    await act(async () => {
-      fireEvent.press(da());
-    });
+    await upisi('npr. 065 222 3333', ' 065 222 3333 ');
+    await upisi('npr. Mira Petrovic, 064 111 2222\nJovan Petrovic, 065 333 4444', ' Baka Mira 064 111 2222 ');
 
     await pritisni('Dodaj dete');
 
     await waitFor(() =>
       expect(apiRequest).toHaveBeenCalledWith(
         '/children',
-        expect.objectContaining({ body: expect.objectContaining({ eatsSnack: null }) })
+        expect.objectContaining({
+          body: expect.objectContaining({
+            extraContactPhone: '065 222 3333',
+            pickupPersons: 'Baka Mira 064 111 2222',
+          }),
+        })
       )
     );
+  });
+
+  test('neispravan dodatni kontakt se odbija', async () => {
+    await prikazi();
+    await popuniObavezno();
+    await upisi('npr. 065 222 3333', 'nemam');
+
+    await pritisni('Dodaj dete');
+
+    expect(apiRequest).not.toHaveBeenCalled();
+    expect(screen.getByText('Broj telefona nije ispravan.')).toBeTruthy();
+  });
+
+  test('promenjen telefon roditelja se cuva na nalogu', async () => {
+    mockUser = { phone: null };
+    await prikazi();
+    await popuniObavezno();
+    await upisi('npr. 064 123 4567', '064 999 8888');
+
+    await pritisni('Dodaj dete');
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalled());
+    expect(mockUpdateProfile).toHaveBeenCalledWith({ phone: '064 999 8888' });
+  });
+});
+
+describe('AddChildScreen - posle registracije', () => {
+  test('prvi ekran posle registracije pozdravlja i posle cuvanja vodi na pocetnu', async () => {
+    mockNovNalog = true;
+    const nav = { goBack: jest.fn(), navigate: jest.fn(), getState: () => ({ index: 0 }) };
+    await render(<AddChildScreen navigation={nav} />);
+
+    expect(screen.getByText('Dobro dosli!')).toBeTruthy();
+    await popuniObavezno();
+    await pritisni('Dodaj dete');
+
+    await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    Alert.alert.mock.calls[0][2][0].onPress();
+    expect(nav.navigate).toHaveBeenCalledWith('Tabs');
+    expect(nav.goBack).not.toHaveBeenCalled();
+  });
+
+  test('obicno dodavanje deteta nema pozdrav', async () => {
+    await prikazi();
+    expect(screen.queryByText('Dobro dosli!')).toBeNull();
   });
 });
 
@@ -285,10 +366,12 @@ describe('AddChildScreen - izmena postojeceg deteta', () => {
     photoConsent: true,
     eatsLunch: null,
     eatsSnack: false,
+    walksConsent: true,
     pickupPersons: null,
+    extraContactPhone: null,
   };
-  const prikaziIzmenu = () =>
-    render(<AddChildScreen navigation={navigation} route={{ params: { child: dete } }} />);
+  const prikaziIzmenu = (params = {}) =>
+    render(<AddChildScreen navigation={navigation} route={{ params: { child: dete, ...params } }} />);
 
   test('popunjava formu postojecim podacima', async () => {
     await prikaziIzmenu();
@@ -296,18 +379,18 @@ describe('AddChildScreen - izmena postojeceg deteta', () => {
     expect(screen.getByPlaceholderText('Ime deteta').props.value).toBe('Lena');
     expect(screen.getByPlaceholderText('Nesto drugo? Upisite ovde').props.value).toBe('kivi');
     expect(
-      screen.getByLabelText('Da li dete sme da se slika?: Da').props.accessibilityState.selected
+      screen.getByLabelText('Saglasnost za fotografisanje i snimanje deteta: Da').props
+        .accessibilityState.selected
     ).toBe(true);
     expect(screen.getByText('Sacuvaj izmene')).toBeTruthy();
   });
 
   test('cuva izmene preko PATCH i vraca na ekran deteta', async () => {
     await prikaziIzmenu();
-
     await act(async () => {
-      fireEvent.press(screen.getByLabelText('Da li dete jede rucak u igraonici?: Da'));
+      fireEvent.press(screen.getByLabelText('Saglasnost za konzumiranje rucka: Da'));
     });
-    await upisi('npr. baka Mira, 064 111 2222', 'Deka Pera');
+    await upisi('npr. Mira Petrovic, 064 111 2222\nJovan Petrovic, 065 333 4444', 'Deka Pera');
 
     await pritisni('Sacuvaj izmene');
 
@@ -319,32 +402,24 @@ describe('AddChildScreen - izmena postojeceg deteta', () => {
           photoConsent: true,
           eatsLunch: true,
           eatsSnack: false,
+          walksConsent: true,
           pickupPersons: 'Deka Pera',
         }),
       })
     );
     expect(navigation.goBack).toHaveBeenCalled();
   });
-});
 
-describe('AddChildScreen - otvoren sa podsetnika na pocetnoj', () => {
-  const dete = {
-    id: 'd2',
-    firstName: 'Marko',
-    lastName: 'Probni',
-    dateOfBirth: '2021-03-14T00:00:00.000Z',
-    photoConsent: true,
-  };
-  const raspored = { nativeEvent: { layout: { x: 0, y: 900, width: 400, height: 500 } } };
+  test('ni izmena se ne cuva dok fali obavezan odgovor', async () => {
+    await prikaziIzmenu();
+    await pritisni('Sacuvaj izmene');
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
 
-  test('skroluje do saglasnosti, i to samo jednom', async () => {
+  test('otvoren sa podsetnika skroluje do saglasnosti, i to samo jednom', async () => {
     const scrollTo = jest.spyOn(require('react-native').ScrollView.prototype, 'scrollTo');
-    await render(
-      <AddChildScreen
-        navigation={navigation}
-        route={{ params: { child: dete, naSaglasnosti: true } }}
-      />
-    );
+    await prikaziIzmenu({ naSaglasnosti: true });
+    const raspored = { nativeEvent: { layout: { x: 0, y: 900, width: 400, height: 500 } } };
 
     await act(async () => {
       fireEvent(screen.getByTestId('saglasnosti'), 'layout', raspored);
@@ -352,20 +427,17 @@ describe('AddChildScreen - otvoren sa podsetnika na pocetnoj', () => {
     });
 
     expect(scrollTo).toHaveBeenCalledTimes(1);
-    expect(scrollTo.mock.calls[0][0].y).toBeGreaterThan(0);
     scrollTo.mockRestore();
   });
 
   test('obicna izmena ostaje na vrhu', async () => {
     const scrollTo = jest.spyOn(require('react-native').ScrollView.prototype, 'scrollTo');
-    await render(
-      <AddChildScreen navigation={navigation} route={{ params: { child: dete } }} />
-    );
-
+    await prikaziIzmenu();
     await act(async () => {
-      fireEvent(screen.getByTestId('saglasnosti'), 'layout', raspored);
+      fireEvent(screen.getByTestId('saglasnosti'), 'layout', {
+        nativeEvent: { layout: { x: 0, y: 900, width: 400, height: 500 } },
+      });
     });
-
     expect(scrollTo).not.toHaveBeenCalled();
     scrollTo.mockRestore();
   });

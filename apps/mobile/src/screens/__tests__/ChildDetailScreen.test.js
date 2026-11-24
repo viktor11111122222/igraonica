@@ -4,6 +4,9 @@ import ChildDetailScreen from '../ChildDetailScreen';
 import { apiRequest } from '../../utils/api';
 
 jest.mock('../../utils/api', () => ({ apiRequest: jest.fn() }));
+jest.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({ user: { phone: '064 123 4567' } }),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback) => require('react').useEffect(callback, [callback]),
 }));
@@ -139,8 +142,9 @@ describe('ChildDetailScreen - saglasnosti', () => {
   test('preskocena pitanja se vide kao neodgovorena i nude dopunu', async () => {
     await prikazi();
 
-    expect(screen.getAllByText('Nije odgovoreno')).toHaveLength(3);
-    expect(screen.getByText('Nije upisano')).toBeTruthy();
+    expect(screen.getAllByText('Nije odgovoreno')).toHaveLength(4);
+    expect(screen.getAllByText('Nije upisano')).toHaveLength(2);
+    expect(screen.getByText('064 123 4567')).toBeTruthy();
     expect(screen.getByText('Dopuni podatke')).toBeTruthy();
   });
 
@@ -150,13 +154,16 @@ describe('ChildDetailScreen - saglasnosti', () => {
       photoConsent: false,
       eatsLunch: true,
       eatsSnack: true,
+      walksConsent: true,
       pickupPersons: 'Baka Mira',
+      extraContactPhone: '065 222 3333',
     };
     odgovori({ child: popunjeno });
     await render(<ChildDetailScreen navigation={navigation} route={{ params: { child: popunjeno } }} />);
 
     expect(screen.getByText('Ne')).toBeTruthy();
-    expect(screen.getAllByText('Da')).toHaveLength(2);
+    expect(screen.getAllByText('Da')).toHaveLength(3);
+    expect(screen.getByText('065 222 3333')).toBeTruthy();
     expect(screen.getByText('Baka Mira')).toBeTruthy();
     expect(screen.getByText('Izmeni podatke')).toBeTruthy();
   });

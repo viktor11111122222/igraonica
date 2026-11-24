@@ -335,7 +335,9 @@ describe('PATCH /api/children/:id', () => {
         photoConsent: false,
         eatsLunch: true,
         eatsSnack: true,
+        walksConsent: true,
         pickupPersons: 'Baka Mira 0641112222',
+        extraContactPhone: '065 222 3333',
       });
 
     expect(res.status).toBe(200);
@@ -343,6 +345,17 @@ describe('PATCH /api/children/:id', () => {
     expect(res.body.child.eatsLunch).toBe(true);
     expect(res.body.child.eatsSnack).toBe(true);
     expect(res.body.child.pickupPersons).toBe('Baka Mira 0641112222');
+    expect(res.body.child.walksConsent).toBe(true);
+    expect(res.body.child.extraContactPhone).toBe('065 222 3333');
+  });
+
+  test('dodatni kontakt telefon mora biti broj', async () => {
+    const res = await request(app)
+      .patch(`/api/children/${childId}`)
+      .set('Authorization', `Bearer ${parentToken}`)
+      .send({ extraContactPhone: 'nema' });
+
+    expect(res.status).toBe(400);
   });
 
   test('saglasnost mora biti da ili ne', async () => {

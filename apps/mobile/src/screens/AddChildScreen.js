@@ -12,7 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
 import BirthDatePicker from '../components/BirthDatePicker';
-import PitanjaODetetu from '../components/PitanjaODetetu';
+import PitanjaODetetu, { nepotpuno } from '../components/PitanjaODetetu';
+import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
 // Najcesce alergije kod dece - da roditelj ne mora da kuca.
@@ -48,6 +49,7 @@ export default function AddChildScreen({ navigation, route }) {
   const vecSkrolovano = useRef(false);
 
   function saglasnostiPostavljene(e) {
+    saglasnostiY.current = e.nativeEvent.layout.y;
     if (!naSaglasnosti || vecSkrolovano.current) return;
     vecSkrolovano.current = true;
     skrol.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - spacing.lg), animated: true });
@@ -65,8 +67,20 @@ export default function AddChildScreen({ navigation, route }) {
     photoConsent: postojece?.photoConsent ?? null,
     eatsLunch: postojece?.eatsLunch ?? null,
     eatsSnack: postojece?.eatsSnack ?? null,
+    walksConsent: postojece?.walksConsent ?? null,
     pickupPersons: postojece?.pickupPersons ?? '',
+    extraContactPhone: postojece?.extraContactPhone ?? '',
   });
+  // Stavka 4 je telefon roditelja - stoji na nalogu, ne na detetu, pa se
+  // ovde samo pokazuje i po potrebi menja na nalogu.
+  const { user, updateProfile, novNalog } = useAuth();
+  // Prvi ekran posle registracije - ispod njega nema nicega.
+  const prviEkran = navigation.getState?.()?.index === 0;
+  const posleRegistracije = !postojece && novNalog && prviEkran;
+  const [telefonRoditelja, setTelefonRoditelja] = useState(user?.phone ?? '');
+  // Istaknuta polja se pune tek posle pokusaja cuvanja.
+  const [greske, setGreske] = useState([]);
+  const saglasnostiY = useRef(0);
   const [loading, setLoading] = useState(false);
 
   function toggleAllergy(name) {
@@ -82,6 +96,13 @@ export default function AddChildScreen({ navigation, route }) {
     return [...picked, ...(extra ? [extra] : [])].join(', ');
   }
 
+  // Posle registracije ovaj ekran je prvi, pa ispod njega nema cemu da se
+  // vrati - tada ide na pocetnu.
+  function nazad() {
+    if (navigation.getState?.()?.index === 0) navigation.navigate('Tabs');
+    else navigation.goBack();
+  }
+
   async function handleSubmit() {
     if (!firstName.trim() || !lastName.trim()) {
       Alert.alert('Nedostaju podaci', 'Ime i prezime su obavezni.');
@@ -92,17 +113,49 @@ export default function AddChildScreen({ navigation, route }) {
       return;
     }
 
+    // Saglasnosti su obavezne: bez odgovora na svako da/ne pitanje i bez
+    // telefona roditelja dete se ne cuva. Ekran se spusti do njih i istakne
+    // sta fali.
+    const fali = nepotpuno(odgovori, telefonRoditelja);
+    setGreske(fali);
+    if (fali.length > 0) {
+      // Poruka navodi samo ono sto stvarno fali, da roditelj ne trazi gresku
+      // u polju koje je vec dobro popunio.
+      const nedostaje = [];
+      if (fali.some((k) => !['telefonRoditelja', 'extraContactPhone'].includes(k))) {
+        nedostaje.push('odgovorite sa Da ili Ne na sve stavke oznacene sa *');
+      }
+      if (fali.includes('telefonRoditelja')) {
+        nedostaje.push('upisite ispravan kontakt telefon roditelja/staratelja (stavka 4)');
+      }
+      if (fali.includes('extraContactPhone')) {
+        nedostaje.push('ispravite dodatni kontakt telefon ili ostavite polje prazno (stavka 5)');
+      }
+      const tekst = nedostaje.join(' i ');
+      Alert.alert('Nedostaju saglasnosti', `Pre cuvanja ${tekst}.`);
+      skrol.current?.scrollTo({ y: Math.max(0, saglasnostiY.current - spacing.lg), animated: true });
+      return;
+    }
+
     const allergies = buildAllergies();
 
     const saglasnosti = {
       photoConsent: odgovori.photoConsent,
       eatsLunch: odgovori.eatsLunch,
       eatsSnack: odgovori.eatsSnack,
+      walksConsent: odgovori.walksConsent,
       pickupPersons: odgovori.pickupPersons.trim() || null,
+      extraContactPhone: odgovori.extraContactPhone.trim() || null,
     };
 
     setLoading(true);
     try {
+      // Telefon roditelja se cuva na nalogu, i to pre deteta - ako ne prodje,
+      // ne sme da ostane dete sacuvano a broj nepromenjen bez znanja roditelja.
+      if (telefonRoditelja.trim() !== (user?.phone ?? '')) {
+        await updateProfile({ phone: telefonRoditelja.trim() });
+      }
+
       if (postojece) {
         // Pri izmeni prazno polje znaci "obrisano", pa ide null - inace bi
         // server zadrzao staru vrednost.
@@ -120,7 +173,7 @@ export default function AddChildScreen({ navigation, route }) {
         });
         // Ekran deteta pri povratku sam ucitava sveze podatke (izmena je
         // vec ocistila kes).
-        navigation.goBack();
+        nazad();
         return;
       }
 
@@ -139,8 +192,8 @@ export default function AddChildScreen({ navigation, route }) {
         },
       });
 
-      Alert.alert('Gotovo', `${firstName.trim()} je dodat/a. QR kod je spreman.`, [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert('Gotovo', `Dete ${firstName.trim()} je dodato. QR kod je spreman.`, [
+        { text: 'OK', onPress: nazad },
       ]);
     } catch (err) {
       Alert.alert('Greska', err.message);
@@ -156,6 +209,16 @@ export default function AddChildScreen({ navigation, route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
+      {posleRegistracije && (
+        <View style={styles.dobrodoslica}>
+          <Text style={styles.dobrodoslicaNaslov}>Dobro dosli!</Text>
+          <Text style={styles.dobrodoslicaTekst}>
+            Dodajte dete i popunite saglasnosti - osoblju trebaju pre prvog
+            dolaska. Dete mozete dodati i kasnije, sa taba Moj paket.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.card}>
         <Text style={styles.label}>Ime *</Text>
         <TextInput
@@ -267,7 +330,13 @@ export default function AddChildScreen({ navigation, route }) {
       </View>
 
       <View onLayout={saglasnostiPostavljene} testID="saglasnosti">
-        <PitanjaODetetu odgovori={odgovori} onChange={setOdgovori} />
+        <PitanjaODetetu
+          odgovori={odgovori}
+          onChange={setOdgovori}
+          telefonRoditelja={telefonRoditelja}
+          onTelefonRoditelja={setTelefonRoditelja}
+          greske={greske}
+        />
       </View>
 
       <PressableScale
@@ -289,6 +358,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.xl, paddingBottom: spacing.xxxl },
 
+  dobrodoslica: {
+    backgroundColor: colors.primaryTint,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  dobrodoslicaNaslov: { ...type.heading, color: colors.text },
+  dobrodoslicaTekst: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 17 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,

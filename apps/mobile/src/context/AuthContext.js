@@ -11,6 +11,9 @@ export const ZAPAMCEN_EMAIL = 'zapamcen_email';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  // Tek otvoren nalog: aplikacija tada odmah otvara dodavanje deteta, jer se
+  // saglasnosti za dete popunjavaju pri registraciji.
+  const [novNalog, setNovNalog] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
@@ -72,11 +75,13 @@ export function AuthProvider({ children }) {
     });
     kes.ponisti();
     await storage.setItem('token', data.token);
+    setNovNalog(true);
     setUser(data.user);
     return data;
   }
 
   async function logout() {
+    setNovNalog(false);
     await storage.deleteItem('token');
     kes.ponisti();
     setUser(null);
@@ -104,7 +109,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, updateProfile, deleteAccount }}
+      value={{ user, loading, novNalog, login, register, logout, updateProfile, deleteAccount }}
     >
       {children}
     </AuthContext.Provider>
