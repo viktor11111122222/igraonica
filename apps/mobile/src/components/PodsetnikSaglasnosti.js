@@ -4,52 +4,44 @@ import PressableScale from './PressableScale';
 import { PITANJA, DOPUNSKE } from './PitanjaODetetu';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
-// Fali bar jedan obavezan odgovor - dete dodato pre ove forme ili iz starije
-// verzije aplikacije.
+// Fali bar jedna stavka. Sve su obavezne, pa su "obavezne" i "sve" isto;
+// oba imena ostaju jer ih koriste ekran deteta i Moj paket.
 export function nedostajuObavezne(dete) {
-  return PITANJA.some(({ kljuc }) => dete[kljuc] == null);
+  return (
+    PITANJA.some(({ kljuc }) => dete[kljuc] == null) ||
+    DOPUNSKE.some((kljuc) => !(dete[kljuc] || '').trim())
+  );
 }
 
-// Fali bilo sta, i neobavezne stavke 4 i 5 - na njih podsetnik takodje
-// podseca, jer osoblju pomazu kad roditelj nije dostupan.
-export function nedostajuSaglasnosti(dete) {
-  return nedostajuObavezne(dete) || DOPUNSKE.some((kljuc) => !dete[kljuc]);
+export const nedostajuSaglasnosti = nedostajuObavezne;
+
+// Da li ovaj roditelj uopste vidi podsetnik. Osoblje ga u panelu gasi svima
+// (podesavanje) ili jednom roditelju (nalog), a roditelj moze sam da ga
+// skloni - osoblje ga tada moze vratiti.
+export function podsetnikVidljiv(korisnik, podesavanja) {
+  return (
+    podesavanja?.mobile_consent_reminder !== 'false' &&
+    korisnik?.consentReminder !== false &&
+    !korisnik?.contactReminderHiddenAt
+  );
 }
 
-// Na sta sme da se podseti ovaj roditelj. Osoblje u panelu gasi podsetnik
-// svima (podesavanje) ili jednom roditelju (nalog); blazi podsetnik za
-// kontakte roditelj moze i sam da skloni. Obavezne saglasnosti roditelj ne
-// moze da skloni - samo osoblje.
-export function podsetnikDozvoljen(korisnik, podesavanja) {
-  const ukljuceno =
-    podesavanja?.mobile_consent_reminder !== 'false' && korisnik?.consentReminder !== false;
-  return {
-    obavezne: ukljuceno,
-    kontakti: ukljuceno && !korisnik?.contactReminderHiddenAt,
-  };
+// Da li za dete treba nesto istaci.
+export function treba(dete, vidljiv = true) {
+  return vidljiv && nedostajuObavezne(dete);
 }
 
-// Da li za dete treba nesto istaci, po onome sto je roditelju dozvoljeno.
-export function treba(dete, dozvola) {
-  if (nedostajuObavezne(dete)) return dozvola.obavezne;
-  return dozvola.kontakti && nedostajuSaglasnosti(dete);
-}
-
-// Baner na pocetnoj koji podseca roditelja da popuni saglasnosti. Kad fali
-// nesto obavezno, poziva da se saglasnosti popune; kad fale samo dodatni
-// kontakt i ovlascene osobe, blaze poziva da se dopune i tada ga roditelj moze
-// skloniti. Nestaje cim je za svu decu sve upisano.
-export default function PodsetnikSaglasnosti({ deca, navigation, dozvola, onSakrij }) {
-  const dozvoljeno = dozvola || { obavezne: true, kontakti: true };
-  const bez = (deca || []).filter((d) => treba(d, dozvoljeno));
+// Baner na pocetnoj koji podseca roditelja da popuni saglasnosti za decu
+// dodatu pre ove forme ili iz starije verzije aplikacije (nova deca ne mogu
+// da se sacuvaju bez njih). Nestaje cim je za svu decu sve upisano.
+export default function PodsetnikSaglasnosti({ deca, navigation, vidljiv = true, onSakrij }) {
+  const bez = (deca || []).filter((d) => treba(d, vidljiv));
   if (bez.length === 0) return null;
 
-  const obavezno = bez.some(nedostajuObavezne);
   const jedno = bez.length === 1;
   const imena = bez.map((d) => d.firstName).join(', ');
   // Imena se ne menjaju po padezima ("Za Marko"), pa stoje ispred dvotacke.
   const za = jedno ? `Dete ${imena}` : `Deca ${imena}`;
-  const naslov = obavezno ? 'Popunite saglasnosti' : 'Dopunite kontakte';
 
   // Jedno dete vodi pravo na pitanja; za vise dece roditelj bira na Mom paketu.
   function otvori() {
@@ -60,7 +52,7 @@ export default function PodsetnikSaglasnosti({ deca, navigation, dozvola, onSakr
   function sakrij() {
     Alert.alert(
       'Sakriti podsetnik?',
-      'Podsetnik za dodatni kontakt i osobe koje smeju da preuzmu dete vise se nece prikazivati. Podatke uvek mozete dopuniti na stranici deteta.',
+      'Podsetnik se vise nece prikazivati. Saglasnosti i kontakte uvek mozete popuniti na stranici deteta.',
       [
         { text: 'Otkazi', style: 'cancel' },
         { text: 'Sakrij', onPress: () => onSakrij?.() },
@@ -73,25 +65,18 @@ export default function PodsetnikSaglasnosti({ deca, navigation, dozvola, onSakr
       style={styles.baner}
       onPress={otvori}
       accessibilityRole="button"
-      accessibilityLabel={`${naslov} za ${imena}`}
+      accessibilityLabel={`Popunite saglasnosti za ${imena}`}
     >
       <View style={styles.ikona}>
-        <Ionicons
-          name={obavezno ? 'shield-checkmark-outline' : 'people-outline'}
-          size={22}
-          color={colors.primaryDarker}
-        />
+        <Ionicons name="shield-checkmark-outline" size={22} color={colors.primaryDarker} />
       </View>
       <View style={styles.tekst}>
-        <Text style={styles.naslov}>{naslov}</Text>
+        <Text style={styles.naslov}>Popunite saglasnosti</Text>
         <Text style={styles.opis}>
-          {obavezno
-            ? `${za}: nedostaju obavezne saglasnosti. Popunite ih pre sledeceg dolaska u igraonicu.`
-            : `${za}: upisite dodatni kontakt telefon i osobe koje smeju da preuzmu dete. Nije obavezno, ali pomaze osoblju.`}
+          {`${za}: nedostaju saglasnosti ili kontakti. Popunite ih pre sledeceg dolaska u igraonicu.`}
         </Text>
       </View>
-      {/* Obavezne saglasnosti se ne sklanjaju - samo blazi podsetnik. */}
-      {!obavezno && onSakrij ? (
+      {onSakrij ? (
         <Pressable
           onPress={sakrij}
           hitSlop={10}

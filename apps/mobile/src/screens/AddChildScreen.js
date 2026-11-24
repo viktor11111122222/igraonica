@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../utils/api';
 import PressableScale from '../components/PressableScale';
 import BirthDatePicker from '../components/BirthDatePicker';
-import PitanjaODetetu, { nepotpuno } from '../components/PitanjaODetetu';
+import PitanjaODetetu, { DOPUNSKE, nepotpuno } from '../components/PitanjaODetetu';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
@@ -118,13 +118,23 @@ export default function AddChildScreen({ navigation, route }) {
       // Poruka navodi samo ono sto stvarno fali, da roditelj ne trazi gresku
       // u polju koje je vec dobro popunio.
       const nedostaje = [];
-      if (fali.some((k) => k !== 'extraContactPhone')) {
-        nedostaje.push('odgovorite sa Da ili Ne na sve stavke oznacene sa *');
+      if (fali.some((k) => !DOPUNSKE.includes(k))) {
+        nedostaje.push('odgovorite sa Da ili Ne na sva pitanja');
       }
       if (fali.includes('extraContactPhone')) {
-        nedostaje.push('ispravite dodatni kontakt telefon ili ostavite polje prazno (stavka 4)');
+        nedostaje.push(
+          odgovori.extraContactPhone.trim()
+            ? 'ispravite broj dodatnog kontakta (stavka 4)'
+            : 'upisite dodatni kontakt ili "Nema" (stavka 4)'
+        );
       }
-      const tekst = nedostaje.join(' i ');
+      if (fali.includes('pickupPersons')) {
+        nedostaje.push('upisite ko sme da preuzme dete ili "Samo roditelji" (stavka 5)');
+      }
+      const tekst =
+        nedostaje.length > 1
+          ? `${nedostaje.slice(0, -1).join(', ')} i ${nedostaje[nedostaje.length - 1]}`
+          : nedostaje[0];
       Alert.alert('Nedostaju saglasnosti', `Pre cuvanja ${tekst}.`);
       skrol.current?.scrollTo({ y: Math.max(0, saglasnostiY.current - spacing.lg), animated: true });
       return;

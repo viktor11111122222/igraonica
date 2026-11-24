@@ -31,6 +31,13 @@ function Saglasnost({ label, value }) {
   return <span className="badge amber">{label}: ?</span>;
 }
 
+// Dodatni kontakt i ovlascene osobe su obavezni; prazno polje znaci da
+// roditelj jos nije odgovorio, pa se istice kao i "?" kod saglasnosti.
+function Upis({ value }) {
+  if (!value) return <span className="badge amber">nije upisano</span>;
+  return value;
+}
+
 export default function Children() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -158,10 +165,10 @@ export default function Children() {
                           </div>
                         </td>
                         <td className="muted" data-label="Dodatni kontakt">
-                          {c.extraContactPhone || '—'}
+                          <Upis value={c.extraContactPhone} />
                         </td>
                         <td className="muted pre-line" data-label="Preuzima">
-                          {c.pickupPersons || '—'}
+                          <Upis value={c.pickupPersons} />
                         </td>
                         <td data-label="Paket roditelja">
                           {c.parentRemainingHours > 0 ? (

@@ -56,6 +56,14 @@ async function odgovoriNaSve(odgovor = 'Da') {
   }
 }
 
+const OSOBE = 'npr. Mira Petrovic, 064 111 2222\nJovan Petrovic, 065 333 4444';
+
+// Stavke 4 i 5 su obavezne; roditelj bez dodatnih osoba to i upise.
+async function upisiKontakte(kontakt = 'Nema', osobe = 'Samo roditelji') {
+  await upisi('npr. 065 222 3333', kontakt);
+  await upisi(OSOBE, osobe);
+}
+
 async function popuniObavezno() {
   await upisi('Ime deteta', 'Lena');
   await upisi('Prezime deteta', 'Petrovic');
@@ -63,6 +71,7 @@ async function popuniObavezno() {
     fireEvent.press(screen.getByTestId('izaberi-datum'));
   });
   await odgovoriNaSve();
+  await upisiKontakte();
 }
 
 beforeEach(() => {
@@ -162,6 +171,7 @@ describe('AddChildScreen - slanje', () => {
       fireEvent.press(screen.getByTestId('izaberi-datum'));
     });
     await odgovoriNaSve();
+    await upisiKontakte();
 
     await pritisni('Dodaj dete');
 
@@ -262,7 +272,7 @@ describe('AddChildScreen - saglasnosti', () => {
     expect(mockUpdateProfile).not.toHaveBeenCalled();
   });
 
-  test('salje sve stavke; neobavezne prazne idu kao null', async () => {
+  test('salje sve stavke, i "Nema" kad roditelj nema nikoga', async () => {
     await prikazi();
     await popuniObavezno();
     await act(async () => {
@@ -281,8 +291,8 @@ describe('AddChildScreen - saglasnosti', () => {
           eatsLunch: true,
           eatsSnack: true,
           walksConsent: true,
-          pickupPersons: null,
-          extraContactPhone: null,
+          pickupPersons: 'Samo roditelji',
+          extraContactPhone: 'Nema',
         }),
       })
     );
@@ -313,12 +323,32 @@ describe('AddChildScreen - saglasnosti', () => {
   test('neispravan dodatni kontakt se odbija', async () => {
     await prikazi();
     await popuniObavezno();
-    await upisi('npr. 065 222 3333', 'nemam');
+    await upisi('npr. 065 222 3333', '064 12');
 
     await pritisni('Dodaj dete');
 
     expect(apiRequest).not.toHaveBeenCalled();
     expect(screen.getByText('Broj telefona nije ispravan.')).toBeTruthy();
+  });
+
+  test('prazni dodatni kontakt i ovlascene osobe ne prolaze, uz uputstvo sta upisati', async () => {
+    await prikazi();
+    await popuniObavezno();
+    await upisiKontakte('', '');
+    // Pre pokusaja cuvanja ispod polja stoji sitno uputstvo.
+    expect(screen.getByText('Ako nemate nikoga drugog, upisite "Nema".')).toBeTruthy();
+
+    await pritisni('Dodaj dete');
+
+    expect(apiRequest).not.toHaveBeenCalled();
+    expect(screen.getByText('Upisite broj telefona, ili "Nema" ako nemate nikoga.')).toBeTruthy();
+    expect(screen.getByText('Upisite ko sme da preuzme dete, ili "Samo roditelji".')).toBeTruthy();
+    // Greska kaze isto sto i uputstvo, pa se uputstvo tada ne ponavlja.
+    expect(screen.queryByText('Ako nemate nikoga drugog, upisite "Nema".')).toBeNull();
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Nedostaju saglasnosti',
+      'Pre cuvanja upisite dodatni kontakt ili "Nema" (stavka 4) i upisite ko sme da preuzme dete ili "Samo roditelji" (stavka 5).'
+    );
   });
 
 });
@@ -381,7 +411,7 @@ describe('AddChildScreen - izmena postojeceg deteta', () => {
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Saglasnost za konzumiranje rucka: Da'));
     });
-    await upisi('npr. Mira Petrovic, 064 111 2222\nJovan Petrovic, 065 333 4444', 'Deka Pera');
+    await upisiKontakte('065 222 3333', 'Deka Pera');
 
     await pritisni('Sacuvaj izmene');
 

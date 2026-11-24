@@ -1,12 +1,14 @@
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PressableScale from './PressableScale';
-import { jeTelefon } from '../utils/telefon';
+import { jeKontakt } from '../utils/telefon';
 import { colors, radius, spacing, type, shadow } from '../theme';
 
 // "Saglasnosti i informacije o detetu" - sest stavki koje igraonica trazi za
-// svako dete. Da/ne stavke su obavezne pri dodavanju deteta; dodatni kontakt i
-// ovlascene osobe nisu, ali ih podsetnik na pocetnoj trazi dok nisu upisani.
+// svako dete, sve obavezne. Za dodatni kontakt i ovlascene osobe roditelj koji
+// nema nikoga to i upise ("Nema", "Samo roditelji") - osoblju je bitno da
+// polje nije prazno, jer prazno ne kaze da li roditelj nema nikoga ili je
+// samo preskocio pitanje.
 // Telefon roditelja ovde ne stoji - to je podatak roditelja, ne deteta, i
 // upisuje se pri registraciji i na tabu Moj paket.
 //
@@ -46,16 +48,22 @@ export const PITANJA = [
   },
 ];
 
-// Neobavezne stavke (4 i 5): ne traze se pri cuvanju, ali ih podsetnik trazi.
+// Tekstualne stavke (4 i 5), takodje obavezne.
 export const DOPUNSKE = ['extraContactPhone', 'pickupPersons'];
 
-// Sta fali za cuvanje: obavezni odgovori i ispravan dodatni telefon, ako je
-// upisan. Vraca kljuceve.
+// Sta fali za cuvanje. Vraca kljuceve.
 export function nepotpuno(odgovori) {
   const fali = PITANJA.filter(({ kljuc }) => odgovori[kljuc] == null).map((p) => p.kljuc);
-  const dodatni = (odgovori.extraContactPhone || '').trim();
-  if (dodatni && !jeTelefon(dodatni)) fali.push('extraContactPhone');
+  if (!jeKontakt(odgovori.extraContactPhone)) fali.push('extraContactPhone');
+  if (!(odgovori.pickupPersons || '').trim()) fali.push('pickupPersons');
   return fali;
+}
+
+// Greska za dodatni kontakt: prazno polje i pogresan broj traze drugo.
+function greskaKontakta(vrednost) {
+  const tekst = (vrednost || '').trim();
+  if (!tekst) return 'Upisite broj telefona, ili "Nema" ako nemate nikoga.';
+  return 'Broj telefona nije ispravan.';
 }
 
 function DaNe({ vrednost, onChange, oznaka }) {
@@ -85,7 +93,7 @@ function DaNe({ vrednost, onChange, oznaka }) {
   );
 }
 
-function Stavka({ broj, naslov, opis, obavezno, greska, children }) {
+function Stavka({ broj, naslov, opis, obavezno, greska, napomena, children }) {
   return (
     <View style={[styles.stavka, greska && styles.stavkaGreska]}>
       <Text style={styles.naslov}>
@@ -94,6 +102,9 @@ function Stavka({ broj, naslov, opis, obavezno, greska, children }) {
       </Text>
       {opis ? <Text style={styles.opis}>{opis}</Text> : null}
       {children}
+      {/* Sitno uputstvo ispod polja - sta upisati kad nema nikoga. Dok stoji
+          greska, ona vec kaze isto, pa se uputstvo ne ponavlja. */}
+      {napomena && !greska ? <Text style={styles.napomena}>{napomena}</Text> : null}
       {greska ? <Text style={styles.greskaTekst}>{greska}</Text> : null}
     </View>
   );
@@ -128,9 +139,8 @@ export default function PitanjaODetetu({ odgovori, onChange, greske = [] }) {
         <Text style={styles.sectionTitle}>Saglasnosti i informacije o detetu</Text>
       </View>
       <Text style={styles.sectionHint}>
-        Stavke oznacene sa * su obavezne. Stavke 4 i 5 nisu obavezne, ali vam
-        preporucujemo da ih popunite. Odgovore mozete promeniti u svakom
-        trenutku na stranici deteta.
+        Sve stavke su obavezne. Odgovore mozete promeniti u svakom trenutku na
+        stranici deteta.
       </Text>
 
       {PITANJA.slice(0, 3).map(daNe)}
@@ -139,7 +149,9 @@ export default function PitanjaODetetu({ odgovori, onChange, greske = [] }) {
         broj={4}
         naslov="Dodatni kontakt telefon"
         opis="Broj osobe koju osoblje zove ako Vi niste dostupni (npr. drugi roditelj, baka, deka)."
-        greska={imaGresku('extraContactPhone') ? 'Broj telefona nije ispravan.' : null}
+        obavezno
+        napomena='Ako nemate nikoga drugog, upisite "Nema".'
+        greska={imaGresku('extraContactPhone') ? greskaKontakta(odgovori.extraContactPhone) : null}
       >
         <TextInput
           style={styles.input}
@@ -147,7 +159,12 @@ export default function PitanjaODetetu({ odgovori, onChange, greske = [] }) {
           placeholderTextColor={colors.textFaint}
           value={odgovori.extraContactPhone}
           onChangeText={postavi('extraContactPhone')}
-          keyboardType="phone-pad"
+          // Obicna tastatura: osim broja, roditelj moze da upise i "Nema".
+          keyboardType="default"
+          autoCapitalize="sentences"
+          // Bez autokorekcije: engleska tastatura je "Nema" menjala u "Ben's".
+          autoCorrect={false}
+          spellCheck={false}
           accessibilityLabel="Dodatni kontakt telefon"
         />
       </Stavka>
@@ -155,7 +172,14 @@ export default function PitanjaODetetu({ odgovori, onChange, greske = [] }) {
       <Stavka
         broj={5}
         naslov="Ovlascene osobe za preuzimanje deteta"
-        opis="Osobe koje, osim roditelja/staratelja, smeju da preuzmu Vase dete iz Kids Club-a. Za svaku osobu upisite ime, prezime i broj telefona, svaku u novi red. Ako polje ostavite prazno, dete preuzima samo roditelj/staratelj."
+        opis="Osobe koje, osim roditelja/staratelja, smeju da preuzmu Vase dete iz Kids Club-a. Za svaku osobu upisite ime, prezime i broj telefona, svaku u novi red."
+        obavezno
+        napomena='Ako dete preuzimate samo Vi (roditelji/staratelji), upisite "Samo roditelji".'
+        greska={
+          imaGresku('pickupPersons')
+            ? 'Upisite ko sme da preuzme dete, ili "Samo roditelji".'
+            : null
+        }
       >
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -164,6 +188,9 @@ export default function PitanjaODetetu({ odgovori, onChange, greske = [] }) {
           value={odgovori.pickupPersons}
           onChangeText={postavi('pickupPersons')}
           multiline
+          // Imena i brojevi - autokorekcija bi ih kvarila.
+          autoCorrect={false}
+          spellCheck={false}
           accessibilityLabel="Ovlascene osobe za preuzimanje deteta"
         />
       </Stavka>
@@ -206,6 +233,13 @@ const styles = StyleSheet.create({
   naslov: { ...type.label, color: colors.text },
   zvezdica: { color: colors.danger },
   opis: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 17 },
+  napomena: {
+    ...type.caption,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
+    lineHeight: 17,
+  },
   greskaTekst: { ...type.caption, color: colors.danger, marginTop: spacing.xs },
   daNe: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   daNeCelija: { flex: 1 },

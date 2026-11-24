@@ -69,8 +69,8 @@ describe('PodsetnikSaglasnosti', () => {
   });
 });
 
-describe('PodsetnikSaglasnosti - neobavezne stavke', () => {
-  test('podseca i kad fale samo dodatni kontakt i ovlascene osobe, blazim tekstom', async () => {
+describe('PodsetnikSaglasnosti - stavke 4 i 5 su obavezne', () => {
+  test('podseca i kad fale samo dodatni kontakt ili ovlascene osobe', async () => {
     await render(
       <PodsetnikSaglasnosti
         deca={[{ ...popunjeno, extraContactPhone: null }]}
@@ -78,77 +78,54 @@ describe('PodsetnikSaglasnosti - neobavezne stavke', () => {
       />
     );
 
-    expect(screen.queryByText('Popunite saglasnosti')).toBeNull();
-    expect(screen.getByText('Dopunite kontakte')).toBeTruthy();
+    expect(screen.getByText('Popunite saglasnosti')).toBeTruthy();
   });
 
-  test('obavezne imaju prednost u naslovu', async () => {
+  test('"Nema" i "Samo roditelji" su odgovor', async () => {
     await render(
       <PodsetnikSaglasnosti
-        deca={[{ ...popunjeno, extraContactPhone: null }, prazno]}
+        deca={[{ ...popunjeno, extraContactPhone: 'Nema', pickupPersons: 'Samo roditelji' }]}
         navigation={navigation}
       />
     );
 
-    expect(screen.getByText('Popunite saglasnosti')).toBeTruthy();
+    expect(screen.queryByText('Popunite saglasnosti')).toBeNull();
   });
 });
 
 describe('PodsetnikSaglasnosti - sklanjanje i kontrola osoblja', () => {
-  const samoKontakti = { ...popunjeno, extraContactPhone: null };
+  const { podsetnikVidljiv } = require('../PodsetnikSaglasnosti');
 
-  test('roditelj sklanja blazi podsetnik preko X, uz potvrdu', async () => {
+  test('roditelj sklanja podsetnik preko X, uz potvrdu', async () => {
     const { Alert } = require('react-native');
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const onSakrij = jest.fn();
     await render(
-      <PodsetnikSaglasnosti deca={[samoKontakti]} navigation={navigation} onSakrij={onSakrij} />
+      <PodsetnikSaglasnosti deca={[prazno]} navigation={navigation} onSakrij={onSakrij} />
     );
 
     fireEvent.press(screen.getByLabelText('Sakrij podsetnik'));
-    const dugmad = alert.mock.calls[0][2];
-    dugmad.find((d) => d.text === 'Sakrij').onPress();
+    alert.mock.calls[0][2].find((d) => d.text === 'Sakrij').onPress();
 
     expect(onSakrij).toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
     alert.mockRestore();
   });
 
-  test('obavezne saglasnosti nemaju X', async () => {
+  test('sklonjen podsetnik se ne prikazuje', async () => {
     await render(
-      <PodsetnikSaglasnosti deca={[prazno]} navigation={navigation} onSakrij={() => {}} />
+      <PodsetnikSaglasnosti
+        deca={[prazno]}
+        navigation={navigation}
+        vidljiv={podsetnikVidljiv({ contactReminderHiddenAt: '2026-11-24' }, {})}
+      />
     );
-
-    expect(screen.getByText('Popunite saglasnosti')).toBeTruthy();
-    expect(screen.queryByLabelText('Sakrij podsetnik')).toBeNull();
+    expect(screen.queryByText('Popunite saglasnosti')).toBeNull();
   });
 
-  test('sklonjen blazi podsetnik se ne prikazuje, obavezni i dalje da', async () => {
-    const { podsetnikDozvoljen } = require('../PodsetnikSaglasnosti');
-    const dozvola = podsetnikDozvoljen({ contactReminderHiddenAt: '2026-11-24' }, {});
-
-    await render(
-      <PodsetnikSaglasnosti deca={[samoKontakti]} navigation={navigation} dozvola={dozvola} />
-    );
-    expect(screen.queryByText('Dopunite kontakte')).toBeNull();
-
-    await render(
-      <PodsetnikSaglasnosti deca={[prazno]} navigation={navigation} dozvola={dozvola} />
-    );
-    expect(screen.getByText('Popunite saglasnosti')).toBeTruthy();
-  });
-
-  test('osoblje gasi ceo podsetnik roditelju ili svima', async () => {
-    const { podsetnikDozvoljen } = require('../PodsetnikSaglasnosti');
-
-    for (const dozvola of [
-      podsetnikDozvoljen({ consentReminder: false }, {}),
-      podsetnikDozvoljen({}, { mobile_consent_reminder: 'false' }),
-    ]) {
-      await render(
-        <PodsetnikSaglasnosti deca={[prazno]} navigation={navigation} dozvola={dozvola} />
-      );
-      expect(screen.queryByText('Popunite saglasnosti')).toBeNull();
-    }
+  test('osoblje gasi podsetnik roditelju ili svima', async () => {
+    expect(podsetnikVidljiv({ consentReminder: false }, {})).toBe(false);
+    expect(podsetnikVidljiv({}, { mobile_consent_reminder: 'false' })).toBe(false);
+    expect(podsetnikVidljiv({ consentReminder: true }, { mobile_consent_reminder: 'true' })).toBe(true);
   });
 });

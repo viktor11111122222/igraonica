@@ -21,11 +21,18 @@ const validacijaSaglasnosti = [
     .isString()
     .isLength({ max: 500 })
     .withMessage('Spisak osoba koje preuzimaju dete je predugacak.'),
+  // Broj telefona, ili rec kojom roditelj kaze da nema nikoga ("Nema").
+  // Cim ima cifara, mora biti ispravan broj - "064 12" nije ni broj ni odgovor.
   body('extraContactPhone')
     .optional({ values: 'falsy' })
     .trim()
-    .matches(/^\+?[\d\s\-/()]{6,20}$/)
-    .withMessage('Dodatni kontakt telefon nije ispravan.'),
+    .isLength({ max: 100 })
+    .custom((v) =>
+      /\d/.test(v)
+        ? /^\+?[\d\s\-/()]{6,20}$/.test(v) && v.replace(/\D/g, '').length >= 6
+        : v.length >= 2
+    )
+    .withMessage('Dodatni kontakt: upisite ispravan broj telefona ili "Nema".'),
 ];
 
 function generateQRCode() {
@@ -66,8 +73,18 @@ router.get('/', async (req, res) => {
 // Filteri po saglasnostima za spisak dece u panelu. "Ne" je izricit odgovor
 // roditelja (false), a "nije odgovoreno" je null - to su dve razlicite stvari.
 const FILTERI_SAGLASNOSTI = {
+  // Sve stavke su obavezne - i dodatni kontakt i ovlascene osobe.
   nepotpuno: {
-    OR: [{ photoConsent: null }, { eatsLunch: null }, { eatsSnack: null }, { walksConsent: null }],
+    OR: [
+      { photoConsent: null },
+      { eatsLunch: null },
+      { eatsSnack: null },
+      { walksConsent: null },
+      { extraContactPhone: null },
+      { extraContactPhone: '' },
+      { pickupPersons: null },
+      { pickupPersons: '' },
+    ],
   },
   bez_slikanja: { photoConsent: false },
   bez_rucka: { eatsLunch: false },

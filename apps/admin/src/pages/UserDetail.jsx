@@ -228,9 +228,11 @@ export default function UserDetail() {
                       </td>
                       <td data-label="Setnja">{daNe(c.walksConsent)}</td>
                       <td className="muted" data-label="Dodatni kontakt">
-                        {c.extraContactPhone || '—'}
+                        {c.extraContactPhone || <span className="muted">?</span>}
                       </td>
-                      <td className="muted" data-label="Preuzima">{c.pickupPersons || '—'}</td>
+                      <td className="muted pre-line" data-label="Preuzima">
+                        {c.pickupPersons || <span className="muted">?</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -247,7 +249,7 @@ export default function UserDetail() {
             {reminderError && <Alert>{reminderError}</Alert>}
             <SettingRow
               label="Podsetnik za saglasnosti"
-              hint="Baner na pocetnoj aplikacije koji trazi da roditelj popuni saglasnosti i kontakte za dete. Iskljuceno: ovaj roditelj ga ne vidi uopste."
+              hint="Baner na pocetnoj aplikacije koji trazi da roditelj popuni saglasnosti i kontakte za decu kojoj nesto fali. Iskljuceno: ovaj roditelj ga ne vidi."
             >
               <Switch
                 checked={user.consentReminder !== false}
@@ -255,11 +257,11 @@ export default function UserDetail() {
               />
             </SettingRow>
             <SettingRow
-              label="Podsetnik za dodatni kontakt i ovlascene osobe"
+              label="Roditelj nije sklonio podsetnik"
               hint={
                 user.contactReminderHiddenAt
-                  ? `Sklonjen ${formatDateTime(user.contactReminderHiddenAt)}. Ukljucite ga da ga roditelj ponovo vidi.`
-                  : 'Blazi podsetnik za stavke 4 i 5 (dodatni kontakt i ovlascene osobe). Roditelj moze sam da ga skloni u aplikaciji.'
+                  ? `Roditelj ga je sklonio ${formatDateTime(user.contactReminderHiddenAt)}. Ukljucite da ga ponovo vidi.`
+                  : 'Roditelj moze sam da skloni podsetnik u aplikaciji. Tada se ovde iskljuci, a vi ga mozete vratiti.'
               }
             >
               <Switch

@@ -349,13 +349,25 @@ describe('PATCH /api/children/:id', () => {
     expect(res.body.child.extraContactPhone).toBe('065 222 3333');
   });
 
-  test('dodatni kontakt telefon mora biti broj', async () => {
+  test('dodatni kontakt: pogresan broj se odbija', async () => {
     const res = await request(app)
       .patch(`/api/children/${childId}`)
       .set('Authorization', `Bearer ${parentToken}`)
-      .send({ extraContactPhone: 'nema' });
+      .send({ extraContactPhone: '064 12' });
 
     expect(res.status).toBe(400);
+  });
+
+  // Roditelj koji nema nikoga to i upise - polje ne ostaje prazno.
+  test('dodatni kontakt moze biti "Nema"', async () => {
+    const res = await request(app)
+      .patch(`/api/children/${childId}`)
+      .set('Authorization', `Bearer ${parentToken}`)
+      .send({ extraContactPhone: 'Nema', pickupPersons: 'Samo roditelji' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.child.extraContactPhone).toBe('Nema');
+    expect(res.body.child.pickupPersons).toBe('Samo roditelji');
   });
 
   test('saglasnost mora biti da ili ne', async () => {
@@ -472,7 +484,14 @@ describe('GET /api/children/all - filter po saglasnostima', () => {
   let nepotpuna;
 
   beforeAll(async () => {
-    const osnovno = { parentId, dateOfBirth: new Date('2021-05-05'), eatsLunch: true, eatsSnack: true };
+    const osnovno = {
+      parentId,
+      dateOfBirth: new Date('2021-05-05'),
+      eatsLunch: true,
+      eatsSnack: true,
+      extraContactPhone: 'Nema',
+      pickupPersons: 'Samo roditelji',
+    };
     saglasna = await prisma.child.create({
       data: { ...osnovno, firstName: 'Filter', lastName: 'Sve', qrCode: 'FLT-SVE', photoConsent: true, walksConsent: true },
     });
@@ -501,6 +520,30 @@ describe('GET /api/children/all - filter po saglasnostima', () => {
     const res = await trazi('nepotpuno');
 
     expect(ids(res)).toEqual([nepotpuna.id]);
+  });
+
+  test('prazan dodatni kontakt ili ovlascene osobe se racuna kao nepotpuno', async () => {
+    const bezKontakta = await prisma.child.create({
+      data: {
+        parentId,
+        dateOfBirth: new Date('2021-05-05'),
+        firstName: 'Filter',
+        lastName: 'BezKontakta',
+        qrCode: 'FLT-KONT',
+        photoConsent: true,
+        eatsLunch: true,
+        eatsSnack: true,
+        walksConsent: true,
+        extraContactPhone: null,
+        pickupPersons: 'Samo roditelji',
+      },
+    });
+
+    const res = await trazi('nepotpuno');
+
+    expect(ids(res)).toEqual(expect.arrayContaining([nepotpuna.id, bezKontakta.id]));
+    expect(ids(res)).not.toContain(saglasna.id);
+    await prisma.child.delete({ where: { id: bezKontakta.id } });
   });
 
   test('nepoznat filter vraca sve', async () => {

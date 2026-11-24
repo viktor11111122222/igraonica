@@ -333,9 +333,9 @@ describe('UserDetail - podsetnik u aplikaciji', () => {
     prikazi();
     await screen.findByText('Podsetnik u aplikaciji');
 
-    const naziv = 'Podsetnik za dodatni kontakt i ovlascene osobe';
+    const naziv = 'Roditelj nije sklonio podsetnik';
     expect(prekidac(naziv)).toHaveAttribute('aria-checked', 'false');
-    expect(screen.getByText(/^Sklonjen /)).toBeInTheDocument();
+    expect(screen.getByText(/^Roditelj ga je sklonio /)).toBeInTheDocument();
     await userEvent.click(prekidac(naziv));
 
     expect(patch).toHaveBeenCalledWith('/users/u1', { contactReminderHidden: false });
